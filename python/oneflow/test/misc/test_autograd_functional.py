@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import pdb
+import torch as torch_original
 import unittest
 import oneflow as flow
 import oneflow.unittest
@@ -111,9 +113,10 @@ class TestAutogradFunctional(flow.unittest.TestCase):
         result_tensors = torch.autograd.functional.hvp(_func_multi_scalar, inputs, v)
 
     # TODO: The local test of test_jacobian and test_hessian passed, but the ci test failed
-    """
+    
     @autotest(n=1, check_graph=False)
     def test_jacobian(test_case):
+        #pdb.set_trace()
         inputs = random_tensor(ndim=2, dim0=5, dim1=5)
         result_tensor = torch.autograd.functional.jacobian(
             _func_tensor, inputs, vectorize=False, strategy="reverse-mode"
@@ -123,10 +126,13 @@ class TestAutogradFunctional(flow.unittest.TestCase):
             random_tensor(ndim=2, dim0=5, dim1=5),
             random_tensor(ndim=2, dim0=5, dim1=5),
         )
+
         result_tensors = torch.autograd.functional.jacobian(
             _func_multi_scalar, inputs, vectorize=False, strategy="reverse-mode"
         )
 
+
+    """
     @autotest(n=1, check_graph=False)
     def test_hessian(test_case):
         inputs = random_tensor(ndim=2, dim0=5, dim1=5)
@@ -147,7 +153,8 @@ class TestAutogradFunctional(flow.unittest.TestCase):
             vectorize=False,
             outer_jacobian_strategy="reverse-mode",
         )
-    """
+        """
+
 
 
 if __name__ == "__main__":
