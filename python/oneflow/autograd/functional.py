@@ -779,6 +779,7 @@ def jacobian(
             )
 
         jacobian = _grad_postprocess(jacobian, create_graph)
+        return jacobian
 
         return _tuple_postprocess(jacobian, (is_outputs_tuple, is_inputs_tuple))
 
