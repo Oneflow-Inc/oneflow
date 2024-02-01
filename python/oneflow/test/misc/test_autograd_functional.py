@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import torch as torch_original
 from packaging import version
 import unittest
 import oneflow as flow
@@ -111,8 +110,6 @@ class TestAutogradFunctional(flow.unittest.TestCase):
             random_tensor(ndim=2, dim0=5, dim1=5),
         )
         result_tensors = torch.autograd.functional.hvp(_func_multi_scalar, inputs, v)
-
-    # TODO: The local test of test_jacobian and test_hessian passed, but the ci test failed
 
     @unittest.skipIf(
         version.parse(torch.pytorch.__version__) < version.parse("1.11.0"),
