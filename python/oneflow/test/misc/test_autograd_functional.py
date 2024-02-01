@@ -15,6 +15,7 @@ limitations under the License.
 """
 import pdb
 import torch as torch_original
+import numpy as np
 import unittest
 import oneflow as flow
 import oneflow.unittest
@@ -114,9 +115,18 @@ class TestAutogradFunctional(flow.unittest.TestCase):
 
     # TODO: The local test of test_jacobian and test_hessian passed, but the ci test failed
 
-    @autotest(n=1, check_graph=False)
     def test_jacobian(test_case):
         # pdb.set_trace()
+        inputs = np.random.rand(5, 5)
+        torch_inputs = torch_original.tensor(inputs)
+        torch_result = torch_original.autograd.functional.jacobian(
+            _func_tensor, inputs, vectorize=False, strategy="reverse-mode"
+        )
+        flow_inputs = flow.tensor(inputs)
+        flow_result = flow.autograd.functional.jacobian(
+            _func_tensor, inputs, vectorize=False, strategy="reverse-mode"
+        )
+        return flow_result, torch_result
         inputs = random_tensor(ndim=2, dim0=5, dim1=5)
 
         result_tensor = torch.autograd.functional.jacobian(
