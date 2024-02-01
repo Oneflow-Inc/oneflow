@@ -118,13 +118,13 @@ class TestAutogradFunctional(flow.unittest.TestCase):
     def test_jacobian(test_case):
         # pdb.set_trace()
         inputs = np.random.rand(5, 5)
-        torch_inputs = torch_original.tensor(inputs)
+        torch_inputs = torch_original.Tensor(inputs)
         torch_result = torch_original.autograd.functional.jacobian(
-            _func_tensor, inputs, vectorize=False, strategy="reverse-mode"
+            _func_tensor, torch_inputs, vectorize=False, strategy="reverse-mode"
         )
-        flow_inputs = flow.tensor(inputs)
+        flow_inputs = flow.Tensor(inputs)
         flow_result = flow.autograd.functional.jacobian(
-            _func_tensor, inputs, vectorize=False, strategy="reverse-mode"
+            _func_tensor, flow_inputs, vectorize=False, strategy="reverse-mode"
         )
         return flow_result, torch_result
         inputs = random_tensor(ndim=2, dim0=5, dim1=5)
