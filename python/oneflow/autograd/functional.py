@@ -173,7 +173,12 @@ def _check_requires_grad(inputs, input_type, strict):
 
 
 def _autograd_grad(
-    outputs, inputs, grad_outputs=None, create_graph=False, retain_graph=None,is_grads_batched=False,
+    outputs,
+    inputs,
+    grad_outputs=None,
+    create_graph=False,
+    retain_graph=None,
+    is_grads_batched=False,
 ):
     # Version of autograd.grad that accepts `None` in outputs and do not compute gradients for them.
     # This has the extra constraint that inputs has to be a tuple
@@ -696,7 +701,11 @@ def jacobian(
             def vjp(grad_output):
                 vj = list(
                     _autograd_grad(
-                        flat_outputs, inputs, grad_output, create_graph=create_graph,is_grads_batched=True,
+                        flat_outputs,
+                        inputs,
+                        grad_output,
+                        create_graph=create_graph,
+                        is_grads_batched=True,
                     )
                 )
                 for el_idx, vj_el in enumerate(vj):
