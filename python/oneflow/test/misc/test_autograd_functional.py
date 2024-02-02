@@ -111,49 +111,62 @@ class TestAutogradFunctional(flow.unittest.TestCase):
         )
         result_tensors = torch.autograd.functional.hvp(_func_multi_scalar, inputs, v)
 
-    @unittest.skipIf(
-        version.parse(torch.pytorch.__version__) < version.parse("1.11.0"),
-        "'jacobian' has no strategy parameter in PyTorch before '1.11.0'",
-    )
+    # TODO: "'jacobian' and 'hessian' has no strategy parameter in PyTorch before '1.11.0'"
     @autotest(n=1, check_graph=False)
     def test_jacobian(test_case):
         inputs = random_tensor(ndim=2, dim0=5, dim1=5)
-        result_tensor = torch.autograd.functional.jacobian(
-            _func_tensor, inputs, vectorize=False, strategy="reverse-mode"
-        )
+        if version.parse(torch.pytorch.__version__) < version.parse("1.11.0"):
+            result_tensor = torch.autograd.functional.jacobian(
+                _func_tensor, inputs, vectorize=False
+            )
+        else:
+            result_tensor = torch.autograd.functional.jacobian(
+                _func_tensor, inputs, vectorize=False, strategy="reverse-mode"
+            )
 
         inputs = (
             random_tensor(ndim=2, dim0=5, dim1=5),
             random_tensor(ndim=2, dim0=5, dim1=5),
         )
-        result_tensors = torch.autograd.functional.jacobian(
-            _func_multi_scalar, inputs, vectorize=False, strategy="reverse-mode"
-        )
+        if version.parse(torch.pytorch.__version__) < version.parse("1.11.0"):
+            result_tensors = torch.autograd.functional.jacobian(
+                _func_multi_scalar, inputs, vectorize=False
+            )
+        else:
+            result_tensors = torch.autograd.functional.jacobian(
+                _func_multi_scalar, inputs, vectorize=False, strategy="reverse-mode"
+            )
 
-    @unittest.skipIf(
-        version.parse(torch.pytorch.__version__) < version.parse("1.11.0"),
-        "'hessian' has no strategy parameter in PyTorch before '1.11.0'",
-    )
     @autotest(n=1, check_graph=False)
     def test_hessian(test_case):
         inputs = random_tensor(ndim=2, dim0=5, dim1=5)
-        result_tensor = torch.autograd.functional.hessian(
-            _func_scalar,
-            inputs,
-            vectorize=False,
-            outer_jacobian_strategy="reverse-mode",
-        )
+        if version.parse(torch.pytorch.__version__) < version.parse("1.11.0"):
+            result_tensor = torch.autograd.functional.hessian(
+                _func_scalar, inputs, vectorize=False,
+            )
+        else:
+            result_tensor = torch.autograd.functional.hessian(
+                _func_scalar,
+                inputs,
+                vectorize=False,
+                outer_jacobian_strategy="reverse-mode",
+            )
 
         inputs = (
             random_tensor(ndim=2, dim0=5, dim1=5),
             random_tensor(ndim=2, dim0=5, dim1=5),
         )
-        result_tensors = torch.autograd.functional.hessian(
-            _func_multi_scalar,
-            inputs,
-            vectorize=False,
-            outer_jacobian_strategy="reverse-mode",
-        )
+        if version.parse(torch.pytorch.__version__) < version.parse("1.11.0"):
+            result_tensors = torch.autograd.functional.hessian(
+                _func_multi_scalar, inputs, vectorize=False,
+            )
+        else:
+            result_tensors = torch.autograd.functional.hessian(
+                _func_multi_scalar,
+                inputs,
+                vectorize=False,
+                outer_jacobian_strategy="reverse-mode",
+            )
 
 
 if __name__ == "__main__":
