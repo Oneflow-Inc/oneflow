@@ -694,14 +694,16 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
   PyObject* placement_obj = Py_None;
   PyObject* sbp_obj = Py_None;
   PyObject* check_meta_obj = Py_True;
+  PyObject* sync_data_obj = Py_True;
   PyObject* copy_obj = Py_False;
-  static const char* keywords[5] = {"placement", "sbp", "check_meta", "copy", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$O!O!:local_to_global",
+  static const char* keywords[6] = {"placement", "sbp", "check_meta", "sync_data", "copy", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$O!O!O!:local_to_global",
                                    const_cast<char**>(keywords), &placement_obj, &sbp_obj,
-                                   &PyBool_Type, &check_meta_obj, &PyBool_Type, &copy_obj)) {
+                                   &PyBool_Type, &check_meta_obj, &PyBool_Type, &sync_data_obj, &PyBool_Type, &copy_obj)) {
     return NULL;
   }
   const bool check_meta = (check_meta_obj == Py_True);
+  const bool sync_data = (sync_data_obj == Py_True);
   const bool copy = (copy_obj == Py_True);
 
   CHECK_OR_THROW(placement_obj != Py_None && sbp_obj != Py_None)
@@ -721,7 +723,7 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
     sbp = functional::PyUnpackSbpParallelSequence(sbp_obj);
   }
   return PyTensor_New(ASSERT_PTR(functional::ToGlobal(
-      tensor, functional::PyUnpackParallelDesc(placement_obj), sbp, {}, check_meta, copy)));
+      tensor, functional::PyUnpackParallelDesc(placement_obj), sbp, {}, check_meta, sync_data, copy)));
   END_HANDLE_ERRORS
 }
 
@@ -736,14 +738,17 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   std::vector<Symbol<SbpParallel>> sbp;
   std::vector<Symbol<SbpParallel>> grad_sbp;
   PyObject* check_meta_obj = Py_False;
+  PyObject* sync_data_obj = Py_True;
   PyObject* copy_obj = Py_False;
-  static const char* keywords[6] = {"placement", "sbp", "grad_sbp", "check_meta", "copy", NULL};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$OO!O!:global_to_global",
+  static const char* keywords[7] = {"placement", "sbp", "grad_sbp", "check_meta", "sync_data", "copy", NULL};
+  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$OO!O!O!:global_to_global",
                                    const_cast<char**>(keywords), &placement_obj, &sbp_obj,
-                                   &grad_sbp_obj, &PyBool_Type, &check_meta_obj, &copy_obj)) {
+                                   &grad_sbp_obj, &PyBool_Type, &check_meta_obj, &PyBool_Type, 
+                                   &sync_data_obj, &PyBool_Type, &copy_obj)) {
     return NULL;
   }
   const bool check_meta = (check_meta_obj == Py_True);
+  const bool sync_data = (sync_data_obj == Py_True);
   const bool copy = (copy_obj == Py_True);
 
   // sbp
@@ -781,7 +786,7 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
     grad_sbp = functional::PyUnpackSbpParallelSequence(grad_sbp_obj);
   }
   return PyTensor_New(
-      ASSERT_PTR(functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta, copy)));
+      ASSERT_PTR(functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta, sync_data, copy)));
   END_HANDLE_ERRORS
 }
 
@@ -846,7 +851,7 @@ static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject
     sbp.emplace_back(ndsbp->sbp_parallel(i));
   }
   return PyTensor_New(
-      ASSERT_PTR(functional::ToGlobal(value_tensor, placement, sbp, {}, true, /*copy=*/false)));
+      ASSERT_PTR(functional::ToGlobal(value_tensor, placement, sbp, {}, true, true, /*copy=*/false)));
   END_HANDLE_ERRORS
 }
 
@@ -945,7 +950,7 @@ int PyTensorObject_setitem(PyObject* self, PyObject* item, PyObject* value) {
             << Error::RuntimeError()
             << "tensor_setitem(): value must be a global tensor when self is global";
         value_tensor = ASSERT_PTR(
-            functional::ToGlobal(value_tensor, placement, sbp, {}, true, /*copy=*/false));
+            functional::ToGlobal(value_tensor, placement, sbp, {}, true, true, /*copy=*/false));
       }
     } else {
       if (functional::PyScalarCheck(value)) {

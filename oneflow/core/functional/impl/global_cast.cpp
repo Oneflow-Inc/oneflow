@@ -520,7 +520,7 @@ class ToGlobalFunctor {
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
                            const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels,
-                           bool check_meta, bool copy) const {
+                           bool check_meta, bool sync_data, bool copy) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, grad_sbp_parallels, 1,
@@ -532,7 +532,7 @@ class ToGlobalFunctor {
       DeviceType device_type = parallel_desc->device_type();
       if (ccl::IsBroadcastRegistered(device_type)) {
         tensor = JUST(LocalToGlobal(x, parallel_desc, sbp_parallels, NullOpt, NullOpt,
-                                    local_to_global_op_, check_meta, /* sync_data */ true, copy));
+                                    local_to_global_op_, check_meta, /* sync_data */ sync_data, copy));
       } else {
         // Assuming that the newly adapted hardware device does not support collective
         // communication, since local to global may need to synchronize data (through the
@@ -543,7 +543,7 @@ class ToGlobalFunctor {
             JUST(ReplaceDeviceType(parallel_desc, DeviceType::kCPU));
         std::shared_ptr<Tensor> cpu_tensor =
             JUST(LocalToGlobal(x, cpu_parallel_desc, sbp_parallels, NullOpt, NullOpt,
-                               local_to_global_op_, check_meta, /* sync_data */ true, copy));
+                               local_to_global_op_, check_meta, /* sync_data */ sync_data, copy));
         tensor =
             JUST(GlobalToGlobal(cpu_tensor, parallel_desc, sbp_parallels, GetNoneSbpList(), copy));
       }

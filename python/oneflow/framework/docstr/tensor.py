@@ -395,7 +395,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.local_to_global,
     """
-    Tensor.local_to_global(placement=None, sbp=None, *, check_meta=True, copy=False) -> Tensor
+    Tensor.local_to_global(placement=None, sbp=None, *, check_meta=True, sync_data=True, copy=False) -> Tensor
 
     Creates a global tensor from a local tensor.
 
@@ -426,7 +426,7 @@ add_docstr(
         >>> # Run on 2 ranks respectively
         >>> import oneflow as flow
         >>> input = flow.tensor([0., 1.], dtype=flow.float32) # doctest: +SKIP
-        >>> output = input.local_to_global(placement=flow.placement("cpu", ranks=[0, 1]), sbp=[flow.sbp.split(0)], check_meta=False) # doctest: +SKIP
+        >>> output = input.local_to_global(placement=flow.placement("cpu", ranks=[0, 1]), sbp=[flow.sbp.split(0)], check_meta=False, sync_data=True) # doctest: +SKIP
         >>> print(output.size()) # doctest: +SKIP
         >>> print(output) # doctest: +SKIP
 
@@ -539,7 +539,7 @@ add_docstr(
         >>> # Run on 2 ranks respectively
         >>> import oneflow as flow
         >>> input = flow.tensor([0., 1.], dtype=flow.float32) # doctest: +SKIP
-        >>> output = input.to_global(placement=flow.placement("cpu", ranks=[0, 1]), sbp=[flow.sbp.split(0)], check_meta=False) # doctest: +SKIP
+        >>> output = input.to_global(placement=flow.placement("cpu", ranks=[0, 1]), sbp=[flow.sbp.split(0)], check_meta=False, sync_data=True) # doctest: +SKIP
         >>> print(output.size()) # doctest: +SKIP
         >>> print(output) # doctest: +SKIP
 

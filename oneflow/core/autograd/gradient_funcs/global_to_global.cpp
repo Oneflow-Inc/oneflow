@@ -61,12 +61,13 @@ class GlobalToGlobalGradFunction : public OpExprGradFunction<GlobalToGlobalState
 
     if (LazyMode::is_enabled()) {
       (*in_grads)[0] = JUST(one::functional::ToGlobal(out_grad, ctx->parallel_desc, *grad_sbp_list,
-                                                      {}, /* check_meta */ false, /*copy=*/false));
+                                                      {}, /* check_meta */ false, /* sync_data */ true,
+                                                      /*copy=*/false));
     } else {
       const auto& grad_grad_sbp_list = JUST(GetSbpList(ctx->nd_sbp));
       (*in_grads)[0] = JUST(one::functional::ToGlobal(out_grad, ctx->parallel_desc, *grad_sbp_list,
                                                       *grad_grad_sbp_list, /* check_meta */ false,
-                                                      /*copy=*/false));
+                                                      /* sync_data */ true, /*copy=*/false));
     }
     return Maybe<void>::Ok();
   }
