@@ -17,16 +17,17 @@ import math
 from typing import Optional, Tuple, Union
 
 import oneflow as flow
+from oneflow.framework.tensor import Tensor
 
 
 def interpolate(
-    input,
-    size=None,
-    scale_factor=None,
-    mode="nearest",
-    align_corners=None,
-    recompute_scale_factor=None,
-):
+    input: Tensor,
+    size: Optional[Union[int, Tuple[int, ...]]] = None,
+    scale_factor: Optional[Union[float, Tuple[float, ...]]] = None,
+    mode: str = "nearest",
+    align_corners: Optional[bool] = None,
+    recompute_scale_factor: Optional[bool] = None,
+) -> Tensor:
     r"""The interface is consistent with PyTorch.    
     
     The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/functional.html#interpolate.
@@ -279,12 +280,12 @@ def interpolate(
 
 
 def upsample(
-    input,
+    input: Tensor,
     size: Optional[Union[int, Tuple[int, ...]]] = None,
     scale_factor: Optional[Union[float, Tuple[float, ...]]] = None,
     mode: str = "nearest",
     align_corners: Optional[bool] = None,
-):
+) -> Tensor:
     r"""    
     Upsamples a given multi-channel 1D (temporal), 2D (spatial) or 3D (volumetric) data.
 
@@ -298,3 +299,9 @@ def upsample(
         mode=mode,
         align_corners=align_corners,
     )
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

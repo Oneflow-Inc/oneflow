@@ -13,8 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from typing import Tuple, Union
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
+
+_shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 
 
 def group_norm(
@@ -24,7 +27,7 @@ def group_norm(
     bias: Tensor = None,
     eps: float = 1e-05,
     num_channels: int = None,
-):
+) -> Tensor:
     r"""Apply Group Normalization for last certain number of dimensions.
 
     See :class:`~oneflow.nn.GroupNorm` for details.
@@ -54,7 +57,13 @@ def group_norm(
         return res
 
 
-def layer_norm(input, normalized_shape: tuple, weight=None, bias=None, eps=1e-05):
+def layer_norm(
+    input: Tensor,
+    normalized_shape: _shape_t,
+    weight: Tensor = None,
+    bias: Tensor = None,
+    eps: float = 1e-05,
+) -> Tensor:
     if isinstance(normalized_shape, int):
         normalized_shape = (normalized_shape,)
     normalized_shape = tuple(normalized_shape)
@@ -118,3 +127,9 @@ def layer_norm(input, normalized_shape: tuple, weight=None, bias=None, eps=1e-05
                 epsilon=eps,
             )
         return res
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

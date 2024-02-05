@@ -14,9 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+from oneflow.framework.tensor import Tensor
 
 
-def sparse_softmax_cross_entropy(labels, logits):
+def sparse_softmax_cross_entropy(labels: Tensor, logits: Tensor) -> Tensor:
     r"""The interface is consistent with TensorFlow.    
     The documentation is referenced from: 
     https://www.tensorflow.org/api_docs/python/tf/nn/sparse_softmax_cross_entropy_with_logits
@@ -68,3 +69,9 @@ def sparse_softmax_cross_entropy(labels, logits):
         tensor([ 2.9751e-01,  1.1448e+00, -1.4305e-06], dtype=oneflow.float32)
     """
     return flow._C.sparse_softmax_cross_entropy(logits, labels)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

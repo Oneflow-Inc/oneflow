@@ -13,10 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from typing import Optional
+
 import oneflow as flow
+from oneflow.framework.tensor import Tensor
 
 
-def linear(input, weight, bias=None):
+def linear(input: Tensor, weight: Tensor, bias: Optional[Tensor] = None) -> Tensor:
     r"""
     Applies a linear transformation to the incoming data: :math:`y = xA^T + b`.
 
@@ -46,3 +49,9 @@ def linear(input, weight, bias=None):
     if bias is not None:
         res += bias
     return res
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

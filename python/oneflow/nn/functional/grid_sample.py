@@ -15,15 +15,16 @@ limitations under the License.
 """
 
 import oneflow as flow
+from oneflow.framework.tensor import Tensor
 
 
 def grid_sample(
-    input,
-    grid,
+    input: Tensor,
+    grid: Tensor,
     mode: str = "bilinear",
     padding_mode: str = "zeros",
     align_corners: bool = False,
-):
+) -> Tensor:
     r"""The interface is consistent with PyTorch.    
     The documentation is referenced from: 
     https://pytorch.org/docs/1.10/generated/torch.nn.functional.grid_sample.html.
@@ -137,3 +138,9 @@ def grid_sample(
         align_corners=align_corners,
     )
     return y
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

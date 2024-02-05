@@ -15,10 +15,11 @@ limitations under the License.
 """
 import warnings
 import oneflow as flow
+from oneflow.framework.tensor import Tensor
 
 
-def relu6(input, inplace=False):
-    r"""relu6(input, inplace=False) -> Tensor
+def relu6(input: Tensor, inplace=False) -> Tensor:
+    r"""relu6(input: Tensor, inplace=False) -> Tensor
 
     Applies the element-wise function :math:`\text{ReLU6}(x) = \min(\max(0,x), 6)`.
 
@@ -27,3 +28,9 @@ def relu6(input, inplace=False):
     if inplace:
         warnings.warn("relu6 do not support inplace now")
     return flow._C.hardtanh(input, min_val=0.0, max_val=6.0)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

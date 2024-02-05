@@ -13,18 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from typing import Optional
 import oneflow as flow
+from oneflow.framework.tensor import Tensor
 
 
 def embedding(
-    input,
-    weight,
-    padding_idx=None,
-    max_norm=None,
-    norm_type=2.0,
-    scale_grad_by_freq=False,
-    sparse=False,
-):
+    input: Tensor,
+    weight: Tensor,
+    padding_idx: Optional[int] = None,
+    max_norm: Optional[float] = None,
+    norm_type: float = 2.0,
+    scale_grad_by_freq: bool = False,
+    sparse: bool = False,
+) -> Tensor:
     r"""A simple lookup table that looks up embeddings in a fixed dictionary and size.
 
     This module is often used to retrieve word embeddings using indices.
@@ -87,3 +89,9 @@ def embedding(
         return flow._C.gather(weight, input, axis=0)
     else:
         return flow._C.embedding(weight, input, padding_idx, scale_grad_by_freq)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

@@ -16,9 +16,10 @@ limitations under the License.
 from typing import List
 
 import oneflow as flow
+from oneflow.framework.tensor import Tensor
 
 
-def affine_grid(theta, size: List[int], align_corners: bool = False):
+def affine_grid(theta: Tensor, size: List[int], align_corners: bool = False) -> Tensor:
     r"""The interface is consistent with PyTorch.    
     The documentation is referenced from: 
     https://pytorch.org/docs/1.10/generated/torch.nn.functional.affine_grid.html.
@@ -66,3 +67,9 @@ def affine_grid(theta, size: List[int], align_corners: bool = False):
     """
     y = flow._C.affine_grid(theta, size=size, align_corners=align_corners)
     return y
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
