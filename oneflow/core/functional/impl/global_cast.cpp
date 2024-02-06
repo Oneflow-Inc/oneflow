@@ -531,8 +531,9 @@ class ToGlobalFunctor {
     } else {
       DeviceType device_type = parallel_desc->device_type();
       if (ccl::IsBroadcastRegistered(device_type)) {
-        tensor = JUST(LocalToGlobal(x, parallel_desc, sbp_parallels, NullOpt, NullOpt,
-                                    local_to_global_op_, check_meta, /* sync_data */ sync_data, copy));
+        tensor =
+            JUST(LocalToGlobal(x, parallel_desc, sbp_parallels, NullOpt, NullOpt,
+                               local_to_global_op_, check_meta, /* sync_data */ sync_data, copy));
       } else {
         // Assuming that the newly adapted hardware device does not support collective
         // communication, since local to global may need to synchronize data (through the

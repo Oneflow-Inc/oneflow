@@ -699,7 +699,8 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
   static const char* keywords[6] = {"placement", "sbp", "check_meta", "sync_data", "copy", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$O!O!O!:local_to_global",
                                    const_cast<char**>(keywords), &placement_obj, &sbp_obj,
-                                   &PyBool_Type, &check_meta_obj, &PyBool_Type, &sync_data_obj, &PyBool_Type, &copy_obj)) {
+                                   &PyBool_Type, &check_meta_obj, &PyBool_Type, &sync_data_obj,
+                                   &PyBool_Type, &copy_obj)) {
     return NULL;
   }
   const bool check_meta = (check_meta_obj == Py_True);
@@ -722,8 +723,9 @@ static PyObject* PyTensorObject_local_to_global(PyObject* self, PyObject* args, 
         << functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(sbp_obj)));
     sbp = functional::PyUnpackSbpParallelSequence(sbp_obj);
   }
-  return PyTensor_New(ASSERT_PTR(functional::ToGlobal(
-      tensor, functional::PyUnpackParallelDesc(placement_obj), sbp, {}, check_meta, sync_data, copy)));
+  return PyTensor_New(
+      ASSERT_PTR(functional::ToGlobal(tensor, functional::PyUnpackParallelDesc(placement_obj), sbp,
+                                      {}, check_meta, sync_data, copy)));
   END_HANDLE_ERRORS
 }
 
@@ -740,10 +742,11 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   PyObject* check_meta_obj = Py_False;
   PyObject* sync_data_obj = Py_True;
   PyObject* copy_obj = Py_False;
-  static const char* keywords[7] = {"placement", "sbp", "grad_sbp", "check_meta", "sync_data", "copy", NULL};
+  static const char* keywords[7] = {"placement", "sbp",  "grad_sbp", "check_meta",
+                                    "sync_data", "copy", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OO$OO!O!O!:global_to_global",
                                    const_cast<char**>(keywords), &placement_obj, &sbp_obj,
-                                   &grad_sbp_obj, &PyBool_Type, &check_meta_obj, &PyBool_Type, 
+                                   &grad_sbp_obj, &PyBool_Type, &check_meta_obj, &PyBool_Type,
                                    &sync_data_obj, &PyBool_Type, &copy_obj)) {
     return NULL;
   }
@@ -785,8 +788,8 @@ static PyObject* PyTensorObject_global_to_global(PyObject* self, PyObject* args,
   } else if (functional::PySbpParallelSequenceCheck(grad_sbp_obj)) {
     grad_sbp = functional::PyUnpackSbpParallelSequence(grad_sbp_obj);
   }
-  return PyTensor_New(
-      ASSERT_PTR(functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta, sync_data, copy)));
+  return PyTensor_New(ASSERT_PTR(
+      functional::ToGlobal(tensor, placement, sbp, grad_sbp, check_meta, sync_data, copy)));
   END_HANDLE_ERRORS
 }
 
@@ -850,8 +853,8 @@ static PyObject* PyTensorObject_type_as(PyObject* self, PyObject* args, PyObject
   for (int32_t i = 0; i < ndsbp->sbp_parallel_size(); i++) {
     sbp.emplace_back(ndsbp->sbp_parallel(i));
   }
-  return PyTensor_New(
-      ASSERT_PTR(functional::ToGlobal(value_tensor, placement, sbp, {}, true, true, /*copy=*/false)));
+  return PyTensor_New(ASSERT_PTR(
+      functional::ToGlobal(value_tensor, placement, sbp, {}, true, true, /*copy=*/false)));
   END_HANDLE_ERRORS
 }
 

@@ -318,8 +318,9 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const bool requires_grad) {
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
   bool check_meta = other->is_global() ? false : true;
-  std::shared_ptr<Tensor> tensor = JUST(functional::ToGlobal(
-      other, placement, sbp_tuple, grad_sbp_tuple, check_meta, /* sync_data */ true, /*copy=*/false));
+  std::shared_ptr<Tensor> tensor =
+      JUST(functional::ToGlobal(other, placement, sbp_tuple, grad_sbp_tuple, check_meta,
+                                /* sync_data */ true, /*copy=*/false));
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);
     if (tensor->dtype() != dtype_) {
