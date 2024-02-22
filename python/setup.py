@@ -66,6 +66,10 @@ if "cu11" in ONEFLOW_VERSION and "cu112" not in ONEFLOW_VERSION:
     REQUIRED_PACKAGES.append("nvidia-cudnn-cu11")
     REQUIRED_PACKAGES.append("nvidia-cublas-cu11")
 
+if "cu12" in ONEFLOW_VERSION:
+    REQUIRED_PACKAGES.append("nvidia-cudnn-cu12")
+    REQUIRED_PACKAGES.append("nvidia-cublas-cu12")
+
 # if python version < 3.7.x, than need pip install dataclasses
 if sys.version_info.minor < 7:
     REQUIRED_PACKAGES.append("dataclasses")
