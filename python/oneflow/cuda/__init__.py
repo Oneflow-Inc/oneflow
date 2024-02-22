@@ -195,6 +195,24 @@ def empty_cache() -> None:
     return flow._oneflow_internal.EmptyCache()
 
 
+def mem_get_info(device: Any = None) -> Tuple[int, int]:
+    r"""Returns the global free and total GPU memory for a given
+    device using cudaMemGetInfo.
+
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.cuda.mem_get_info.html
+
+    Args:
+        device (flow.device or int, optional): selected device. Returns
+            statistic for the current device, given by :func:`~flow.cuda.current_device`,
+            if :attr:`device` is ``None`` (default).
+    """
+    if device is None:
+        device = current_device()
+    device = _get_device_index(device)
+    return flow._oneflow_internal.CudaMemGetInfo(device)
+
+
 from .random import *  # noqa: F403
 
 
