@@ -46,8 +46,22 @@ def oneflow_backend(gm, example_inputs, *args, **kwargs):
             )
         else:
             output = transformed_fn(*args, **kwargs)
-        if isinstance(output, tuple):
-            return tuple(flow.utils.tensor.to_torch(i) for i in output)
-        return flow.utils.tensor.to_torch(output)
+
+        def output_fn(value):
+            if isinstance(value, flow.Tensor):
+                return flow.utils.tensor.to_torch(value)
+            else:
+                return value
+
+        if isinstance(output, (tuple, list, flow._oneflow_internal.TensorTuple)):
+            return tuple(output_fn(i) for i in output)
+        elif isinstance(output, dict):
+            return {k: output_fn(v) for (k, v) in output.items()}
+        elif isinstance(output, flow.Tensor):
+            return output_fn(output)
+        else:
+            raise NotImplementedError(
+                f"How to handle {type(output)} output type is not implemented"
+            )
 
     return wrapped_forward

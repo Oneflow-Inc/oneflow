@@ -38,7 +38,6 @@ def fx_node_tranform(gm):
         # Align this with env setting in `with_oneflow_compile`.
         # Otherwise, infererence using PyTorch with OneFlow backend on
         # multiple input shapes may crash
-        os.environ.setdefault("ONEFLOW_RUN_GRAPH_BY_VM", "1")
         os.environ.setdefault("ONEFLOW_GRAPH_DELAY_VARIABLE_OP_EXECUTION", "1")
         os.environ.setdefault("ONEFLOW_MLIR_CSE", "1")
         os.environ.setdefault("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION", "1")
@@ -63,6 +62,7 @@ def fx_node_tranform(gm):
         os.environ.setdefault("ONEFLOW_MLIR_GROUP_MATMUL_QUANT", "1")
 
         class OfGraph(flow.nn.Graph):
+            @flow.nn.Graph.with_dynamic_input_shape()
             def __init__(self):
                 super().__init__()
                 self.fx_md = of_gm
@@ -70,9 +70,14 @@ def fx_node_tranform(gm):
                 self.config.allow_fuse_add_to_output(True)
 
             def build(self, *args, **kwargs):
-                return self.fx_md(*args, **kwargs)
+                if self.fx_md.training:
+                    return self.fx_md(*args, **kwargs)
+                with flow.no_grad():
+                    return self.fx_md(*args, **kwargs)
 
         of_g = OfGraph()
+        of_g._dynamic_input_graph_cache.set_cache_size(9)
+        of_g._dynamic_input_graph_cache.enable_shared(True)
         oneflow_fn = lambda *args, **kwargs: of_g(*args, **kwargs)
 
     return oneflow_fn
