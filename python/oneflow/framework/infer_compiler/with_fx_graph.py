@@ -76,7 +76,8 @@ def fx_node_tranform(gm):
                     return self.fx_md(*args, **kwargs)
 
         of_g = OfGraph()
-        of_g._dynamic_input_graph_cache.set_cache_size(9)
+        DEFAULT_CACHE_SIZE = 9
+        of_g._dynamic_input_graph_cache.set_cache_size(DEFAULT_CACHE_SIZE)
         of_g._dynamic_input_graph_cache.enable_shared(True)
         oneflow_fn = lambda *args, **kwargs: of_g(*args, **kwargs)
 
