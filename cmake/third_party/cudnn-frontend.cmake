@@ -18,8 +18,12 @@ if(THIRD_PARTY)
     INSTALL_COMMAND "")
 
   add_copy_headers_target(
-    NAME cudnn_frontend
-    SRC ${CUDNN_FRONTEND_BASE_DIR}/include/
-    DST ${CUDNN_FRONTEND_INCLUDE_DIR}
-    DEPS cudnn-frontend)
+    NAME
+    cudnn_frontend
+    SRC
+    ${CUDNN_FRONTEND_BASE_DIR}/include/
+    DST
+    ${CUDNN_FRONTEND_INCLUDE_DIR}
+    DEPS
+    cudnn-frontend)
 endif(THIRD_PARTY)
