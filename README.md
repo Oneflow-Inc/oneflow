@@ -13,8 +13,8 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 
 ## Latest News
 
-- Version 0.9.0 is out!
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.9.0)
+- Version 1.0.0 is out!
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v1.0.0)
 
 ## Publication
 
