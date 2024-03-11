@@ -101,7 +101,6 @@ def clip_grad_norm_(
         if norm_type == float("inf"):
             norms = [
                 p.grad.detach()
-                .to_global(sbp=sbp_broadcast)
                 .abs()
                 .max()
                 .to_global(placement=param0_placement)
@@ -111,7 +110,6 @@ def clip_grad_norm_(
         elif norm_type == float("-inf"):
             norms = [
                 p.grad.detach()
-                .to_global(sbp=sbp_broadcast)
                 .abs()
                 .min()
                 .to_global(placement=param0_placement)
@@ -123,7 +121,7 @@ def clip_grad_norm_(
                 flow.stack(
                     [
                         flow.linalg.vector_norm(
-                            p.grad.detach().to_global(sbp=sbp_broadcast), norm_type
+                            p.grad.detach(), norm_type
                         ).to_global(placement=param0_placement)
                         for p in parameters
                     ]
