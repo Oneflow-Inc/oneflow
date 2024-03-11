@@ -25,14 +25,17 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_upsample2d_bilinear(test_case, device):
+def _test_upsample2d_bilinear(test_case, device, obj):
     input = flow.tensor(
         np.arange(1, 5).reshape((1, 1, 2, 2)),
         device=flow.device(device),
         dtype=flow.float32,
     )
-    m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear")
-    of_out = m(input)
+    if obj == "function":
+        of_out = flow.nn.functional.upsample(input, scale_factor=2.0, mode="bilinear")
+    elif obj == "module":
+        m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear")
+        of_out = m(input)
     np_out = np.array(
         [
             [
@@ -48,14 +51,19 @@ def _test_upsample2d_bilinear(test_case, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
 
-def _test_upsample2d_bilinear_aligncorner(test_case, device):
+def _test_upsample2d_bilinear_aligncorner(test_case, device, obj):
     input = flow.tensor(
         np.arange(1, 5).reshape((1, 1, 2, 2)),
         device=flow.device(device),
         dtype=flow.float32,
     )
-    m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=True)
-    of_out = m(input)
+    if obj == "function":
+        of_out = flow.nn.functional.upsample(
+            input, scale_factor=2.0, mode="bilinear", align_corners=True
+        )
+    elif obj == "module":
+        m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=True)
+        of_out = m(input)
     np_out = np.array(
         [
             [
@@ -117,14 +125,17 @@ def _test_UpsamplingBilinear2d(test_case, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
 
 
-def _test_upsample2d_4dim(test_case, device):
+def _test_upsample2d_4dim(test_case, device, obj):
     input = flow.tensor(
         np.arange(1, 37).reshape((2, 2, 3, 3)),
         device=flow.device(device),
         dtype=flow.float32,
     )
-    m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
-    of_out = m(input)
+    if obj == "function":
+        of_out = flow.nn.functional.upsample(input, scale_factor=2.0, mode="nearest")
+    elif obj == "module":
+        m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
+        of_out = m(input)
     np_out = np.array(
         [
             [
@@ -168,14 +179,17 @@ def _test_upsample2d_4dim(test_case, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
 
-def _test_upsample2d_bilinear_4dim(test_case, device):
+def _test_upsample2d_bilinear_4dim(test_case, device, obj):
     input = flow.tensor(
         np.arange(1, 37).reshape((2, 2, 3, 3)),
         device=flow.device(device),
         dtype=flow.float32,
     )
-    m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear")
-    of_out = m(input)
+    if obj == "function":
+        of_out = flow.nn.functional.upsample(input, scale_factor=2.0, mode="bilinear")
+    elif obj == "module":
+        m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear")
+        of_out = m(input)
     np_out = np.array(
         [
             [
@@ -219,45 +233,56 @@ def _test_upsample2d_bilinear_4dim(test_case, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
 
 
-def _test_upsample2d_backward(test_case, device):
+def _test_upsample2d_backward(test_case, device, obj):
     input = flow.tensor(
         np.arange(1, 5).reshape((1, 1, 2, 2)),
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
     )
-    m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
-    of_out = m(input)
+    if obj == "function":
+        of_out = flow.nn.functional.upsample(input, scale_factor=2.0, mode="nearest")
+    elif obj == "module":
+        m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
+        of_out = m(input)
     of_out = of_out.sum()
     of_out.backward()
     np_grad = [[[[4.0, 4.0], [4.0, 4.0]]]]
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
 
 
-def _test_upsample2d_bilinear_aligncorner_backward(test_case, device):
+def _test_upsample2d_bilinear_aligncorner_backward(test_case, device, obj):
     input = flow.tensor(
         np.arange(1, 5).reshape((1, 1, 2, 2)),
         device=flow.device(device),
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=True)
-    of_out = m(input)
+    if obj == "function":
+        of_out = flow.nn.functional.upsample(
+            input, scale_factor=2.0, mode="bilinear", align_corners=True
+        )
+    elif obj == "module":
+        m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=True)
+        of_out = m(input)
     of_out = of_out.sum()
     of_out.backward()
     np_grad = [[[[3.999999523162842, 4.000000476837158], [3.999999761581421, 4.0]]]]
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
 
 
-def _test_interpolate_nearest_float_scale(test_case, device):
+def _test_interpolate_nearest_float_scale(test_case, device, obj):
     input = flow.tensor(
         np.arange(1, 10).reshape((1, 1, 3, 3)),
         device=flow.device(device),
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.Upsample(scale_factor=1.5)
-    of_out = m(input)
+    if obj == "function":
+        of_out = flow.nn.functional.upsample(input, scale_factor=1.5)
+    elif obj == "module":
+        m = flow.nn.Upsample(scale_factor=1.5)
+        of_out = m(input)
     np_out = np.array(
         [
             [
@@ -277,15 +302,18 @@ def _test_interpolate_nearest_float_scale(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
 
 
-def _test_interpolate_bilinear_float_scale(test_case, device):
+def _test_interpolate_bilinear_float_scale(test_case, device, obj):
     input = flow.tensor(
         np.arange(1, 5, dtype=np.int32).reshape((1, 1, 2, 2)),
         device=flow.device(device),
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
-    of_out = m(input)
+    if obj == "function":
+        of_out = flow.nn.functional.upsample(input, scale_factor=0.5, mode="bilinear")
+    elif obj == "module":
+        m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
+        of_out = m(input)
     np_out = np.array([[[[2.5]]]])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     of_out = of_out.sum()
@@ -298,8 +326,11 @@ def _test_interpolate_bilinear_float_scale(test_case, device):
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
-    of_out = m(input)
+    if obj == "function":
+        of_out = flow.nn.functional.upsample(input, scale_factor=0.5, mode="bilinear")
+    elif obj == "module":
+        m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
+        of_out = m(input)
     np_out = np.array([[[[3.0]]]])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     of_out = of_out.sum()
@@ -312,8 +343,11 @@ def _test_interpolate_bilinear_float_scale(test_case, device):
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.Upsample(size=(4, 4), mode="bilinear")
-    of_out = m(input)
+    if obj == "function":
+        of_out = flow.nn.functional.upsample(input, size=(4, 4), mode="bilinear")
+    elif obj == "module":
+        m = flow.nn.Upsample(size=(4, 4), mode="bilinear")
+        of_out = m(input)
     np_out = np.array(
         [
             [
@@ -335,15 +369,20 @@ def _test_interpolate_bilinear_float_scale(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-05, 1e-05))
 
 
-def _test_upsample_bilinear_align_corners(test_case, device):
+def _test_upsample_bilinear_align_corners(test_case, device, obj):
     input = flow.tensor(
         np.arange(1, 5, dtype=np.int32).reshape((1, 1, 2, 2)),
         device=flow.device(device),
         dtype=flow.float32,
         requires_grad=True,
     )
-    m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear", align_corners=True)
-    of_out = m(input)
+    if obj == "function":
+        of_out = flow.nn.functional.upsample(
+            input, scale_factor=0.5, mode="bilinear", align_corners=True
+        )
+    elif obj == "module":
+        m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear", align_corners=True)
+        of_out = m(input)
     np_out = np.array([[[[1.0]]]])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     of_out = of_out.sum()
@@ -359,8 +398,8 @@ class TestUpsample2d(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_upsample2d_bilinear,
             _test_upsample2d_bilinear_aligncorner,
-            _test_UpsamplingNearest2d,
-            _test_UpsamplingBilinear2d,
+            # _test_UpsamplingNearest2d,
+            # _test_UpsamplingBilinear2d,
             _test_upsample2d_4dim,
             _test_upsample2d_bilinear_4dim,
             _test_upsample2d_backward,
@@ -370,7 +409,17 @@ class TestUpsample2d(flow.unittest.TestCase):
             _test_upsample_bilinear_align_corners,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["obj"] = ["function", "module"]
         for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+        subclass_arg_dict = OrderedDict()
+        subclass_arg_dict["test_fun"] = [
+            _test_UpsamplingNearest2d,
+            _test_UpsamplingBilinear2d,
+        ]
+        subclass_arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(subclass_arg_dict):
             arg[0](test_case, *arg[1:])
 
     @unittest.skip(
@@ -381,8 +430,12 @@ class TestUpsample2d(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         m = torch.nn.Upsample(scale_factor=random().to(float), mode="nearest")
-        y = m(x)
-        return y
+        y_m = m(x)
+
+        y_t = torch.nn.functional.upsample(
+            input=x, scale_factor=random().to(float), mode="nearest"
+        )
+        return y_m, y_t
 
     @unittest.skip(
         "The nearest interpolate operation in pytorch has bug, https://github.com/pytorch/pytorch/issues/65200"
@@ -392,8 +445,12 @@ class TestUpsample2d(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device=device, dtype=torch.float16)
         m = torch.nn.Upsample(scale_factor=random().to(float), mode="nearest")
-        y = m(x)
-        return y
+        y_m = m(x)
+
+        y_t = torch.nn.functional.upsample(
+            input=x, scale_factor=random().to(float), mode="nearest"
+        )
+        return y_m, y_t
 
     # The forward and backward result in cpu and cuda of bilinear interpolate operation in PyTorch is different
     # in some corner cases. OneFlow has the same cpu and cuda results with PyTorch's cuda result.
@@ -408,8 +465,14 @@ class TestUpsample2d(flow.unittest.TestCase):
             mode="bilinear",
             align_corners=random_bool(),
         )
-        y = m(x)
-        return y
+        y_m = m(x)
+        y_f = torch.nn.functional.upsample(
+            input=x,
+            scale_factor=random().to(float),
+            mode="bilinear",
+            align_corners=random_bool(),
+        )
+        return y_m, y_f
 
     @autotest(atol=1e-5)
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -420,32 +483,45 @@ class TestUpsample2d(flow.unittest.TestCase):
             mode="bicubic",
             align_corners=random_bool(),
         )
-        y = m(x)
-        return y
+        y_m = m(x)
+
+        y_f = torch.nn.functional.upsample(
+            input=x,
+            scale_factor=random().to(float),
+            mode="bicubic",
+            align_corners=random_bool(),
+        )
+        return y_m, y_f
 
     @autotest(n=5, atol=1e-5)
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample1d_nearest_output_size(test_case):
         x = random_tensor(ndim=3, dim0=1, dim1=2, dim2=12).to("cuda")
         m = torch.nn.Upsample(size=(13), mode="nearest")
-        y = m(x)
-        return y
+        y_m = m(x)
+
+        y_f = torch.nn.functional.upsample(x, size=(13), mode="nearest")
+        return y_m, y_f
 
     @autotest(n=5, atol=1e-5)
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample2d_nearest_output_size(test_case):
         x = random_tensor(ndim=4, dim0=1, dim1=1, dim2=1, dim3=937).to("cuda")
         m = torch.nn.Upsample(size=(1, 30), mode="nearest")
-        y = m(x)
-        return y
+        y_m = m(x)
+
+        y_f = torch.nn.functional.upsample(input=x, size=(1, 30), mode="nearest")
+        return y_m, y_f
 
     @autotest(n=5, atol=1e-5)
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample3d_nearest_output_size(test_case):
         x = random_tensor(ndim=5, dim0=1, dim1=1, dim2=6, dim3=12, dim4=6).to("cuda")
         m = torch.nn.Upsample(size=(8, 10, 7), mode="nearest")
-        y = m(x)
-        return y
+        y_m = m(x)
+
+        y_f = torch.nn.functional.upsample(input=x, size=(8, 10, 7), mode="nearest")
+        return y_m, y_f
 
     @autotest(n=5, atol=1e-5)
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -453,32 +529,40 @@ class TestUpsample2d(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=3, dim0=1, dim1=2, dim2=12).to(device)
         m = torch.nn.Upsample(size=(13), mode="linear")
-        y = m(x)
-        return y
+        y_m = m(x)
+
+        y_f = torch.nn.functional.upsample(input=x, size=(13), mode="linear")
+        return y_m, y_f
 
     @autotest(n=5, atol=1e-5)
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample2d_bilinear_output_size(test_case):
         x = random_tensor(ndim=4, dim0=1, dim1=1, dim2=12, dim3=21).to("cuda")
         m = torch.nn.Upsample(size=(14, 19), mode="bilinear")
-        y = m(x)
-        return y
+        y_m = m(x)
+
+        y_f = torch.nn.functional.upsample(input=x, size=(14, 19), mode="bilinear")
+        return y_m, y_f
 
     @autotest(n=5, atol=1e-5)
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample2d_bicubic_output_size(test_case):
         x = random_tensor(ndim=4, dim0=1, dim1=2, dim2=12, dim3=21).to("cuda")
         m = torch.nn.Upsample(size=(14, 19), mode="bicubic")
-        y = m(x)
-        return y
+        y_m = m(x)
+
+        y_f = torch.nn.functional.upsample(input=x, size=(14, 19), mode="bicubic")
+        return y_m, y_f
 
     @autotest(n=5, atol=1e-5)
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_upsample3d_trilinear_output_size(test_case):
         x = random_tensor(ndim=5, dim0=1, dim1=2, dim2=1, dim3=12, dim4=17).to("cuda")
         m = torch.nn.Upsample(size=(1, 14, 23), mode="trilinear")
-        y = m(x)
-        return y
+        y_m = m(x)
+
+        y_f = torch.nn.functional.upsample(input=x, size=(1, 14, 23), mode="trilinear")
+        return y_m, y_f
 
 
 if __name__ == "__main__":

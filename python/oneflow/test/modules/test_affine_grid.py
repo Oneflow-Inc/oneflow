@@ -30,27 +30,42 @@ import oneflow.unittest
 class TestAffineGrid(flow.unittest.TestCase):
     def test_affine_grid_2d(test_case):
         input = flow.tensor(np.arange(1.0, 7).reshape((1, 2, 3)), dtype=flow.float32)
-        output = flow.nn.functional.affine_grid(
+        output_f = flow.nn.functional.affine_grid(
             input, flow.Size([1, 1, 2, 2]), align_corners=True
+        )
+        output_m = flow.nn.AffineGrid(size=flow.Size([1, 1, 2, 2]), align_corners=True)(
+            input
         )
         groundtruth = np.array([[[[0.0, -3.0], [2.0, 5.0]], [[4.0, 7.0], [6.0, 15.0]]]])
         test_case.assertTrue(
-            np.allclose(output.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
+            np.allclose(output_f.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(output_m.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
         )
 
-        output = flow.nn.functional.affine_grid(
+        output_f = flow.nn.functional.affine_grid(
             input, flow.Size([1, 1, 2, 2]), align_corners=False
         )
+        output_m = flow.nn.AffineGrid(
+            size=flow.Size([1, 1, 2, 2]), align_corners=False
+        )(input)
         groundtruth = np.array([[[[1.5, 1.5], [2.5, 5.5]], [[3.5, 6.5], [4.5, 10.5]]]])
         test_case.assertTrue(
-            np.allclose(output.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
+            np.allclose(output_f.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(output_m.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
         )
 
     def test_affine_grid_3d(test_case):
         input = flow.tensor(np.arange(1.0, 13).reshape((1, 3, 4)), dtype=flow.float32)
-        output = flow.nn.functional.affine_grid(
+        output_f = flow.nn.functional.affine_grid(
             input, flow.Size([1, 1, 2, 2, 2]), align_corners=True
         )
+        output_m = flow.nn.AffineGrid(
+            size=flow.Size([1, 1, 2, 2, 2]), align_corners=True
+        )(input)
         groundtruth = np.array(
             [
                 [
@@ -66,12 +81,18 @@ class TestAffineGrid(flow.unittest.TestCase):
             ]
         )
         test_case.assertTrue(
-            np.allclose(output.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
+            np.allclose(output_f.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(output_m.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
         )
 
-        output = flow.nn.functional.affine_grid(
+        output_f = flow.nn.functional.affine_grid(
             input, flow.Size([1, 1, 2, 2, 2]), align_corners=False
         )
+        output_m = flow.nn.AffineGrid(
+            size=flow.Size([1, 1, 2, 2, 2]), align_corners=False
+        )(input)
         groundtruth = np.array(
             [
                 [
@@ -87,7 +108,10 @@ class TestAffineGrid(flow.unittest.TestCase):
             ]
         )
         test_case.assertTrue(
-            np.allclose(output.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
+            np.allclose(output_f.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(output_m.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
         )
 
     @autotest(n=5, rtol=1e-03, atol=1e-04, check_allclose=False, check_graph=True)
