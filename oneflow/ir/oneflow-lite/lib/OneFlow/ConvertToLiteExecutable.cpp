@@ -116,6 +116,9 @@ static flatbuffers_vec_ref_t createLiteOpAttrs(FlatbufferBuilder& builder, Opera
     } else if (attrType.value() == ::oneflow::kAtListString) {
       strAttrType = "strs";
       serializeStringsAttr(attrBuilder, attrValue);
+    } else if (attrType.value() == ::oneflow::kAtBytes) {
+      strAttrType = "str";
+      serializeStringAttr(attrBuilder, attrValue);
     } else {
       llvm::errs() << "error attribute type: " << attrType.value() << "\n";
       exit(1);
