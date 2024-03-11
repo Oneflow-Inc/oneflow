@@ -33,7 +33,8 @@ RUN yum-config-manager --add-repo https://yum.repos.intel.com/oneapi && \
     rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB && \
     yum update -y && yum install -y epel-release && \
     yum -y install centos-release-scl && \
-    yum install -y intel-oneapi-mkl-devel-2021.2.0 nasm rdma-core-devel devtoolset-7-gcc* rsync gdb
+    yum install -y intel-oneapi-mkl-devel-2021.2.0 nasm rdma-core-devel devtoolset-7-gcc* rsync gdb && \
+    yum -y install cuda-drivers
 
 RUN /opt/python/cp35-cp35m/bin/pip install $pip_args -U cmake==3.18.4.post1 && ln -s /opt/_internal/cpython-3.5.9/bin/cmake /usr/bin/cmake
 
