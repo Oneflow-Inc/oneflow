@@ -16,3 +16,6 @@ set(WITH_MLIR ON CACHE BOOL "")
 set(BUILD_CPP_API ON CACHE BOOL "")
 set(CUDA_NVCC_THREADS_NUMBER 8 CACHE STRING "")
 set(BUILD_FOR_CI ON CACHE BOOL "")
+set(CMAKE_CXX_FLAGS
+    "-Wno-unused-but-set-parameter -Wno-unused-variable -Wno-class-memaccess -Wno-cast-function-type -Wno-comment -Wno-reorder"
+    CACHE STRING "")

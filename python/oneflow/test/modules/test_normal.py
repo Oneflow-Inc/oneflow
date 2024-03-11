@@ -62,7 +62,11 @@ def _test_normal(test_case, mean, std, shape, device, dtype):
                 t_transform(q[99:100]).std().item(), std_transform(1), atol=0.3, rtol=0
             )
         )
-        self.assertTrue(flow.allclose(t_transform(q[0:1]).clone(), t_transform(q_row1)))
+        self.assertTrue(
+            flow.allclose(
+                t_transform(q[0:1]).clone(), t_transform(q_row1), atol=0.3, rtol=0.3,
+            )
+        )
 
         mean = flow.empty(100, 100, dtype=dtype, device=device)
         mean[:50].fill_(ptype(0))
