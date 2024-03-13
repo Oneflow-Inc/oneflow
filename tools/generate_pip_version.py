@@ -17,7 +17,7 @@ version = f"1.0.0"
 assert (
     os.getenv("ONEFLOW_RELEASE_VERSION") != ""
 ), "ONEFLOW_RELEASE_VERSION should be either None or a valid string"
-is_release = False
+is_release = True
 is_nightly = False
 
 date_str = os.getenv("ONEFLOW_NIGHTLY_DATE")
