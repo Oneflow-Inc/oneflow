@@ -41,7 +41,7 @@ if args.cuda:
 else:
     compute_platform = "cpu"
 assert compute_platform
-version += f"+{compute_platform}"
+# version += f"+{compute_platform}"
 
 try:
     git_hash = (
@@ -53,8 +53,8 @@ except:
     git_hash = "unknown"
 
 # append git if not release
-if not os.getenv("ONEFLOW_RELEASE_VERSION") and not os.getenv("ONEFLOW_NIGHTLY_DATE"):
-    version += f".git.{git_hash}"
+# if not os.getenv("ONEFLOW_RELEASE_VERSION") and not os.getenv("ONEFLOW_NIGHTLY_DATE"):
+#    version += f".git.{git_hash}"
 
 
 print(f"-- Generating pip version: {version}, writing to: {args.out}")
