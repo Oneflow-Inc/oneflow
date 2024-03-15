@@ -31,7 +31,7 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 - CUDA Toolkit version 10.0 or above
 - Nvidia driver version 440.33 or above
 
-OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
+  OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
 ## Install
 
@@ -67,11 +67,11 @@ docker pull oneflowinc/oneflow:nightly-cuda11.7
   python3 -m pip install --pre oneflow -f https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cu118
   ```
 
-If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
-```
-python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-```
-For more information on this, please refer to [pypi 镜像使用帮助](https://mirror.tuna.tsinghua.edu.cn/help/pypi/)
+  If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
+  ```
+  python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+  ```
+  For more information on this, please refer to [pypi 镜像使用帮助](https://mirror.tuna.tsinghua.edu.cn/help/pypi/)
 
 ### Install from Source
 
@@ -140,7 +140,7 @@ For more information on this, please refer to [pypi 镜像使用帮助](https://
     ```
     cmake .. -C ../cmake/caches/international/cuda.cmake -DCMAKE_CUDA_ARCHITECTURES=80 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda -DCUDNN_ROOT_DIR=/usr/local/cudnn
     ```
-Here the DCMAKE\_CUDA\_ARCHITECTURES macro is used to specify the CUDA architecture, and the DCUDA\_TOOLKIT\_ROOT\_DIR and DCUDNN\_ROOT\_DIR macros are used to specify the root path of the CUDA Toolkit and CUDNN.
+    Here the DCMAKE\_CUDA\_ARCHITECTURES macro is used to specify the CUDA architecture, and the DCUDA\_TOOLKIT\_ROOT\_DIR and DCUDNN\_ROOT\_DIR macros are used to specify the root path of the CUDA Toolkit and CUDNN.
 
 - Build the project, inside `build` directory, run:
 
