@@ -55,7 +55,7 @@ docker pull oneflowinc/oneflow:nightly-cuda11.7
   python3 -m pip install oneflow
   ```
 
-- To install nightly release of OneFlow with CPU support:
+- To install nightly release of OneFlow with CPU-only support:
 
   ```bash
   python3 -m pip install --pre oneflow -f https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cpu
