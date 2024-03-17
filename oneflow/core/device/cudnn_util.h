@@ -22,6 +22,9 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include "cudnn.h"
+#include "cudnn_frontend.h"
+#include "cudnn_frontend_find_plan.h"
+#include "cudnn_frontend_get_plan.h"
 
 namespace oneflow {
 

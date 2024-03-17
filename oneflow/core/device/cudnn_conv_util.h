@@ -20,6 +20,7 @@ limitations under the License.
 
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/user_op_tensor.h"
 
 namespace oneflow {
 
@@ -167,6 +168,52 @@ cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvReso
                                         cudnnConvolutionBwdDataAlgo_t algo, size_t* sz);
 cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
                                         cudnnConvolutionBwdFilterAlgo_t algo, size_t* sz);
+
+void RunSingleConv(const cudnnHandle_t handle, const cudnnBackendDescriptorType_t desc,
+                   const user_op::Tensor* x, user_op::Tensor* y, const user_op::Tensor* w,
+                   user_op::Tensor* buf, const std::vector<int64_t>& padding,
+                   const std::vector<int64_t>& stride, const std::vector<int64_t>& dilation,
+                   float beta);
+
+cudnn_frontend::EngineConfigList GetConfigs(
+    const cudnnHandle_t handle, const cudnnBackendDescriptorType_t desc, const user_op::Tensor* x,
+    const user_op::Tensor* y, const user_op::Tensor* w, const std::vector<int64_t>& padding,
+    const std::vector<int64_t>& stride, const std::vector<int64_t>& dilation, std::string& tag,
+    float beta);
+
+cudnn_frontend::OperationGraph BuildConvOpGraph(
+    const cudnnHandle_t handle, const cudnnBackendDescriptorType_t desc, const user_op::Tensor* x,
+    const user_op::Tensor* y, const user_op::Tensor* w, const std::vector<int64_t>& padding,
+    const std::vector<int64_t>& stride, const std::vector<int64_t>& dilation, float beta);
+
+cudnn_frontend::OperationGraph BuildConvBiasGraph(
+    const cudnnHandle_t handle, const cudnnBackendDescriptorType_t desc, const user_op::Tensor* x,
+    const user_op::Tensor* w, const user_op::Tensor* b, user_op::Tensor* y,
+    const std::vector<int64_t>& padding, const std::vector<int64_t>& stride,
+    const std::vector<int64_t>& dilation);
+
+cudnn_frontend::Tensor GetTensorDescriptor(const user_op::Tensor* t, const int64_t id);
+
+cudnn_frontend::ConvDesc GetConvDescriptor(cudnnDataType_t data_type,
+                                           const std::vector<int64_t>& padding,
+                                           const std::vector<int64_t>& stride,
+                                           const std::vector<int64_t>& dilation);
+
+std::vector<cudnn_frontend::GeneratorSource> GetGeneratorSources(
+    const cudnnBackendDescriptorType_t desc);
+
+void FilterEngineConfigs(cudnn_frontend::EngineConfigList& from,
+                         cudnn_frontend::EngineConfigList& to, bool deterministic);
+
+void TryConfigs(const cudnnHandle_t handle, const user_op::Tensor* x, user_op::Tensor* y,
+                const user_op::Tensor* w, user_op::Tensor* buf,
+                cudnn_frontend::EngineConfigList& configs, const std::string& tag);
+
+bool PlanErrataException(const cudnnHandle_t handle, const std::string& executionPlanTag);
+
+void RunConvPlan(const cudnnHandle_t handle, const user_op::Tensor* x, user_op::Tensor* y,
+                 const user_op::Tensor* w, user_op::Tensor* buf,
+                 const cudnn_frontend::ExecutionPlan& plan);
 
 template<typename perf_t>
 perf_t FindCudnnConvAlgorithm(CudnnConvArgs* args);

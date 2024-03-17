@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/job/lazy_mode.h"
 
 namespace oneflow {
 
@@ -422,6 +423,176 @@ cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvReso
   return cudnnGetConvolutionBackwardFilterWorkspaceSize(res->cudnn_handle(), args.xdesc.Get(),
                                                         args.ydesc.Get(), args.cdesc.Get(),
                                                         args.wdesc.Get(), algo, sz);
+}
+
+void RunSingleConv(const cudnnHandle_t handle, const cudnnBackendDescriptorType_t desc,
+                   const user_op::Tensor* x, user_op::Tensor* y, const user_op::Tensor* w,
+                   user_op::Tensor* buf, const std::vector<int64_t>& padding,
+                   const std::vector<int64_t>& stride, const std::vector<int64_t>& dilation,
+                   float beta) {
+  std::string tag;
+  cudnn_frontend::EngineConfigList configs =
+      GetConfigs(handle, desc, x, y, w, padding, stride, dilation, tag, beta);
+  TryConfigs(handle, x, y, w, buf, configs, tag);
+}
+
+cudnn_frontend::EngineConfigList GetConfigs(
+    const cudnnHandle_t handle, const cudnnBackendDescriptorType_t desc, const user_op::Tensor* x,
+    const user_op::Tensor* y, const user_op::Tensor* w, const std::vector<int64_t>& padding,
+    const std::vector<int64_t>& stride, const std::vector<int64_t>& dilation, std::string& tag,
+    float beta) {
+  auto op_graph = BuildConvOpGraph(handle, desc, x, y, w, padding, stride, dilation, beta);
+  tag = op_graph.getTag();
+  auto sources = GetGeneratorSources(desc);
+  cudnn_frontend::EngineConfigGenerator generator(sources.size(), sources.data());
+  auto configs = generator.generate_engine_config(op_graph);
+  return configs;
+}
+
+cudnn_frontend::OperationGraph BuildConvOpGraph(
+    const cudnnHandle_t handle, const cudnnBackendDescriptorType_t desc, const user_op::Tensor* x,
+    const user_op::Tensor* y, const user_op::Tensor* w, const std::vector<int64_t>& padding,
+    const std::vector<int64_t>& stride, const std::vector<int64_t>& dilation, float beta) {
+  auto data_type = GetCudnnDataType(x->data_type());
+  auto conv_op = cudnn_frontend::OperationBuilder(desc)
+                     .setxDesc(GetTensorDescriptor(x, 'x'))
+                     .setyDesc(GetTensorDescriptor(y, 'y'))
+                     .setwDesc(GetTensorDescriptor(w, 'w'))
+                     .setcDesc(GetConvDescriptor(data_type, padding, stride, dilation))
+                     .setBeta(beta)
+                     .build();
+  std::array<cudnn_frontend::Operation const*, 1> ops = {&conv_op};
+  auto op_graph = cudnn_frontend::OperationGraphBuilder()
+                      .setHandle(handle)
+                      .setOperationGraph(ops.size(), ops.data())
+                      .build();
+  return op_graph;
+}
+
+cudnn_frontend::Tensor GetTensorDescriptor(const user_op::Tensor* t, const int64_t id) {
+  auto dim = t->shape_view();
+  auto stride = t->stride();
+  auto data_type = GetCudnnDataType(t->data_type());
+  return cudnn_frontend::TensorBuilder()
+      .setDim(dim.size(), dim.data())
+      .setStride(stride.size(), stride.data())
+      .setId(id)
+      .setAlignment(16)
+      .setDataType(data_type)
+      .build();
+}
+
+cudnn_frontend::ConvDesc GetConvDescriptor(cudnnDataType_t data_type,
+                                           const std::vector<int64_t>& padding,
+                                           const std::vector<int64_t>& stride,
+                                           const std::vector<int64_t>& dilation) {
+  uint64_t ndim = stride.size();
+  return cudnn_frontend::ConvDescBuilder()
+      .setDataType(data_type)
+      .setMathMode(CUDNN_CROSS_CORRELATION)
+      .setNDims(ndim)
+      .setStrides(ndim, stride.data())
+      .setPrePadding(ndim, padding.data())
+      .setPostPadding(ndim, padding.data())
+      .setDilation(ndim, dilation.data())
+      .build();
+}
+
+std::vector<cudnn_frontend::GeneratorSource> GetGeneratorSources(
+    const cudnnBackendDescriptorType_t desc) {
+  bool deterministic = Singleton<ResourceDesc, ForSession>::Get()
+                           ->resource()
+                           .cudnn_conf()
+                           .cudnn_conv_use_deterministic_algo_only();
+  // Method for engine config generator based on heuristics
+  const auto heurgen_method =
+      [deterministic](cudnn_frontend::OperationGraph& opGraph) -> cudnn_frontend::EngineConfigList {
+    bool heuristic = Singleton<ResourceDesc, ForSession>::Get()
+                         ->resource()
+                         .cudnn_conf()
+                         .cudnn_conv_heuristic_search_algo()
+                     || (!LazyMode::is_enabled());
+    auto heur_mode = heuristic ? CUDNN_HEUR_MODE_B : CUDNN_HEUR_MODE_A;
+    auto heuristics = cudnn_frontend::EngineHeuristicsBuilder()
+                          .setOperationGraph(opGraph)
+                          .setHeurMode(heur_mode)
+                          .build();
+    auto& engine_configs = heuristics.getEngineConfig(heuristics.getEngineConfigCount());
+    cudnn_frontend::EngineConfigList filtered_configs;
+    FilterEngineConfigs(engine_configs, filtered_configs, deterministic);
+    return filtered_configs;
+  };
+  // Method for engine config generator based on fallback list
+  const auto fallback_method =
+      [&desc,
+       deterministic](cudnn_frontend::OperationGraph& opGraph) -> cudnn_frontend::EngineConfigList {
+    auto fallback = cudnn_frontend::EngineFallbackListBuilder()
+                        .setOperationGraph(opGraph)
+                        .setOperation(desc)
+                        .build();
+    auto& fallback_list = fallback.getFallbackList();
+    cudnn_frontend::EngineConfigList filtered_configs;
+    FilterEngineConfigs(fallback_list, filtered_configs, deterministic);
+    return filtered_configs;
+  };
+  std::vector<cudnn_frontend::GeneratorSource> sources = {heurgen_method, fallback_method};
+  return sources;
+}
+
+void FilterEngineConfigs(cudnn_frontend::EngineConfigList& from,
+                         cudnn_frontend::EngineConfigList& to, bool deterministic) {
+  auto filter = [=](cudnnBackendDescriptor_t c) {
+    if (deterministic) {
+      if (cudnn_frontend::hasNumericalNote<CUDNN_NUMERICAL_NOTE_NONDETERMINISTIC>(c)) {
+        return true;
+      }
+    }
+    if (cudnn_frontend::hasNumericalNote<CUDNN_NUMERICAL_NOTE_DOWN_CONVERT_INPUTS>(c)) {
+      return true;
+    }
+    return false;
+  };
+  cudnn_frontend::filter(from, to, filter);
+}
+
+void TryConfigs(const cudnnHandle_t handle, const user_op::Tensor* x, user_op::Tensor* y,
+                const user_op::Tensor* w, user_op::Tensor* buf,
+                cudnn_frontend::EngineConfigList& configs, const std::string& tag) {
+  for (auto& config : configs) {
+    try {
+      auto plan = cudnn_frontend::ExecutionPlanBuilder()
+                      .setHandle(handle)
+                      .setEngineConfig(config, tag)
+                      .build();
+      if (PlanErrataException(handle, tag)) { continue; }
+      RunConvPlan(handle, x, y, w, buf, plan);
+      return;
+    } catch (cudnn_frontend::cudnnException& e) { continue; }
+  }
+}
+
+bool PlanErrataException(const cudnnHandle_t handle, const std::string& executionPlanTag) {
+  static nlohmann::json errata_json_handle;
+  static bool has_json = cudnn_frontend::load_from_config(errata_json_handle, "");
+  if (!has_json) {
+    return false;
+  } else {
+    return cudnn_frontend::check_errata(errata_json_handle, executionPlanTag, handle,
+                                        []() { return true; });
+  }
+}
+
+void RunConvPlan(const cudnnHandle_t handle, const user_op::Tensor* x, user_op::Tensor* y,
+                 const user_op::Tensor* w, user_op::Tensor* buf,
+                 const cudnn_frontend::ExecutionPlan& plan) {
+  void* data[] = {const_cast<void*>(x->dptr()), y->mut_dptr(), const_cast<void*>(w->dptr())};
+  int64_t ids[] = {'x', 'y', 'w'};
+  auto variantPack = cudnn_frontend::VariantPackBuilder()
+                         .setWorkspacePointer(buf->mut_dptr())
+                         .setDataPointers(3, data)
+                         .setUids(3, ids)
+                         .build();
+  OF_CUDNN_CHECK(cudnnBackendExecute(handle, plan.get_raw_desc(), variantPack.get_raw_desc()));
 }
 
 template<>
