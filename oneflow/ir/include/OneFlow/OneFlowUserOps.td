@@ -4497,6 +4497,43 @@ def OneFlow_AbsGradOp : OneFlow_BaseOp<"abs_grad", [NoMemoryEffect, DeclareOpInt
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_CDistOp : OneFlow_BaseOp<"cdist", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x1,
+    OneFlow_Tensor:$x2
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "2.0">:$p
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_CDistGradOp : OneFlow_BaseOp<"cdist_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x1,
+    OneFlow_Tensor:$x2,
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx1,
+    OneFlow_Tensor:$dx2
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "2.0">:$p
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_ErfOp : OneFlow_BaseOp<"erf", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x

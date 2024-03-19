@@ -3431,6 +3431,83 @@ class CosineSimilarityFunctor {
   }
 };
 
+class CDistFunctor {
+ public:
+  CDistFunctor() {
+    op_ = CHECK_JUST(OpBuilder("cdist").Input("x1").Input("x2").Output("out").Build());
+  }
+  Maybe<Tensor> euclidean_dist(const std::shared_ptr<Tensor>& x1,
+                               const std::shared_ptr<Tensor>& x2) const {
+    const auto& x1_norm = JUST(ReduceSum(JUST(ScalarPow(x1, 2, false)), {-1}, true));
+    const auto& x2_norm = JUST(ReduceSum(JUST(ScalarPow(x2, 2, false)), {-1}, true));
+    const auto& x1_ones = JUST(OnesLike(x1_norm));
+    const auto& x2_ones = JUST(OnesLike(x2_norm));
+    const auto& x1_cat = JUST(Concat({JUST(ScalarMul(x1, -2, false)), x1_norm, x1_ones}, -1));
+    const auto& x2_cat = JUST(Concat({x2, x2_ones, x2_norm}, -1));
+    const auto& result =
+        JUST(MatMul(x1_cat, JUST(Transpose2dim(x2_cat, -1, -2)), false, false, 1.0));
+    return Sqrt(JUST(ClampMin(result, 0.0)));
+  };
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x1, const std::shared_ptr<Tensor>& x2,
+                           const double& p, const Optional<std::string>& compute_mode) const {
+    const int64_t x1_ndim = x1->ndim();
+    const int64_t x2_ndim = x2->ndim();
+    CHECK_OR_RETURN(x1_ndim >= 2) << "cdist only supports at least 2D tensors, X1 got: "
+                                  << x1->ndim() << "D";
+    CHECK_OR_RETURN(x2_ndim >= 2) << "cdist only supports at least 2D tensors, X2 got: "
+                                  << x2->ndim() << "D";
+    CHECK_OR_RETURN(x1->dim(x1_ndim - 1) == x2->dim(x2_ndim - 1))
+        << "X1 and X2 must have the same number of columns. X1: " << x1->dim(x1_ndim - 1)
+        << " X2: " << x2->dim(x2_ndim - 1);
+    CHECK_OR_RETURN(p >= 0) << "cdist only supports non-negative p values, got " << p;
+
+    if (compute_mode.has_value()) {
+      OF_LOG_ONCE(LOG(WARNING)
+                  << "'compute_mode' argument is not supported yet, cdist "
+                     "will not use matrix multiplication approach to calculate euclidean distance");
+    }
+
+    int64_t r1 = x1->dim(x1_ndim - 2);
+    int64_t r2 = x2->dim(x2_ndim - 2);
+    int64_t d = x1->dim(x1_ndim - 1);
+
+    std::vector<Shape> shape_vector = {
+        Shape(DimVector({x1->shape()->begin(), x1->shape()->end() - 2})),
+        Shape(DimVector({x2->shape()->begin(), x2->shape()->end() - 2})),
+    };
+    auto broadcasted_shape = JUST(BroadcastShapes(shape_vector));
+    Shape x1_expand_shape(*broadcasted_shape);
+    x1_expand_shape.emplace_back(r1);
+    x1_expand_shape.emplace_back(d);
+    broadcasted_shape->emplace_back(r2);
+    broadcasted_shape->emplace_back(d);
+
+    const auto x1_expand = JUST(Expand(x1, x1_expand_shape));
+    const auto x2_expand = JUST(Expand(x2, *broadcasted_shape));
+
+    // mm_for_euclid_dist has accuracy issue
+    // if (p == 2 && (mode == 1 || (mode == 0 && (r1 > 25 || r2 > 25)))) {
+    //   shape output_shape(max_batch_shape);
+    //   output_shape.emplace_back(r1);
+    //   output_shape.emplace_back(r2);
+    //   return JUST(Reshape(JUST(euclidean_dist(x1_expand, x2_expand)), output_shape));
+    // }
+
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+             .AddInputs({x1_expand, x2_expand})
+             .Apply());
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("p");
+    attrs.SetAllAttrs(p);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x1, x2}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class L2NormalizeFunctor {
  public:
   L2NormalizeFunctor() {
@@ -5503,6 +5580,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PairwiseDistanceFunctor>("PairwiseDistance");
   m.add_functor<impl::CosineSimilarityFunctor>("CosineSimilarity");
   m.add_functor<impl::NormalizeFunctor>("Normalize");
+  m.add_functor<impl::CDistFunctor>("CDist");
   m.add_functor<impl::L2NormalizeFunctor>("L2Normalize");
   m.add_functor<impl::L2NormalizeGradFunctor>("L2NormalizeGrad");
   m.add_functor<impl::FusedBiasAddGeluFunctor>("FusedBiasAddGelu");
