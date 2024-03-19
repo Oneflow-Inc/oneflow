@@ -619,6 +619,20 @@ class SoftplusGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+
+class SoftplusGradGradFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, const std::shared_ptr<Tensor>& dydx,
+                           const double& beta, const double& threshold) const {
+    const auto& x = functional::ScalarMul(input, beta, false);
+    const auto& z = functional::SigmoidGrad(JUST(x), dydx);
+    const auto& b = functional::ScalarLogicalLess(JUST(x), threshold);
+    const auto& c = functional::ScalarMul(JUST(b), beta, false);
+    return functional::Mul(JUST(z), JUST(c));
+  }
+};
+
+
 class SiluFunctor : public UnaryFunctor {
  public:
   SiluFunctor() { op_ = CHECK_JUST(one::OpBuilder("silu").Input("in").Output("out").Build()); }
@@ -813,6 +827,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RReluFunctor>("RRelu");
   m.add_functor<impl::RReluInplaceFunctor>("RReluInplace");
   m.add_functor<impl::SoftplusFunctor>("Softplus");
+  m.add_functor<impl::SoftplusGradGradFunctor>("SoftplusGradGrad");
   m.add_functor<impl::SoftplusGradFunctor>("SoftplusGrad");
   m.add_functor<impl::SiluFunctor>("Silu");
   m.add_functor<impl::SiluGradFunctor>("SiluGrad");
