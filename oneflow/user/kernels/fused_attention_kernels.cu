@@ -26,9 +26,116 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "trt_flash_attention/fmha.h"
 #include "trt_flash_attention/fmha_flash_attention.h"
+#include "oneflow/core/ep/include/primitive/batch_matmul.h"
+#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/user/kernels/collective_communication/include/collective_communication.h"
+#include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
+#include "oneflow/core/ep/include/primitive/unary_op.h"
+#include "oneflow/core/ep/cuda/primitive/unary_functor.cuh"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/cuda/rms_norm.cuh"
 
 namespace oneflow {
+namespace {
 
+template<typename SRC, typename DST>
+struct AddResidualLoad {
+  AddResidualLoad(const SRC* src, const SRC* residual, SRC* residual_add_out, int64_t row_size)
+      : src(src), residual(residual), residual_add_out(residual_add_out), row_size(row_size) {}
+  template<int N>
+  __device__ void load(DST* dst, int64_t row, int64_t col) const {
+    using PackType = cuda::layer_norm::Pack<SRC, N>;
+    PackType src_pack;
+    PackType residual_pack;
+    PackType residual_add_pack;
+    const int64_t offset = (row * row_size + col) / N;
+    src_pack.storage = *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(src) + offset);
+    residual_pack.storage =
+        *(reinterpret_cast<const cuda::layer_norm::PackType<SRC, N>*>(residual) + offset);
+#pragma unroll
+    for (int i = 0; i < N; ++i) {
+      residual_add_pack.elem[i] = src_pack.elem[i] + residual_pack.elem[i];
+      dst[i] = static_cast<DST>(residual_add_pack.elem[i]);
+    }
+    *(reinterpret_cast<PackType*>(residual_add_out) + offset) = residual_add_pack;
+  }
+  const SRC* src;
+  const SRC* residual;
+  SRC* residual_add_out;
+  int64_t row_size;
+};
+
+template<typename SRC, typename DST, bool affine>
+struct AffineStore {
+  AffineStore(DST* dst, const DST* weight, int32_t row_size)
+      : dst(dst), weight(weight), row_size(row_size) {}
+
+  template<int N>
+  __device__ void store(const SRC* src, int64_t row, int64_t col) {
+    using PackType = cuda::layer_norm::Pack<DST, N>;
+    PackType dst_pack;
+    PackType weight_pack;
+    const int32_t offset = (row * row_size + col) / N;
+    const int32_t weight_offset = col / N;
+    if (affine) {
+      weight_pack.storage =
+          *(reinterpret_cast<const cuda::layer_norm::PackType<DST, N>*>(weight) + weight_offset);
+    }
+#pragma unroll
+    for (int i = 0; i < N; ++i) {
+      if (affine) {
+        dst_pack.elem[i] = static_cast<DST>(src[i]) * weight_pack.elem[i];
+      } else {
+        dst_pack.elem[i] = static_cast<DST>(src[i]);
+      }
+    }
+    *(reinterpret_cast<cuda::layer_norm::PackType<DST, N>*>(dst) + offset) = dst_pack.storage;
+  }
+
+  DST* dst;
+  const DST* weight;
+  int32_t row_size;
+};
+
+template<typename T, typename ComputeType>
+void DispatchAddResidualRmsNormOutputAffine(ep::Stream* stream, const int64_t nrow,
+                                            const int64_t ncol, const double eps, const T* residual,
+                                            const T* x_dptr, const T* w_dptr, T* residual_out_dptr,
+                                            T* rms_out_dptr, ComputeType* inv_rms) {
+  AddResidualLoad<T, ComputeType> load(x_dptr, residual, residual_out_dptr, ncol);
+  AffineStore<ComputeType, T, /*affine*/ true> store(rms_out_dptr, w_dptr, ncol);
+  OF_CUDA_CHECK((cuda::rms_norm::LaunchRmsNorm<decltype(load), decltype(store), ComputeType>(
+      stream->As<ep::CudaStream>()->cuda_stream(), load, store, nrow, ncol, eps, inv_rms)));
+};
+
+template<typename T>
+struct Add {
+  __device__ __forceinline__ T operator()(const T a, const T b) const { return a + b; }
+};
+template<>
+struct Add<half> {
+  __device__ __forceinline__ half operator()(const half& a, const half& b) const {
+    return __float2half(__half2float(a) + __half2float(b));
+  }
+};
+
+template<typename Act, typename T>
+__global__ void BinaryWithAct(Act act, int64_t m, int64_t n, T* r, const T* a, const T* b) {
+  for (int64_t i = 0; i < m; ++i) {
+    CUDA_1D_KERNEL_LOOP_T(int64_t, j, n) {
+      r[n * i + j] = act(a[2 * i * n + j]) * b[2 * i * n + j];
+    }
+  }
+}
+
+}  // namespace
+namespace cuda {
+namespace rms_norm {
+template<typename T, typename ComputeType>
+void RmsNormForward(ep::Stream* stream, const int64_t nrow, const int64_t ncol, const double eps,
+                    const T* x_dptr, const T* w_dptr, T* y_dptr, ComputeType* inv_rms);
+}
+}  // namespace cuda
 namespace user_op {
 
 namespace {
@@ -1429,6 +1536,422 @@ REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(half);
 REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(nv_bfloat16);
 #endif  // CUDA_VERSION >= 11000
 
+class EagerCclOpKernelCache final : public user_op::OpKernelCache {
+ public:
+  explicit EagerCclOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  ~EagerCclOpKernelCache() override = default;
+
+  const std::shared_ptr<ccl::CommunicationContext>& communication_ctx() const {
+    return communication_ctx_;
+  }
+  int64_t num_of_rank() const { return num_of_rank_; }
+
+ private:
+  void Init(user_op::KernelCacheContext* ctx) {
+    const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
+    ParallelConf parallel_conf;
+    CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
+    Symbol<ParallelDesc> parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+    num_of_rank_ = parallel_desc->parallel_num();
+    if (num_of_rank_ > 1) {
+      communication_ctx_ =
+          ccl::NewCommunicationContext(parallel_desc->device_type(), parallel_desc);
+    }
+  }
+  std::shared_ptr<ccl::CommunicationContext> communication_ctx_;
+  int64_t num_of_rank_;
+};
+
+void InitEagerCclOpKernelCache(user_op::KernelCacheContext* ctx,
+                               std::shared_ptr<user_op::OpKernelCache>* cache_ptr) {
+  if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerCclOpKernelCache>(ctx); }
+}
+
+template<typename T, typename IndexType>
+struct RotaryAndConcatParam {
+  const T* x;
+  const T* past_x;
+  T* out;
+  IndexType x_b_stride, x_m_stride, x_h_stride, x_k_stride;
+  IndexType past_x_b_stride, past_x_m_stride, past_x_h_stride, past_x_k_stride;
+  IndexType out_b_stride, out_m_stride, out_h_stride, out_k_stride;
+  const IndexType* position_ids;
+  IndexType past_m;
+  IndexType num_elems;
+  IndexType position_b_stride;
+  int rotary_size;
+  int rotate_stride;
+  float inv_rotary_size;
+  float theta;
+};
+
+template<typename T, typename IndexType>
+struct RotaryAndConcatParams {
+  RotaryAndConcatParam<T, IndexType> q_param, k_param, v_param;
+};
+
+template<typename T, typename IndexType, bool DoRotaryEmb, bool MFirst>
+__device__ void rotary_and_concat(RotaryAndConcatParam<T, IndexType> param) {
+  CUDA_1D_KERNEL_LOOP_T(IndexType, i, param.num_elems) {
+    IndexType b_idx = i / param.out_b_stride;
+    IndexType b_off = i - b_idx * param.out_b_stride;
+    IndexType m_idx, h_idx, k_idx;
+    if (MFirst) {  // BMHK
+      m_idx = b_off / param.out_m_stride;
+      IndexType m_off = b_off - m_idx * param.out_m_stride;
+      h_idx = m_off / param.out_h_stride;
+      k_idx = m_off - h_idx * param.out_h_stride;
+    } else {  // BHMK
+      h_idx = b_off / param.out_h_stride;
+      IndexType h_off = b_off - h_idx * param.out_h_stride;
+      m_idx = h_off / param.out_m_stride;
+      k_idx = h_off - m_idx * param.out_m_stride;
+    }
+    T v;
+    if (m_idx < param.past_m) {
+      v = param.past_x[b_idx * param.past_x_b_stride + m_idx * param.past_x_m_stride
+                       + h_idx * param.past_x_h_stride + k_idx];
+    } else {
+      const int position_m_idx = m_idx - param.past_m;
+      IndexType x_offset = b_idx * param.x_b_stride + position_m_idx * param.x_m_stride
+                           + h_idx * param.x_h_stride + k_idx;
+      if (DoRotaryEmb) {
+        const IndexType position_id_offset = b_idx * param.position_b_stride + position_m_idx;
+        const IndexType position =
+            param.position_ids ? param.position_ids[position_id_offset] : position_m_idx;
+        T val = position
+                * expf(2.0f * static_cast<float>(k_idx % (param.rotary_size >> 1))
+                       * param.inv_rotary_size * logf(param.theta));
+        T cos_val = cosf(val);
+        T sin_val = sinf(val);
+        T x1 = *(param.x + x_offset);
+        T x2 = (k_idx < param.rotate_stride)
+                   ? static_cast<T>(-*(param.x + x_offset + param.rotate_stride))
+                   : *(param.x + x_offset - param.rotate_stride);
+        v = cos_val * x1 + sin_val * x2;
+      } else {
+        v = param.x[x_offset];
+      }
+    }
+    param.out[i] = v;
+  }
+}
+
+// plane kernel here, no pack
+template<typename T, typename IndexType>
+__global__ void fused_rotary_qk_concat_past_kv(RotaryAndConcatParams<T, IndexType> params) {
+  if (blockIdx.y == 0) {
+    rotary_and_concat<T, IndexType, true, true>(params.q_param);
+  } else if (blockIdx.y == 1) {
+    rotary_and_concat<T, IndexType, true, false>(params.k_param);
+  } else if (blockIdx.y == 2) {
+    rotary_and_concat<T, IndexType, false, false>(params.v_param);
+  } else {
+    // do nothing
+  }
+}
+
+template<typename T>
+class LlamaDecoderLayerForwardKernel final : public user_op::OpKernel {
+ public:
+  LlamaDecoderLayerForwardKernel() = default;
+  ~LlamaDecoderLayerForwardKernel() override = default;
+
+  void InitOpKernelCacheWithFlags(
+      user_op::KernelCacheContext* ctx, int8_t flag,
+      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
+  }
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
+    CHECK(kernel_cache != nullptr);
+    //  input tensors
+    bool has_past_kv = ctx->has_input("past_keys", 0);
+    user_op::Tensor* hidden_states = ctx->Tensor4ArgNameAndIndex("hidden_states", 0);
+    const user_op::Tensor* position_ids = ctx->Tensor4ArgNameAndIndex("position_ids", 0);
+
+    // output tensors
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    user_op::Tensor* output = ctx->Tensor4ArgNameAndIndex("output", 0);
+
+    // attrs && constants
+    const int64_t head_size = ctx->Attr<int64_t>("head_size");
+    const int64_t num_layers = ctx->Attr<int64_t>("num_layers");
+    auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
+    constexpr uint32_t block_size = 256;
+    // b, m, h, k
+    using IndexType = int64_t;
+    auto input_shape = hidden_states->shape_view();
+    const IndexType b = input_shape.At(0);
+    const IndexType m = input_shape.At(1);
+    IndexType h = input_shape.At(2) / head_size;
+    IndexType k = head_size;
+    IndexType past_m = 0, past_num_elems = 0;
+    if (has_past_kv) {
+      past_m = ctx->Tensor4ArgNameAndIndex("past_keys", 0)->shape_view().At(2);
+      past_num_elems = ctx->Tensor4ArgNameAndIndex("past_keys", 0)->shape_view().elem_cnt();
+    }
+    const IndexType bm = b * m;
+    const IndexType input_num_elements = bm * h * k;
+    const IndexType activation_size = GetCudaAlignedSize(sizeof(T) * input_num_elements);
+
+    // main loop
+    for (int i = 0; i < num_layers; i++) {
+      const user_op::Tensor* input_norm_weight =
+          ctx->Tensor4ArgNameAndIndex("input_norm_weights", i);
+      const user_op::Tensor* qkv_weight = ctx->Tensor4ArgNameAndIndex("qkv_weights", i);
+      const user_op::Tensor* attn_out_weight = ctx->Tensor4ArgNameAndIndex("attn_out_weights", i);
+      const user_op::Tensor* post_norm_weight = ctx->Tensor4ArgNameAndIndex("post_norm_weights", i);
+      const user_op::Tensor* glu_weight = ctx->Tensor4ArgNameAndIndex("glu_weights", i);
+      const user_op::Tensor* mlp_down_weight = ctx->Tensor4ArgNameAndIndex("mlp_down_weights", i);
+      user_op::Tensor* concat_key = ctx->Tensor4ArgNameAndIndex("concat_keys", i);
+      user_op::Tensor* concat_value = ctx->Tensor4ArgNameAndIndex("concat_values", i);
+      user_op::Tensor* past_key = nullptr;
+      user_op::Tensor* past_value = nullptr;
+      if (has_past_kv) {
+        past_key = ctx->Tensor4ArgNameAndIndex("past_keys", i);
+        past_value = ctx->Tensor4ArgNameAndIndex("past_values", i);
+      }
+      // step1: input rms norm
+      using RmsNormComputeType = float;
+      cuda::rms_norm::RmsNormForward(
+          cuda_stream, bm, h * k, 1e-6, hidden_states->dptr<T>(), input_norm_weight->dptr<T>(),
+          tmp_buffer->mut_dptr<T>(),
+          reinterpret_cast<RmsNormComputeType*>(tmp_buffer->mut_dptr<char>() + activation_size));
+
+      // step2: q, k, v
+      auto qkv_weight_shape = qkv_weight->shape_view();
+      T* tmp_qkv_ptr = tmp_buffer->mut_dptr<T>() + input_num_elements;
+      auto matmul_m = bm, matmul_k = h * k, matmul_n = qkv_weight_shape.At(0);
+      IndexType num_elements = matmul_m * matmul_n / 3;
+      h = matmul_n / k / 3;  // split h for parallel
+
+      auto batch_matmul = ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
+          ctx->device_type(), /*data_type */ hidden_states->data_type(),
+          /*trans_a*/ ep::primitive::BlasTransposeType::N,
+          /*trans_b*/ ep::primitive::BlasTransposeType::T);
+      CHECK(batch_matmul);
+      batch_matmul->Launch(cuda_stream, b, m, qkv_weight_shape.At(0), qkv_weight_shape.At(1),
+                           /*alpha*/ 1.0, tmp_buffer->dptr(), qkv_weight->dptr(),
+                           /*beta*/ 0.0, reinterpret_cast<void*>(tmp_qkv_ptr));
+
+      // step3&4 : rotary_embedding + concat_past_kv  BM(HK) -> BMHK, PlaneKernel use pack_size=1
+      // out:BMHK,  x: BM(HK), tmp_buffer: rms_out, q, k, v
+      auto position_axes = position_ids->shape_view().NumAxes();
+      const IndexType position_m =
+          static_cast<IndexType>(position_ids->shape_view()[position_axes - 1]);
+
+      RotaryAndConcatParams<T, IndexType> rotaryAndConcatParams;
+
+      rotaryAndConcatParams.q_param.x = tmp_qkv_ptr;
+      rotaryAndConcatParams.q_param.past_x = nullptr;
+      rotaryAndConcatParams.q_param.out = tmp_buffer->mut_dptr<T>();
+      rotaryAndConcatParams.q_param.x_b_stride = m * h * k * 3;
+      rotaryAndConcatParams.q_param.x_m_stride = h * k * 3;
+      rotaryAndConcatParams.q_param.x_h_stride = k;
+      rotaryAndConcatParams.q_param.x_k_stride = 1;
+      rotaryAndConcatParams.q_param.past_x_b_stride = -1;  // no past_q
+      rotaryAndConcatParams.q_param.past_x_m_stride = -1;
+      rotaryAndConcatParams.q_param.past_x_h_stride = -1;
+      rotaryAndConcatParams.q_param.past_x_k_stride = -1;
+      rotaryAndConcatParams.q_param.out_b_stride = m * h * k;
+      rotaryAndConcatParams.q_param.out_m_stride = h * k;
+      rotaryAndConcatParams.q_param.out_h_stride = k;
+      rotaryAndConcatParams.q_param.out_k_stride = 1;
+      rotaryAndConcatParams.q_param.position_ids = position_ids->dptr<IndexType>();
+      rotaryAndConcatParams.q_param.past_m = 0;
+      rotaryAndConcatParams.q_param.num_elems = num_elements;
+      rotaryAndConcatParams.q_param.position_b_stride = position_m;
+      rotaryAndConcatParams.q_param.rotary_size = k;
+      rotaryAndConcatParams.q_param.rotate_stride = k / 2;
+      rotaryAndConcatParams.q_param.inv_rotary_size = 1.0f / k;
+      rotaryAndConcatParams.q_param.theta = 1.0f / 10000;
+      // past_key:bhmk, key:bmhk, out: bhmk
+      rotaryAndConcatParams.k_param.x = tmp_qkv_ptr + h * k;
+      rotaryAndConcatParams.k_param.past_x = past_key == nullptr ? nullptr : past_key->dptr<T>();
+      rotaryAndConcatParams.k_param.out = concat_key->mut_dptr<T>();
+      rotaryAndConcatParams.k_param.x_b_stride = m * h * k * 3;
+      rotaryAndConcatParams.k_param.x_m_stride = h * k * 3;
+      rotaryAndConcatParams.k_param.x_h_stride = k;
+      rotaryAndConcatParams.k_param.x_k_stride = 1;
+      rotaryAndConcatParams.k_param.past_x_b_stride = past_m * h * k;
+      rotaryAndConcatParams.k_param.past_x_m_stride = k;
+      rotaryAndConcatParams.k_param.past_x_h_stride = past_m * k;
+      rotaryAndConcatParams.k_param.past_x_k_stride = 1;
+      rotaryAndConcatParams.k_param.out_b_stride = (past_m + m) * h * k;
+      rotaryAndConcatParams.k_param.out_m_stride = k;
+      rotaryAndConcatParams.k_param.out_h_stride = (past_m + m) * k;
+      rotaryAndConcatParams.k_param.out_k_stride = 1;
+      rotaryAndConcatParams.k_param.position_ids = position_ids->dptr<IndexType>();
+      rotaryAndConcatParams.k_param.past_m = past_m;
+      rotaryAndConcatParams.k_param.num_elems = num_elements + past_num_elems;
+      rotaryAndConcatParams.k_param.position_b_stride = position_m;
+      rotaryAndConcatParams.k_param.rotary_size = k;
+      rotaryAndConcatParams.k_param.rotate_stride = k / 2;
+      rotaryAndConcatParams.k_param.inv_rotary_size = 1.0f / k;
+      rotaryAndConcatParams.k_param.theta = 1.0f / 10000;
+
+      rotaryAndConcatParams.v_param.x = tmp_qkv_ptr + h * k * 2;
+      rotaryAndConcatParams.v_param.past_x =
+          past_value == nullptr ? nullptr : past_value->dptr<T>();
+      rotaryAndConcatParams.v_param.out = concat_value->mut_dptr<T>();
+      rotaryAndConcatParams.v_param.x_b_stride = m * h * k * 3;
+      rotaryAndConcatParams.v_param.x_m_stride = h * k * 3;
+      rotaryAndConcatParams.v_param.x_h_stride = k;
+      rotaryAndConcatParams.v_param.x_k_stride = 1;
+      rotaryAndConcatParams.v_param.past_x_b_stride = past_m * h * k;
+      rotaryAndConcatParams.v_param.past_x_m_stride = k;
+      rotaryAndConcatParams.v_param.past_x_h_stride = past_m * k;
+      rotaryAndConcatParams.v_param.past_x_k_stride = 1;
+      rotaryAndConcatParams.v_param.out_b_stride = (past_m + m) * h * k;
+      rotaryAndConcatParams.v_param.out_m_stride = k;
+      rotaryAndConcatParams.v_param.out_h_stride = (past_m + m) * k;
+      rotaryAndConcatParams.v_param.out_k_stride = 1;
+      rotaryAndConcatParams.v_param.position_ids = position_ids->dptr<IndexType>();
+      rotaryAndConcatParams.v_param.past_m = past_m;
+      rotaryAndConcatParams.v_param.num_elems = num_elements + past_num_elems;
+      rotaryAndConcatParams.v_param.position_b_stride = position_m;
+      rotaryAndConcatParams.v_param.rotary_size = k;
+      rotaryAndConcatParams.v_param.rotate_stride = k / 2;
+      rotaryAndConcatParams.v_param.inv_rotary_size = 1.0f / k;
+      rotaryAndConcatParams.v_param.theta = 1.0f / 10000;
+
+      const dim3 grid_size((num_elements + past_num_elems - 1 + block_size) / block_size, 3);
+      fused_rotary_qk_concat_past_kv<T, IndexType>
+          <<<grid_size, block_size, 0, cuda_stream->cuda_stream()>>>(rotaryAndConcatParams);
+
+      // step5: fmha, query: bmhk, key_value: bhmk, out: bm(hk)
+      Params params{};
+      params.data_type = hidden_states->data_type();
+      params.num_batches = b;
+      params.num_heads = h;
+      params.query_seq_len = m;
+      params.kv_seq_len = (past_m + m);
+      params.head_size = k;
+      params.value_head_size = k;
+      params.scale = 1 / std::sqrt(static_cast<float>(k));
+      params.q_stride_b = m * h * k;
+      params.q_stride_m = h * k;
+      params.q_stride_h = k;
+      params.k_stride_b = (past_m + m) * h * k;
+      params.k_stride_m = k;
+      params.k_stride_h = (past_m + m) * k;
+      params.v_stride_b = (past_m + m) * h * k;
+      params.v_stride_m = k;
+      params.v_stride_h = (past_m + m) * k;
+      params.query_ptr = tmp_buffer->dptr<char>() /* + q_offset * GetSizeOfDataType(data_type)*/;
+      params.key_ptr = concat_key->dptr<char>() /* + k_offset * GetSizeOfDataType(data_type)*/;
+      params.value_ptr = concat_value->dptr<char>() /* + v_offset * GetSizeOfDataType(data_type)*/;
+      params.query_seq_start_ptr = nullptr;
+      params.key_seq_start_ptr = nullptr;
+      params.key_seq_len_ptr = nullptr;
+      params.out_ptr = tmp_buffer->mut_dptr<char>() + activation_size;
+      const int64_t tmp_buffer_size = tmp_buffer->shape_view().elem_cnt();
+      params.workspace =
+          reinterpret_cast<void*>(tmp_buffer->mut_dptr<char>() + activation_size * 2);
+      params.workspace_size = tmp_buffer_size - activation_size * 2;
+      params.attn_mask_type = "causal_from_bottom_right";
+      params.causal_diagonal_offset = 0;
+
+      params.attn_bias_ptr = nullptr;
+      params.attn_bias_stride_m = 0;
+      params.attn_bias_stride_h = 0;
+      params.attn_bias_stride_b = 0;
+
+      DispatchCutlassFmha(params, cuda_stream);
+
+      // step 6, attn_out linear, attn_out: BM(hK), attn_out_weight: (HK)(hK)
+      auto out_weight_shape = attn_out_weight->shape_view();
+      batch_matmul->Launch(
+          cuda_stream, b, m, out_weight_shape.At(0), out_weight_shape.At(1),
+          /*alpha*/ 1.0, reinterpret_cast<const void*>(tmp_buffer->dptr<char>() + activation_size),
+          attn_out_weight->dptr(), /*beta*/ 0.0, tmp_buffer->mut_dptr<char>());
+
+      // step 7, AllReduceSum
+      std::unique_ptr<ccl::AllReduce> all_reduce = ccl::NewCollectiveCommunication<ccl::AllReduce>(
+          ctx->device_type(), output->data_type(), ccl::kSum);
+      if (kernel_cache->num_of_rank() > 1) {
+        all_reduce->Launch(ctx->stream(), tmp_buffer->dptr(), tmp_buffer->mut_dptr(),
+                           input_num_elements, kernel_cache->communication_ctx());
+      }
+      // step 8, residual add: out = out + hidden_states
+      // step 9, post rms-norm
+      h = output->shape_view().At(2) / k;
+      /*
+       * output = residual + hidden_states, tmp_buffer stores the result of rms_norm(output)
+       * output is regarded as residual and will be added to the output of MLP
+       */
+      DispatchAddResidualRmsNormOutputAffine<T>(
+          cuda_stream, bm, h * k, 1e-6, hidden_states->dptr<T>(), tmp_buffer->dptr<T>(),
+          post_norm_weight->dptr<T>(), output->mut_dptr<T>(), tmp_buffer->mut_dptr<T>(),
+          reinterpret_cast<RmsNormComputeType*>(tmp_buffer->mut_dptr<char>() + activation_size));
+
+      // step 10, fused_glu, + silu
+      auto glu_matmul_n = glu_weight->shape_view().At(0);
+      T* gate_ptr = tmp_buffer->mut_dptr<T>() + input_num_elements;
+      num_elements = bm * glu_matmul_n / 2;
+      T* up_ptr = gate_ptr + glu_matmul_n / 2;
+
+      batch_matmul->Launch(cuda_stream, b, m, glu_weight->shape_view().At(0),
+                           glu_weight->shape_view().At(1),
+                           /*alpha*/ 1.0, tmp_buffer->dptr(), glu_weight->dptr(),
+                           /*beta*/ 0.0, reinterpret_cast<void*>(gate_ptr));
+
+      // glu_out shape: (b, m, hk)
+      ep::primitive::UnaryFunctor<DeviceType::kCUDA, ep::primitive::UnaryOp::kSilu, T, T> act(0, 0);
+
+      int num_blocks;
+      cuda::elementwise::GetNumBlocks(glu_matmul_n / 2, &num_blocks);
+      BinaryWithAct<decltype(act), T>
+          <<<num_blocks, cuda::elementwise::kBlockSize, 0, cuda_stream->cuda_stream()>>>(
+              act, bm, glu_matmul_n / 2, gate_ptr, gate_ptr, up_ptr);
+
+      // step 11, mlp_down_proj && all_reduce_sum && add_residual
+      auto mlp_down_weight_shape = mlp_down_weight->shape_view();
+      batch_matmul->Launch(cuda_stream, b, m, mlp_down_weight_shape.At(0),
+                           mlp_down_weight_shape.At(1),
+                           /*alpha*/ 1.0, reinterpret_cast<const void*>(gate_ptr),
+                           mlp_down_weight->dptr(), /*beta*/ 0.0, tmp_buffer->mut_dptr());
+
+      if (kernel_cache->num_of_rank() > 1) {
+        all_reduce->Launch(ctx->stream(), tmp_buffer->dptr(), tmp_buffer->mut_dptr(),
+                           input_num_elements, kernel_cache->communication_ctx());
+      }
+
+      cuda::elementwise::Binary(Add<T>(), input_num_elements, output->mut_dptr<T>(),
+                                output->dptr<T>(), tmp_buffer->dptr<T>(),
+                                cuda_stream->cuda_stream());
+      // set up next input
+      hidden_states = output;
+    }
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_LLAMA_DECODER_LAYER_FORWARD_KERNEL(dtype)                                         \
+  REGISTER_USER_KERNEL("llama_decoder_layer_forward")                                              \
+      .SetCreateFn<LlamaDecoderLayerForwardKernel<dtype>>()                                        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
+                       && (user_op::HobDataType("hidden_states", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](InferContext* ctx) -> size_t {                                         \
+        const auto& out_desc = ctx->OutputTensorDesc("output", 0);                                 \
+        size_t buffer_size = 0;                                                                    \
+        buffer_size +=                                                                             \
+            GetCudaAlignedSize(out_desc.shape().elem_cnt() * GetSizeOfDataType(DataType::kFloat)); \
+        buffer_size += GetCudaAlignedSize(out_desc.shape().elem_cnt()                              \
+                                          * GetSizeOfDataType(out_desc.data_type()))               \
+                       * 7;                                                                        \
+        buffer_size += GetCudaAlignedSize((out_desc.shape().At(0) + 1)                             \
+                                          * GetSizeOfDataType(DataType::kInt32));                  \
+        return buffer_size;                                                                        \
+      });
+
+REGISTER_LLAMA_DECODER_LAYER_FORWARD_KERNEL(half);
 }  // namespace
 
 }  // namespace user_op
