@@ -3494,3 +3494,9 @@
 - name: "fused_clip_grad"
   signature: "Tensor (TensorTuple model_diff, Float max_norm, Float norm_type) => FusedClipGrad"
   bind_python: True
+
+
+# - func: _scaled_dot_product_attention_math(Tensor query, Tensor key, Tensor value, Tensor? attn_mask=None, float dropout_p=0.0, bool is_causal=False, Tensor? dropout_mask=None) -> (Tensor, Tensor)
+- name: "scaled_dot_product_attention_math"
+  signature: "TensorTuple (Tensor query, Tensor key, Tensor value, Tensor attn_mask=None, Float dropout_p=0.0, Bool is_causal=False, Tensor dropout_mask=None) => ScaledDotProductAttentionMath"
+  bind_python: True
