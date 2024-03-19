@@ -16,7 +16,7 @@ limitations under the License.
 import inspect
 import sys
 
-if sys.version_info > (2, 7) and sys.version_info < (3, 0):
+if (2, 7) < sys.version_info < (3, 0):
 
     def GetArgNameAndDefaultTuple(func):
         """

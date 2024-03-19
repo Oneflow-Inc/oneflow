@@ -130,10 +130,10 @@ class AdamW(Optimizer):
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
         assert (
-            betas[0] >= 0.0 and betas[0] < 1.0
+                0.0 <= betas[0] < 1.0
         ), f"Invalid beta parameter at index 0: {betas[0]}"
         assert (
-            betas[1] >= 0.0 and betas[1] < 1.0
+                0.0 <= betas[1] < 1.0
         ), f"Invalid beta parameter at index 1: {betas[1]}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         options = dict()
