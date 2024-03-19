@@ -227,8 +227,8 @@ Maybe<double> GetCUDAMemoryUsed() {
 
   CHECK_OR_RETURN(deviceCount > 0) << "GPU device does not exist";
 
-  size_t gpu_total_size;
-  size_t gpu_free_size;
+  size_t gpu_total_size = 0;
+  size_t gpu_free_size = 0;
 
   cudaError_t cuda_status = cudaMemGetInfo(&gpu_free_size, &gpu_total_size);
 
@@ -239,6 +239,46 @@ Maybe<double> GetCUDAMemoryUsed() {
   double free_memory = double(gpu_free_size) / (1024.0 * 1024.0);
   return (total_memory - free_memory);
 }
+
+namespace CUDACachingAllocator {
+
+DeviceStats GetCUDADeviceStatus(int device) {
+  cudaError_t error_id = cudaGetDeviceCount(&device);
+  CHECK_OR_THROW(error_id == cudaSuccess)
+      << Error::RuntimeError()
+      << "Error: GetCUDAMemoryUsed fails :" << cudaGetErrorString(error_id);
+  CHECK_OR_THROW(device > 0) << "GPU device does not exist";
+
+  // Memory currently reserved by the mempool
+  uint64_t reserved_mem_current = 0;
+  // High-water mark of memory reserved by the mempool since last reset
+  uint64_t reserved_mem_peak = 0;
+  // Memory currently in use by the mempool
+  uint64_t used_mem_current = 0;
+  // High-water mark of memory
+  uint64_t used_mem_peak = 0;
+
+  cudaMemPool_t mempool{};
+  OF_CUDA_CHECK(cudaDeviceGetDefaultMemPool(&mempool, device));
+  OF_CUDA_CHECK(
+      cudaMemPoolGetAttribute(mempool, cudaMemPoolAttrReservedMemCurrent, &reserved_mem_current));
+  OF_CUDA_CHECK(
+      cudaMemPoolGetAttribute(mempool, cudaMemPoolAttrReservedMemHigh, &reserved_mem_peak));
+  OF_CUDA_CHECK(cudaMemPoolGetAttribute(mempool, cudaMemPoolAttrUsedMemCurrent, &used_mem_current));
+  OF_CUDA_CHECK(cudaMemPoolGetAttribute(mempool, cudaMemPoolAttrUsedMemHigh, &used_mem_peak));
+
+  DeviceStats device_stats;
+  device_stats.allocated_bytes[static_cast<size_t>(StatType::AGGREGATE)].current = used_mem_current;
+  device_stats.allocated_bytes[static_cast<size_t>(StatType::AGGREGATE)].peak = used_mem_peak;
+  device_stats.active_bytes[static_cast<size_t>(StatType::AGGREGATE)].current = used_mem_current;
+  device_stats.active_bytes[static_cast<size_t>(StatType::AGGREGATE)].peak = used_mem_peak;
+  device_stats.reserved_bytes[static_cast<size_t>(StatType::AGGREGATE)].current =
+      reserved_mem_current;
+  device_stats.reserved_bytes[static_cast<size_t>(StatType::AGGREGATE)].peak = reserved_mem_peak;
+  return device_stats;
+}
+
+}  // namespace CUDACachingAllocator
 
 static std::once_flag prop_init_flag;
 static std::vector<cudaDeviceProp> device_props;
