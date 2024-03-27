@@ -17,9 +17,10 @@ limitations under the License.
 #define ONEFLOW_CORE_DEVICE_CUDNN_CONV_UTIL_H_
 
 #ifdef WITH_CUDA
-
+#include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/user_op_tensor.h"
 
 namespace oneflow {
 
@@ -91,6 +92,20 @@ struct CudnnConvArgs final {
                 DataType y_data_type, const ShapeView& y_shape, const std::string& data_format,
                 size_t max_workspace_size, bool heuristic_search, bool use_deterministic_algo_only,
                 bool enable_pseudo_half);
+};
+
+struct CudnnConvArgsV8 final {
+  cudnn_frontend::Tensor xdesc;
+  cudnn_frontend::Tensor ydesc;
+  cudnn_frontend::Tensor wdesc;
+  cudnn_frontend::ConvDesc cdesc;
+  float beta;
+
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvArgsV8);
+  explicit CudnnConvArgsV8(const user_op::InferContext& ctx, const user_op::TensorDesc& x,
+                           const user_op::TensorDesc& y, const user_op::TensorDesc& w);
+  explicit CudnnConvArgsV8(const user_op::KernelComputeContext& ctx, const user_op::Tensor* x,
+                           const user_op::Tensor* y, const user_op::Tensor* w);
 };
 
 class CudnnConvResource {
@@ -167,6 +182,55 @@ cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvReso
                                         cudnnConvolutionBwdDataAlgo_t algo, size_t* sz);
 cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
                                         cudnnConvolutionBwdFilterAlgo_t algo, size_t* sz);
+
+void RunSingleConv(const cudnnHandle_t handle, const cudnnBackendDescriptorType_t desc,
+                   user_op::Tensor* x, user_op::Tensor* y, user_op::Tensor* w, user_op::Tensor* b,
+                   const CudnnConvArgsV8& args);
+
+cudnn_frontend::EngineConfigList GetConfigs(const cudnnHandle_t handle,
+                                            const cudnnBackendDescriptorType_t desc,
+                                            const cudnn_frontend::Tensor& xdesc,
+                                            const cudnn_frontend::Tensor& ydesc,
+                                            const cudnn_frontend::Tensor& wdesc,
+                                            const cudnn_frontend::ConvDesc& cdesc, float beta,
+                                            std::string& tag);
+
+cudnn_frontend::OperationGraph BuildConvOpGraph(const cudnnHandle_t handle,
+                                                const cudnnBackendDescriptorType_t desc,
+                                                const cudnn_frontend::Tensor& xdesc,
+                                                const cudnn_frontend::Tensor& ydesc,
+                                                const cudnn_frontend::Tensor& wdesc,
+                                                const cudnn_frontend::ConvDesc& cdesc, float beta);
+
+cudnn_frontend::Tensor GetTensorDescriptor(const user_op::Tensor* t, const int64_t id);
+
+cudnn_frontend::Tensor GetTensorDescriptor(const user_op::TensorDesc& t, const int64_t id);
+
+cudnn_frontend::ConvDesc GetConvDescriptor(const user_op::InferContext& ctx,
+                                           cudnnDataType_t data_type);
+
+cudnn_frontend::ConvDesc GetConvDescriptor(const user_op::KernelComputeContext& ctx,
+                                           cudnnDataType_t data_type);
+
+std::vector<cudnn_frontend::GeneratorSource> GetGeneratorSources(
+    const cudnnBackendDescriptorType_t desc);
+
+void FilterEngineConfigs(cudnn_frontend::EngineConfigList& from,
+                         cudnn_frontend::EngineConfigList& to, bool deterministic);
+
+void TryConfigs(const cudnnHandle_t handle, user_op::Tensor* x, user_op::Tensor* y,
+                user_op::Tensor* w, user_op::Tensor* buf, cudnn_frontend::EngineConfigList& configs,
+                const std::string& tag);
+
+size_t GetCudnnConvWorkspaceSizeV8(const cudnnHandle_t handle,
+                                   cudnn_frontend::EngineConfigList& configs,
+                                   const std::string& tag);
+
+bool PlanErrataException(const cudnnHandle_t handle, const std::string& executionPlanTag);
+
+void RunConvPlan(const cudnnHandle_t handle, user_op::Tensor* x, user_op::Tensor* y,
+                 user_op::Tensor* w, user_op::Tensor* buf,
+                 const cudnn_frontend::ExecutionPlan& plan);
 
 template<typename perf_t>
 perf_t FindCudnnConvAlgorithm(CudnnConvArgs* args);
