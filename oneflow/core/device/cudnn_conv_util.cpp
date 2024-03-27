@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifdef WITH_CUDA
+#include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/cached_caller.h"
@@ -333,6 +334,22 @@ CudnnConvArgs::CudnnConvArgs(const user_op::KernelComputeContext& ctx, DataType 
   params.max_ws_size = max_workspace_size;
 }
 
+CudnnConvArgsV8::CudnnConvArgsV8(const user_op::InferContext& ctx, const user_op::TensorDesc& x,
+                                 const user_op::TensorDesc& y, const user_op::TensorDesc& w)
+    : xdesc(GetTensorDescriptor(x, 'x')),
+      ydesc(GetTensorDescriptor(y, 'y')),
+      wdesc(GetTensorDescriptor(w, 'w')),
+      cdesc(GetConvDescriptor(ctx, GetCudnnDataType(y.data_type()))),
+      beta(0.0f) {}
+
+CudnnConvArgsV8::CudnnConvArgsV8(const user_op::KernelComputeContext& ctx, const user_op::Tensor* x,
+                                 const user_op::Tensor* y, const user_op::Tensor* w)
+    : xdesc(GetTensorDescriptor(x, 'x')),
+      ydesc(GetTensorDescriptor(y, 'y')),
+      wdesc(GetTensorDescriptor(w, 'w')),
+      cdesc(GetConvDescriptor(ctx, GetCudnnDataType(y->data_type()))),
+      beta(0.0f) {}
+
 ManagedCudnnConvResource::ManagedCudnnConvResource(const CudnnConvArgs& args)
     : handle_(nullptr), x_dptr_(nullptr), w_dptr_(nullptr), y_dptr_(nullptr), ws_dptr_(nullptr) {
   x_byte_size_ = ByteSize4Tensor(args.params.x_dims, args.params.x_ndim, args.params.x_data_type);
@@ -426,22 +443,22 @@ cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvReso
 }
 
 void RunSingleConv(const cudnnHandle_t handle, const cudnnBackendDescriptorType_t desc,
-                   const user_op::Tensor* x, user_op::Tensor* y, const user_op::Tensor* w,
-                   user_op::Tensor* buf, const std::vector<int64_t>& padding,
-                   const std::vector<int64_t>& stride, const std::vector<int64_t>& dilation,
-                   float beta) {
+                   user_op::Tensor* x, user_op::Tensor* y, user_op::Tensor* w, user_op::Tensor* b,
+                   const CudnnConvArgsV8& args) {
   std::string tag;
-  cudnn_frontend::EngineConfigList configs =
-      GetConfigs(handle, desc, x, y, w, padding, stride, dilation, tag, beta);
-  TryConfigs(handle, x, y, w, buf, configs, tag);
+  auto configs =
+      GetConfigs(handle, desc, args.xdesc, args.ydesc, args.wdesc, args.cdesc, args.beta, tag);
+  TryConfigs(handle, x, y, w, b, configs, tag);
 }
 
-cudnn_frontend::EngineConfigList GetConfigs(
-    const cudnnHandle_t handle, const cudnnBackendDescriptorType_t desc, const user_op::Tensor* x,
-    const user_op::Tensor* y, const user_op::Tensor* w, const std::vector<int64_t>& padding,
-    const std::vector<int64_t>& stride, const std::vector<int64_t>& dilation, std::string& tag,
-    float beta) {
-  auto op_graph = BuildConvOpGraph(handle, desc, x, y, w, padding, stride, dilation, beta);
+cudnn_frontend::EngineConfigList GetConfigs(const cudnnHandle_t handle,
+                                            const cudnnBackendDescriptorType_t desc,
+                                            const cudnn_frontend::Tensor& xdesc,
+                                            const cudnn_frontend::Tensor& ydesc,
+                                            const cudnn_frontend::Tensor& wdesc,
+                                            const cudnn_frontend::ConvDesc& cdesc, float beta,
+                                            std::string& tag) {
+  auto op_graph = BuildConvOpGraph(handle, desc, xdesc, ydesc, wdesc, cdesc, beta);
   tag = op_graph.getTag();
   auto sources = GetGeneratorSources(desc);
   cudnn_frontend::EngineConfigGenerator generator(sources.size(), sources.data());
@@ -449,16 +466,17 @@ cudnn_frontend::EngineConfigList GetConfigs(
   return configs;
 }
 
-cudnn_frontend::OperationGraph BuildConvOpGraph(
-    const cudnnHandle_t handle, const cudnnBackendDescriptorType_t desc, const user_op::Tensor* x,
-    const user_op::Tensor* y, const user_op::Tensor* w, const std::vector<int64_t>& padding,
-    const std::vector<int64_t>& stride, const std::vector<int64_t>& dilation, float beta) {
-  auto data_type = GetCudnnDataType(x->data_type());
+cudnn_frontend::OperationGraph BuildConvOpGraph(const cudnnHandle_t handle,
+                                                const cudnnBackendDescriptorType_t desc,
+                                                const cudnn_frontend::Tensor& xdesc,
+                                                const cudnn_frontend::Tensor& ydesc,
+                                                const cudnn_frontend::Tensor& wdesc,
+                                                const cudnn_frontend::ConvDesc& cdesc, float beta) {
   auto conv_op = cudnn_frontend::OperationBuilder(desc)
-                     .setxDesc(GetTensorDescriptor(x, 'x'))
-                     .setyDesc(GetTensorDescriptor(y, 'y'))
-                     .setwDesc(GetTensorDescriptor(w, 'w'))
-                     .setcDesc(GetConvDescriptor(data_type, padding, stride, dilation))
+                     .setxDesc(xdesc)
+                     .setyDesc(ydesc)
+                     .setwDesc(wdesc)
+                     .setcDesc(cdesc)
                      .setBeta(beta)
                      .build();
   std::array<cudnn_frontend::Operation const*, 1> ops = {&conv_op};
@@ -472,20 +490,67 @@ cudnn_frontend::OperationGraph BuildConvOpGraph(
 cudnn_frontend::Tensor GetTensorDescriptor(const user_op::Tensor* t, const int64_t id) {
   auto dim = t->shape_view();
   auto stride = t->stride();
-  auto data_type = GetCudnnDataType(t->data_type());
   return cudnn_frontend::TensorBuilder()
       .setDim(dim.size(), dim.data())
       .setStride(stride.size(), stride.data())
       .setId(id)
-      .setAlignment(16)
-      .setDataType(data_type)
+      .setAlignment(32)
+      .setDataType(GetCudnnDataType(t->data_type()))
       .build();
 }
 
-cudnn_frontend::ConvDesc GetConvDescriptor(cudnnDataType_t data_type,
-                                           const std::vector<int64_t>& padding,
-                                           const std::vector<int64_t>& stride,
-                                           const std::vector<int64_t>& dilation) {
+cudnn_frontend::Tensor GetTensorDescriptor(const user_op::TensorDesc& t, const int64_t id) {
+  auto dim = t.shape();
+  auto stride = t.stride();
+  return cudnn_frontend::TensorBuilder()
+      .setDim(dim.size(), dim.data())
+      .setStride(stride.size(), stride.data())
+      .setId(id)
+      .setAlignment(32)
+      .setDataType(GetCudnnDataType(t.data_type()))
+      .build();
+}
+
+cudnn_frontend::ConvDesc GetConvDescriptor(const user_op::InferContext& ctx,
+                                           cudnnDataType_t data_type) {
+  std::vector<int64_t> padding;
+  const auto& padding_before = ctx.Attr<std::vector<int32_t>>("padding_before");
+  copy(padding_before.begin(), padding_before.end(), back_inserter(padding));
+
+  std::vector<int64_t> stride;
+  const auto& strides = ctx.Attr<std::vector<int32_t>>("strides");
+  copy(strides.begin(), strides.end(), back_inserter(stride));
+
+  std::vector<int64_t> dilation;
+  const auto& dilation_rate = ctx.Attr<std::vector<int32_t>>("dilation_rate");
+  copy(dilation_rate.begin(), dilation_rate.end(), back_inserter(dilation));
+
+  uint64_t ndim = stride.size();
+  return cudnn_frontend::ConvDescBuilder()
+      .setDataType(data_type)
+      .setMathMode(CUDNN_CROSS_CORRELATION)
+      .setNDims(ndim)
+      .setStrides(ndim, stride.data())
+      .setPrePadding(ndim, padding.data())
+      .setPostPadding(ndim, padding.data())
+      .setDilation(ndim, dilation.data())
+      .build();
+}
+
+cudnn_frontend::ConvDesc GetConvDescriptor(const user_op::KernelComputeContext& ctx,
+                                           cudnnDataType_t data_type) {
+  std::vector<int64_t> padding;
+  const auto& padding_before = ctx.Attr<std::vector<int32_t>>("padding_before");
+  copy(padding_before.begin(), padding_before.end(), back_inserter(padding));
+
+  std::vector<int64_t> stride;
+  const auto& strides = ctx.Attr<std::vector<int32_t>>("strides");
+  copy(strides.begin(), strides.end(), back_inserter(stride));
+
+  std::vector<int64_t> dilation;
+  const auto& dilation_rate = ctx.Attr<std::vector<int32_t>>("dilation_rate");
+  copy(dilation_rate.begin(), dilation_rate.end(), back_inserter(dilation));
+
   uint64_t ndim = stride.size();
   return cudnn_frontend::ConvDescBuilder()
       .setDataType(data_type)
@@ -504,15 +569,16 @@ std::vector<cudnn_frontend::GeneratorSource> GetGeneratorSources(
                            ->resource()
                            .cudnn_conf()
                            .cudnn_conv_use_deterministic_algo_only();
+  bool heuristic = Singleton<ResourceDesc, ForSession>::Get()
+                       ->resource()
+                       .cudnn_conf()
+                       .cudnn_conv_heuristic_search_algo()
+                   || (!LazyMode::is_enabled());
+  auto heur_mode = heuristic ? CUDNN_HEUR_MODE_B : CUDNN_HEUR_MODE_A;
   // Method for engine config generator based on heuristics
   const auto heurgen_method =
-      [deterministic](cudnn_frontend::OperationGraph& opGraph) -> cudnn_frontend::EngineConfigList {
-    bool heuristic = Singleton<ResourceDesc, ForSession>::Get()
-                         ->resource()
-                         .cudnn_conf()
-                         .cudnn_conv_heuristic_search_algo()
-                     || (!LazyMode::is_enabled());
-    auto heur_mode = heuristic ? CUDNN_HEUR_MODE_B : CUDNN_HEUR_MODE_A;
+      [deterministic,
+       heur_mode](cudnn_frontend::OperationGraph& opGraph) -> cudnn_frontend::EngineConfigList {
     auto heuristics = cudnn_frontend::EngineHeuristicsBuilder()
                           .setOperationGraph(opGraph)
                           .setHeurMode(heur_mode)
@@ -522,20 +588,7 @@ std::vector<cudnn_frontend::GeneratorSource> GetGeneratorSources(
     FilterEngineConfigs(engine_configs, filtered_configs, deterministic);
     return filtered_configs;
   };
-  // Method for engine config generator based on fallback list
-  const auto fallback_method =
-      [&desc,
-       deterministic](cudnn_frontend::OperationGraph& opGraph) -> cudnn_frontend::EngineConfigList {
-    auto fallback = cudnn_frontend::EngineFallbackListBuilder()
-                        .setOperationGraph(opGraph)
-                        .setOperation(desc)
-                        .build();
-    auto& fallback_list = fallback.getFallbackList();
-    cudnn_frontend::EngineConfigList filtered_configs;
-    FilterEngineConfigs(fallback_list, filtered_configs, deterministic);
-    return filtered_configs;
-  };
-  std::vector<cudnn_frontend::GeneratorSource> sources = {heurgen_method, fallback_method};
+  std::vector<cudnn_frontend::GeneratorSource> sources = {heurgen_method};
   return sources;
 }
 
@@ -555,20 +608,37 @@ void FilterEngineConfigs(cudnn_frontend::EngineConfigList& from,
   cudnn_frontend::filter(from, to, filter);
 }
 
-void TryConfigs(const cudnnHandle_t handle, const user_op::Tensor* x, user_op::Tensor* y,
-                const user_op::Tensor* w, user_op::Tensor* buf,
-                cudnn_frontend::EngineConfigList& configs, const std::string& tag) {
+void TryConfigs(const cudnnHandle_t handle, user_op::Tensor* x, user_op::Tensor* y,
+                user_op::Tensor* w, user_op::Tensor* buf, cudnn_frontend::EngineConfigList& configs,
+                const std::string& tag) {
   for (auto& config : configs) {
     try {
       auto plan = cudnn_frontend::ExecutionPlanBuilder()
                       .setHandle(handle)
                       .setEngineConfig(config, tag)
                       .build();
-      if (PlanErrataException(handle, tag)) { continue; }
+      if (PlanErrataException(handle, plan.getTag())) { continue; }
       RunConvPlan(handle, x, y, w, buf, plan);
       return;
-    } catch (cudnn_frontend::cudnnException& e) { continue; }
+    } catch (cudnn_frontend::cudnnException& e) {}
   }
+}
+
+size_t GetCudnnConvWorkspaceSizeV8(const cudnnHandle_t handle,
+                                   cudnn_frontend::EngineConfigList& configs,
+                                   const std::string& tag) {
+  size_t workspace_size = 0;
+  for (auto& config : configs) {
+    try {
+      auto plan = cudnn_frontend::ExecutionPlanBuilder()
+                      .setHandle(handle)
+                      .setEngineConfig(config, tag)
+                      .build();
+      if (PlanErrataException(handle, plan.getTag())) { continue; }
+      if (plan.getWorkspaceSize() > workspace_size) { workspace_size = plan.getWorkspaceSize(); }
+    } catch (cudnn_frontend::cudnnException& e) {}
+  }
+  return workspace_size;
 }
 
 bool PlanErrataException(const cudnnHandle_t handle, const std::string& executionPlanTag) {
@@ -582,10 +652,10 @@ bool PlanErrataException(const cudnnHandle_t handle, const std::string& executio
   }
 }
 
-void RunConvPlan(const cudnnHandle_t handle, const user_op::Tensor* x, user_op::Tensor* y,
-                 const user_op::Tensor* w, user_op::Tensor* buf,
+void RunConvPlan(const cudnnHandle_t handle, user_op::Tensor* x, user_op::Tensor* y,
+                 user_op::Tensor* w, user_op::Tensor* buf,
                  const cudnn_frontend::ExecutionPlan& plan) {
-  void* data[] = {const_cast<void*>(x->dptr()), y->mut_dptr(), const_cast<void*>(w->dptr())};
+  void* data[] = {x->mut_dptr(), y->mut_dptr(), w->mut_dptr()};
   int64_t ids[] = {'x', 'y', 'w'};
   auto variantPack = cudnn_frontend::VariantPackBuilder()
                          .setWorkspacePointer(buf->mut_dptr())
