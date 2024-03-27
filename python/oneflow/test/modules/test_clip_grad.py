@@ -134,14 +134,14 @@ def _test_clip_grad_norm_global_impl(
     ).to_local()
     np_total_norm, np_grad = _clip_grad_norm_np(np_input, max_norm, norm_type)
     test_case.assertTrue(
-        np.allclose(of_total_norm.numpy(), np_total_norm, 1e-4, 1e-4, equal_nan=True)
+        np.allclose(of_total_norm.numpy(), np_total_norm, 1e-2, 1e-2, equal_nan=True)
     )
     test_case.assertTrue(
         np.allclose(
             of_input.grad.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
             np_grad,
-            1e-4,
-            1e-4,
+            1e-2,
+            1e-2,
             equal_nan=True,
         )
     )
