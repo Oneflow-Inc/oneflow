@@ -513,6 +513,10 @@ cudnn_frontend::Tensor GetTensorDescriptor(const user_op::TensorDesc& t, const i
 
 cudnn_frontend::ConvDesc GetConvDescriptor(const user_op::InferContext& ctx,
                                            cudnnDataType_t data_type) {
+  if (data_type == CUDNN_DATA_HALF || data_type == CUDNN_DATA_BFLOAT16) {
+    data_type = CUDNN_DATA_FLOAT;
+  }
+
   std::vector<int64_t> padding;
   const auto& padding_before = ctx.Attr<std::vector<int32_t>>("padding_before");
   copy(padding_before.begin(), padding_before.end(), back_inserter(padding));
@@ -539,6 +543,10 @@ cudnn_frontend::ConvDesc GetConvDescriptor(const user_op::InferContext& ctx,
 
 cudnn_frontend::ConvDesc GetConvDescriptor(const user_op::KernelComputeContext& ctx,
                                            cudnnDataType_t data_type) {
+  if (data_type == CUDNN_DATA_HALF || data_type == CUDNN_DATA_BFLOAT16) {
+    data_type = CUDNN_DATA_FLOAT;
+  }
+
   std::vector<int64_t> padding;
   const auto& padding_before = ctx.Attr<std::vector<int32_t>>("padding_before");
   copy(padding_before.begin(), padding_before.end(), back_inserter(padding));
