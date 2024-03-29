@@ -7,7 +7,7 @@ set(FLASH_ATTENTION_PROJECT flash_attention)
 set(FLASH_ATTENTION_URL
     https://github.com/cccddd77/flash-attention/archive/refs/heads/main.zip
 )
-set(FLASH_ATTENTION_MD5 2e6de692d7354b2ca9e04049f50720b8)
+set(FLASH_ATTENTION_MD5 7484083bac5b42c2d427b0218f9b797b)
 
 set(FLASH_ATTENTION_INSTALL_DIR ${THIRD_PARTY_DIR}/flash_attention)
 set(FLASH_ATTENTION_INCLUDE_DIR ${FLASH_ATTENTION_INSTALL_DIR}/include CACHE PATH "" FORCE)
