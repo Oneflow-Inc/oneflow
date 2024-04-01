@@ -392,7 +392,7 @@ class ScaledDotProductFlashAttentionKernel final : public user_op::OpKernel,
     bool is_causal = ctx->Attr<bool>("is_causal");
     int window_size_left = ctx->Attr<int32_t>("window_size_left");
     int window_size_right = ctx->Attr<int32_t>("window_size_right");
-    uint64_t seed = ctx->Attr<uint64_t>("seed");
+    uint64_t seed = ctx->Attr<int64_t>("seed");
 
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     Tensor* softmax_lse = ctx->Tensor4ArgNameAndIndex("softmax_lse", 0);
@@ -434,11 +434,11 @@ class ScaledDotProductFlashAttentionKernel final : public user_op::OpKernel,
     CHECK_EQ(query->shape_view().At(2), num_heads);
     CHECK_EQ(query->shape_view().At(3), head_size_og);
     CHECK_EQ(key->shape_view().At(0), batch_size);
-    CHECK_EQ(key->shape_view().At(1), seqlen_q);
+    CHECK_EQ(key->shape_view().At(1), seqlen_k);
     CHECK_EQ(key->shape_view().At(2), num_heads_k);
     CHECK_EQ(key->shape_view().At(3), head_size_og);
     CHECK_EQ(value->shape_view().At(0), batch_size);
-    CHECK_EQ(value->shape_view().At(1), seqlen_q);
+    CHECK_EQ(value->shape_view().At(1), seqlen_k);
     CHECK_EQ(value->shape_view().At(2), num_heads_k);
     CHECK_EQ(value->shape_view().At(3), head_size_og);
     CHECK_EQ(out->shape_view().At(0), batch_size);
