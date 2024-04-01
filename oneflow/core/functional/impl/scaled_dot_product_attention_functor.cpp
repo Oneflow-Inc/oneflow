@@ -51,16 +51,14 @@ template<int alignment_size>
 Maybe<one::Tensor> pad_last_dim(const std::shared_ptr<one::Tensor>& input) {
   auto num_dims = input->shape()->NumAxes();
   auto last_dim_size = input->shape()->At(num_dims - 1);
-  if (last_dim_size % alignment_size == 0) {
-    return input;
-  }
+  if (last_dim_size % alignment_size == 0) { return input; }
   auto pad_count = alignment_size - (last_dim_size % alignment_size);
 
-  return JUST(functional::Pad(input, {0, pad_count}, "constant", Scalar(0)));;
-
+  return JUST(functional::Pad(input, {0, pad_count}, "constant", Scalar(0)));
+  ;
 }
 
-} // namespace
+}  // namespace
 
 class ScaledDotProductFlashAttentionFunctor {
  public:
@@ -74,19 +72,17 @@ class ScaledDotProductFlashAttentionFunctor {
                          .Build());
   }
 
-  Maybe<Tensor> operator() (const std::shared_ptr<one::Tensor>& query,
-                            const std::shared_ptr<one::Tensor>& key,
-                            const std::shared_ptr<one::Tensor>& value,
-                            const Optional<one::Tensor>& attn_mask,
-                            const float& dropout_p,
-                            const bool& is_causal,
-                            const Optional<float>& scale,
-                            const int64_t& seed = 0) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& query,
+                           const std::shared_ptr<one::Tensor>& key,
+                           const std::shared_ptr<one::Tensor>& value,
+                           const Optional<one::Tensor>& attn_mask, const float& dropout_p,
+                           const bool& is_causal, const Optional<float>& scale,
+                           const int64_t& seed = 0) const {
     const auto og_size = query->shape()->At(3);
     // const auto max_seqlen_batch_q = query->shape()->At(2);
     const auto max_seqlen_batch_k = key->shape()->At(2);
     const auto max_seqlen_batch_v = value->shape()->At(2);
-    
+
     CHECK_EQ(max_seqlen_batch_k, max_seqlen_batch_v);
 
     // Query (Batch x Num_heads x Q_seq_len  x Dim_per_head)
@@ -103,13 +99,15 @@ class ScaledDotProductFlashAttentionFunctor {
     // Key   -> Key  (Batch x KV_seq_len x Num_heads x Dim_per_head)
     // Value -> Value(Batch x KV_seq_len x Num_heads x Dim_per_head)
 
-    const auto& scale_ = scale.has_value() ? scale : (1.0f / std::sqrt(static_cast<float>(query->shape()->At(3))));
+    const auto& scale_ =
+        scale.has_value() ? scale : (1.0f / std::sqrt(static_cast<float>(query->shape()->At(3))));
 
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("p_dropout", "softmax_scale", "is_causal",
-                                                                  "window_size_left", "window_size_right", "seed");
+                                                 "window_size_left", "window_size_right", "seed");
     attrs.SetAllAttrs(dropout_p, scale_, is_causal, -1, -1, seed);
 
-    std::shared_ptr<one::Tensor> output_ = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {q_, k_, v_}, attrs));
+    std::shared_ptr<one::Tensor> output_ =
+        JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {q_, k_, v_}, attrs));
 
     auto output_padded = JUST(functional::Transpose(output_, {0, 2, 1, 3}));
     return JUST(functional::Slice(output_padded, {-1}, {0}, {og_size}, false));

@@ -46,33 +46,17 @@ namespace user_op {
 
 namespace {
 
-void set_params_fprop(Flash_fwd_params &params,
+void set_params_fprop(Flash_fwd_params& params,
                       // sizes
-                      const size_t b,
-                      const size_t seqlen_q,
-                      const size_t seqlen_k,
-                      const size_t seqlen_q_rounded,
-                      const size_t seqlen_k_rounded,
-                      const size_t h,
-                      const size_t h_k,
-                      const size_t d,
-                      const size_t d_rounded,
+                      const size_t b, const size_t seqlen_q, const size_t seqlen_k,
+                      const size_t seqlen_q_rounded, const size_t seqlen_k_rounded, const size_t h,
+                      const size_t h_k, const size_t d, const size_t d_rounded,
                       // device pointers
-                      const Tensor* q,
-                      const Tensor* k,
-                      const Tensor* v,
-                      Tensor* out,
-                      void *cu_seqlens_q_d,
-                      void *cu_seqlens_k_d,
-                      void *seqused_k,
-                      void *p_d,
-                      void *softmax_lse_d,
-                      float p_dropout,
-                      float softmax_scale,
-                      int window_size_left,
-                      int window_size_right,
-                      bool seqlenq_ngroups_swapped=false) {
-
+                      const Tensor* q, const Tensor* k, const Tensor* v, Tensor* out,
+                      void* cu_seqlens_q_d, void* cu_seqlens_k_d, void* seqused_k, void* p_d,
+                      void* softmax_lse_d, float p_dropout, float softmax_scale,
+                      int window_size_left, int window_size_right,
+                      bool seqlenq_ngroups_swapped = false) {
   // Reset the parameters
   std::memset(&params, 0, sizeof(params));
 
@@ -104,9 +88,9 @@ void set_params_fprop(Flash_fwd_params &params,
     }
   }
 
-  params.cu_seqlens_q = static_cast<int *>(cu_seqlens_q_d);
-  params.cu_seqlens_k = static_cast<int *>(cu_seqlens_k_d);
-  params.seqused_k = static_cast<int *>(seqused_k);
+  params.cu_seqlens_q = static_cast<int*>(cu_seqlens_q_d);
+  params.cu_seqlens_k = static_cast<int*>(cu_seqlens_k_d);
+  params.seqused_k = static_cast<int*>(seqused_k);
 
   // P = softmax(QK^T)
   params.p_ptr = p_d;
@@ -140,9 +124,9 @@ void set_params_fprop(Flash_fwd_params &params,
   params.rp_dropout = 1.f / params.p_dropout;
   params.scale_softmax_rp_dropout = params.rp_dropout * params.scale_softmax;
   CHECK_LT(p_dropout, 1.f);
-  #ifdef FLASHATTENTION_DISABLE_DROPOUT
-      TORCH_CHECK(p_dropout == 0.0f, "This flash attention build does not support dropout.");
-  #endif
+#ifdef FLASHATTENTION_DISABLE_DROPOUT
+  TORCH_CHECK(p_dropout == 0.0f, "This flash attention build does not support dropout.");
+#endif
 
   // Causal is the special case where window_size_right == 0 and window_size_left < 0.
   // Local is the more general case where window_size_right >= 0 or window_size_left >= 0.
@@ -153,16 +137,17 @@ void set_params_fprop(Flash_fwd_params &params,
   params.window_size_left = window_size_left;
   params.window_size_right = window_size_right;
 
-  #ifdef FLASHATTENTION_DISABLE_LOCAL
-      TORCH_CHECK(params.is_causal || (window_size_left < 0 && window_size_right < 0),
-          "This flash attention build does not support local attention.");
-  #endif
+#ifdef FLASHATTENTION_DISABLE_LOCAL
+  TORCH_CHECK(params.is_causal || (window_size_left < 0 && window_size_right < 0),
+              "This flash attention build does not support local attention.");
+#endif
 
   params.is_seqlens_k_cumulative = true;
 
-  #ifdef FLASHATTENTION_DISABLE_UNEVEN_K
-      TORCH_CHECK(d == d_rounded, "This flash attention build does not support headdim not being a multiple of 32.");
-  #endif
+#ifdef FLASHATTENTION_DISABLE_UNEVEN_K
+  TORCH_CHECK(d == d_rounded,
+              "This flash attention build does not support headdim not being a multiple of 32.");
+#endif
 }
 
 // void set_params_dgrad(Flash_bwd_params &params,
@@ -197,20 +182,16 @@ void set_params_fprop(Flash_fwd_params &params,
 //                       int window_size_left,
 //                       int window_size_right,
 //                       bool deterministic) {
-// 
+//
 //   set_params_fprop(params,
-//                     b, seqlen_q, seqlen_k, seqlen_q_rounded, seqlen_k_rounded, h, h_k, d, d_rounded,
-//                     q, k, v, out,
-//                     cu_seqlens_q_d,
-//                     cu_seqlens_k_d,
-//                     nullptr,
-//                     nullptr,
+//                     b, seqlen_q, seqlen_k, seqlen_q_rounded, seqlen_k_rounded, h, h_k, d,
+//                     d_rounded, q, k, v, out, cu_seqlens_q_d, cu_seqlens_k_d, nullptr, nullptr,
 //                     softmax_lse_d,
 //                     p_dropout,
 //                     softmax_scale,
 //                     window_size_left,
 //                     window_size_right);
-// 
+//
 //   // Set the pointers and strides.
 //   params.do_ptr = dout.data_ptr();
 //   params.do_row_stride = dout.stride(-3);
@@ -224,25 +205,25 @@ void set_params_fprop(Flash_fwd_params &params,
 //   params.dq_head_stride = dq.stride(-2);
 //   params.dk_head_stride = dk.stride(-2);
 //   params.dv_head_stride = dv.stride(-2);
-// 
+//
 //   if (cu_seqlens_q_d == nullptr) {
 //     params.do_batch_stride = dout.stride(0);
 //     params.dq_batch_stride = dq.stride(0);
 //     params.dk_batch_stride = dk.stride(0);
 //     params.dv_batch_stride = dv.stride(0);
 //   }
-// 
+//
 //   params.dq_accum_ptr = dq_accum_d;
 //   params.dk_accum_ptr = dk_accum_d;
 //   params.dv_accum_ptr = dv_accum_d;
-// 
+//
 //   // Softmax sum
 //   params.dsoftmax_sum = dsoftmax_sum_d;
-// 
+//
 //   params.deterministic = deterministic;
 // }
 
-void run_mha_fwd(Flash_fwd_params &params, cudaStream_t stream, bool force_split_kernel=false) {
+void run_mha_fwd(Flash_fwd_params& params, cudaStream_t stream, bool force_split_kernel = false) {
   FP16_SWITCH(!params.is_bf16, [&] {
     HEADDIM_SWITCH(params.d, [&] {
       if (params.num_splits <= 1 && !force_split_kernel) {  // If we don't set it num_splits == 0
@@ -260,7 +241,8 @@ void run_mha_fwd(Flash_fwd_params &params, cudaStream_t stream, bool force_split
 // splits as that would incur more HBM reads/writes.
 // So we find the best efficiency, then find the smallest number of splits that gets 85%
 // of the best efficiency.
-inline int num_splits_heuristic(int batch_nheads_mblocks, int num_SMs, int num_n_blocks, int max_splits) {
+inline int num_splits_heuristic(int batch_nheads_mblocks, int num_SMs, int num_n_blocks,
+                                int max_splits) {
   // If we have enough to almost fill the SMs, then just use 1 split
   if (batch_nheads_mblocks >= 0.8f * num_SMs) { return 1; }
   max_splits = std::min({max_splits, num_SMs, num_n_blocks});
@@ -273,7 +255,8 @@ inline int num_splits_heuristic(int batch_nheads_mblocks, int num_SMs, int num_n
   // (i.e. it's 11 splits anyway).
   // So we check if the number of blocks per split is the same as the previous num_splits.
   auto is_split_eligible = [&ceildiv, &num_n_blocks](int num_splits) {
-    return num_splits == 1 || ceildiv(num_n_blocks, num_splits) != ceildiv(num_n_blocks, num_splits - 1);
+    return num_splits == 1
+           || ceildiv(num_n_blocks, num_splits) != ceildiv(num_n_blocks, num_splits - 1);
   };
   for (int num_splits = 1; num_splits <= max_splits; num_splits++) {
     if (!is_split_eligible(num_splits)) {
@@ -296,11 +279,10 @@ inline int num_splits_heuristic(int batch_nheads_mblocks, int num_SMs, int num_n
   return 1;
 }
 
-void set_params_splitkv(Flash_fwd_params &params, const int batch_size,
-  const int num_heads, const int head_size, const int max_seqlen_k, const int max_seqlen_q,
-  const int head_size_rounded, const float p_dropout,
-  const int num_splits, cudaDeviceProp& dprops, void* tmp_ptr) {
-
+void set_params_splitkv(Flash_fwd_params& params, const int batch_size, const int num_heads,
+                        const int head_size, const int max_seqlen_k, const int max_seqlen_q,
+                        const int head_size_rounded, const float p_dropout, const int num_splits,
+                        cudaDeviceProp& dprops, void* tmp_ptr) {
   // This needs to match with run_mha_fwd_splitkv_dispatch
   const int block_n = head_size <= 64 ? 256 : (head_size <= 128 ? 128 : 64);
   const int num_n_blocks = (max_seqlen_k + block_n - 1) / block_n;
@@ -310,18 +292,22 @@ void set_params_splitkv(Flash_fwd_params &params, const int batch_size,
   params.num_splits = num_splits;
   if (p_dropout == 0.0f) {  // SplitKV is not implemented for dropout
     if (num_splits < 1) {
-      params.num_splits = num_splits_heuristic(batch_size * num_heads * num_m_blocks, dprops.multiProcessorCount, num_n_blocks, 128);
+      params.num_splits = num_splits_heuristic(batch_size * num_heads * num_m_blocks,
+                                               dprops.multiProcessorCount, num_n_blocks, 128);
     }
     if (params.num_splits > 1) {
-      size_t softmax_lse_accum_size = params.num_splits * batch_size * num_heads * max_seqlen_q * sizeof(float);
+      size_t softmax_lse_accum_size =
+          params.num_splits * batch_size * num_heads * max_seqlen_q * sizeof(float);
       params.softmax_lseaccum_ptr = tmp_ptr;
-      params.oaccum_ptr = reinterpret_cast<char*>(tmp_ptr) + GetCudaAlignedSize(softmax_lse_accum_size);
+      params.oaccum_ptr =
+          reinterpret_cast<char*>(tmp_ptr) + GetCudaAlignedSize(softmax_lse_accum_size);
     }
     CHECK_LE(params.num_splits, 128);
   }
 }
 
-void set_params_alibi(Flash_fwd_params &params, const Tensor* alibi_slopes_, int batch_size, int num_heads){
+void set_params_alibi(Flash_fwd_params& params, const Tensor* alibi_slopes_, int batch_size,
+                      int num_heads) {
   params.alibi_slopes_ptr = nullptr;
 }
 
@@ -354,15 +340,18 @@ static size_t InferTmpBufferSizeForFlashAttentionKernel(InferContext* ctx) {
   size_t buffer_size = 0;
   buffer_size += GetCudaAlignedSize(2 * GetSizeOfDataType(DataType::kInt64));
   if (p_dropout == 0.0f) {
-    int num_splits = num_splits_heuristic(batch_size * num_heads * num_m_blocks, sm_count, num_n_blocks, 128);
-    buffer_size += GetCudaAlignedSize(num_splits * batch_size * num_heads * seqlen_q * GetSizeOfDataType(DataType::kFloat));
-    buffer_size += GetCudaAlignedSize(num_splits * batch_size * num_heads * seqlen_q * head_size_rounded * GetSizeOfDataType(DataType::kFloat));
+    int num_splits =
+        num_splits_heuristic(batch_size * num_heads * num_m_blocks, sm_count, num_n_blocks, 128);
+    buffer_size += GetCudaAlignedSize(num_splits * batch_size * num_heads * seqlen_q
+                                      * GetSizeOfDataType(DataType::kFloat));
+    buffer_size += GetCudaAlignedSize(num_splits * batch_size * num_heads * seqlen_q
+                                      * head_size_rounded * GetSizeOfDataType(DataType::kFloat));
   }
   return buffer_size;
 }
 
 class ScaledDotProductFlashAttentionKernel final : public user_op::OpKernel,
-                                              public user_op::CudaGraphSupport {
+                                                   public user_op::CudaGraphSupport {
  public:
   ScaledDotProductFlashAttentionKernel() = default;
   ~ScaledDotProductFlashAttentionKernel() override = default;
@@ -385,7 +374,9 @@ class ScaledDotProductFlashAttentionKernel final : public user_op::OpKernel,
     const Tensor* out_ = nullptr;
     if (ctx->has_input("out_", 0)) { out_ = ctx->Tensor4ArgNameAndIndex("out_", 0); }
     const Tensor* alibi_slopes_ = nullptr;
-    if (ctx->has_input("alibi_slopes_", 0)) { out_ = ctx->Tensor4ArgNameAndIndex("alibi_slopes_", 0); }
+    if (ctx->has_input("alibi_slopes_", 0)) {
+      out_ = ctx->Tensor4ArgNameAndIndex("alibi_slopes_", 0);
+    }
 
     const float p_dropout = ctx->Attr<float>("p_dropout");
     const float softmax_scale = ctx->Attr<float>("softmax_scale");
@@ -408,7 +399,8 @@ class ScaledDotProductFlashAttentionKernel final : public user_op::OpKernel,
     CHECK(is_supported_arch);
 
     const DataType data_type = query->data_type();
-    const bool is_supported_dtype = (data_type == DataType::kFloat16 || data_type == DataType::kBFloat16);
+    const bool is_supported_dtype =
+        (data_type == DataType::kFloat16 || data_type == DataType::kBFloat16);
     CHECK(is_supported_dtype);
     CHECK_EQ(key->data_type(), data_type);
     CHECK_EQ(value->data_type(), data_type);
@@ -416,7 +408,7 @@ class ScaledDotProductFlashAttentionKernel final : public user_op::OpKernel,
 
     CHECK_EQ(softmax_lse->data_type(), DataType::kFloat);
 
-    //check contiguous last dimension.
+    // check contiguous last dimension.
     CHECK_EQ(CHECK_JUST(VectorAt(query->stride(), 3)), 1);
     CHECK_EQ(CHECK_JUST(VectorAt(key->stride(), 3)), 1);
     CHECK_EQ(CHECK_JUST(VectorAt(value->stride(), 3)), 1);
@@ -449,9 +441,10 @@ class ScaledDotProductFlashAttentionKernel final : public user_op::OpKernel,
     CHECK_EQ(softmax_lse->shape_view().At(1), num_heads);
     CHECK_EQ(softmax_lse->shape_view().At(2), seqlen_q);
 
-    CHECK_GT(batch_size, 0); //batch size must be postive
-    CHECK_LE(head_size_og, 256); // only support head dimensions at most 256
-    CHECK(num_heads % num_heads_k == 0); // Number of heads in key/value must devide number of heads in query
+    CHECK_GT(batch_size, 0);      // batch size must be postive
+    CHECK_LE(head_size_og, 256);  // only support head dimensions at most 256
+    CHECK(num_heads % num_heads_k
+          == 0);  // Number of heads in key/value must devide number of heads in query
 
     if (window_size_left >= seqlen_k) { window_size_left = -1; }
     if (window_size_right >= seqlen_k) { window_size_right = -1; }
@@ -469,59 +462,48 @@ class ScaledDotProductFlashAttentionKernel final : public user_op::OpKernel,
     const int seqlen_k_rounded = round_multiple(seqlen_k, 128);
 
     Flash_fwd_params params;
-    set_params_fprop(params,
-                     batch_size,
-                     seqlen_q, seqlen_k,
-                     seqlen_q_rounded, seqlen_k_rounded,
-                     num_heads, num_heads_k,
-                     head_size, head_size_rounded,
-                     query, key, value, out,
+    set_params_fprop(params, batch_size, seqlen_q, seqlen_k, seqlen_q_rounded, seqlen_k_rounded,
+                     num_heads, num_heads_k, head_size, head_size_rounded, query, key, value, out,
                      /*cu_seqlens_q_d=*/nullptr,
                      /*cu_seqlens_k_d=*/nullptr,
                      /*seqused_k=*/nullptr,
-                     /*return_softmax=*/nullptr,
-                     softmax_lse->mut_dptr(),
-                     p_dropout,
-                     softmax_scale,
-                     window_size_left,
-                     window_size_right);
-
+                     /*return_softmax=*/nullptr, softmax_lse->mut_dptr(), p_dropout, softmax_scale,
+                     window_size_left, window_size_right);
 
     int64_t counter_offset = params.b * params.h * 32;
     params.rng_state = reinterpret_cast<uint64_t*>(tmp_ptr);
     tmp_ptr = reinterpret_cast<char*>(tmp_ptr) + GetCudaAlignedSize(2 * sizeof(int64_t));
 
-    set_params_splitkv(params, batch_size, num_heads,
-                       head_size, seqlen_k, seqlen_q,
-                       head_size_rounded, p_dropout, /*num_splits*/0, dprops, tmp_ptr);
-    
+    set_params_splitkv(params, batch_size, num_heads, head_size, seqlen_k, seqlen_q,
+                       head_size_rounded, p_dropout, /*num_splits*/ 0, dprops, tmp_ptr);
+
     if (p_dropout > 0.0f) {
       // todo gennerator.
-      auto* flash_attention_kernel_state = dynamic_cast<ScaledDotProductFlashAttentionKernelState*>(state);
+      auto* flash_attention_kernel_state =
+          dynamic_cast<ScaledDotProductFlashAttentionKernelState*>(state);
       CHECK_NOTNULL(flash_attention_kernel_state);
       const auto& generator = flash_attention_kernel_state->generator();
       CHECK_NOTNULL(generator);
       const auto device_index = cuda_device->device_index();
       std::shared_ptr<ep::CUDAGenerator> cuda_generator =
           CHECK_JUST(generator->Get<ep::CUDAGenerator>(device_index));
-      params.philox_args = at::PhiloxCudaState(seed, cuda_generator->get_philox_offset(counter_offset));
+      params.philox_args =
+          at::PhiloxCudaState(seed, cuda_generator->get_philox_offset(counter_offset));
     }
 
     set_params_alibi(params, alibi_slopes_, batch_size, num_heads);
 
-    if (seqlen_k > 0) {
-      run_mha_fwd(params, cuda_stream->cuda_stream());
-    }
+    if (seqlen_k > 0) { run_mha_fwd(params, cuda_stream->cuda_stream()); }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SCALED_DOT_PRODUCT_FLASH_ATTENTION_KERNEL(dtype)    \
-  REGISTER_USER_KERNEL("scaled_dot_product_flash_attention")         \
-      .SetCreateFn<ScaledDotProductFlashAttentionKernel>()           \
+#define REGISTER_SCALED_DOT_PRODUCT_FLASH_ATTENTION_KERNEL(dtype)      \
+  REGISTER_USER_KERNEL("scaled_dot_product_flash_attention")           \
+      .SetCreateFn<ScaledDotProductFlashAttentionKernel>()             \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("out", 0) == dtype)) \
+                       && (user_op::HobDataType("out", 0) == dtype))   \
       .SetInferTmpSizeFn(InferTmpBufferSizeForFlashAttentionKernel);
 
 REGISTER_SCALED_DOT_PRODUCT_FLASH_ATTENTION_KERNEL(DataType::kFloat16)
@@ -529,10 +511,10 @@ REGISTER_SCALED_DOT_PRODUCT_FLASH_ATTENTION_KERNEL(DataType::kFloat16)
 REGISTER_SCALED_DOT_PRODUCT_FLASH_ATTENTION_KERNEL(DataType::kBFloat16)
 #endif
 
-}
+}  // namespace
 
-}
+}  // namespace user_op
 
-}
+}  // namespace oneflow
 
-#endif // WITH_CUTLASS
+#endif  // WITH_CUTLASS
