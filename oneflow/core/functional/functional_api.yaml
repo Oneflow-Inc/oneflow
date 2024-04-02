@@ -2685,7 +2685,7 @@
   bind_python: True
 
 - name: "scaled_dot_product_attention"
-  signature: "Tensor (Tensor query, Tensor key, Tensor value, Tensor attn_mask=None, Float dropout_p=0.0, Bool is_causal=False, Float scale=None) => ScaledDotProductAttention"
+  signature: "Tensor (Tensor query, Tensor key, Tensor value, Tensor attn_mask=None, Float dropout_p=0.0, Bool is_causal=False, Float scale=None, Int64 seed=0) => ScaledDotProductFlashAttention"
   bind_python: True
 
 - name: "fused_multi_head_attention_inference"

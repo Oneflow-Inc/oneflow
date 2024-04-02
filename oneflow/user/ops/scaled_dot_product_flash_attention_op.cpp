@@ -80,6 +80,12 @@ Maybe<void> ScaledDotProductFlashAttentionOp::InferPhysicalTensorDesc(user_op::I
 }
 
 Maybe<void> ScaledDotProductFlashAttentionOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().Broadcast(user_op::OpArg("query", 0))
+                   .Broadcast(user_op::OpArg("key", 0))
+                   .Broadcast(user_op::OpArg("value", 0))
+                   .Broadcast(user_op::OpArg("out", 0))
+                   .Broadcast(user_op::OpArg("softmax", 0))
+                   .Build();
   return Maybe<void>::Ok();
 }
 

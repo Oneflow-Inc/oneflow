@@ -33,10 +33,9 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/user/kernels/random_mask_like_kernel.h"
-#include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/user/kernels/scaled_dot_product_attention_kernel.h"
 
 namespace oneflow {
@@ -79,6 +78,9 @@ class ScaledDotProductFlashAttentionFunctor {
                            const bool& is_causal, const Optional<float>& scale,
                            const int64_t& seed = 0) const {
     const auto og_size = query->shape()->At(3);
+    const auto batch_size = query->shape()->At(0);
+    const auto seqlen_q = query->shape()->At(2);
+    const auto num_heads = query->shape()->At(1);
     // const auto max_seqlen_batch_q = query->shape()->At(2);
     const auto max_seqlen_batch_k = key->shape()->At(2);
     const auto max_seqlen_batch_v = value->shape()->At(2);
@@ -106,11 +108,16 @@ class ScaledDotProductFlashAttentionFunctor {
                                                  "window_size_left", "window_size_right", "seed");
     attrs.SetAllAttrs(dropout_p, scale_, is_causal, -1, -1, seed);
 
+    auto gen = JUST(one::DefaultAutoGenerator());
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), query));
+    const auto& state = std::make_shared<ScaledDotProductFlashAttentionKernelState>(gen);
+    OpExprInterpContext ctx(attrs, state);
+
     std::shared_ptr<one::Tensor> output_ =
-        JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {q_, k_, v_}, attrs));
+        JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {q_, k_, v_}, ctx));
 
     auto output_padded = JUST(functional::Transpose(output_, {0, 2, 1, 3}));
-    return JUST(functional::Slice(output_padded, {-1}, {0}, {og_size}, false));
+    return JUST(functional::Slice(output_padded, {0, 0, 0, 0}, {batch_size, num_heads, seqlen_q, og_size}, {1, 1, 1, 1}, false));
   }
 
  private:
@@ -120,7 +127,7 @@ class ScaledDotProductFlashAttentionFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::ScaledDotProductFlashAttentionFunctor>("ScaledDotProductAttention");
+  m.add_functor<impl::ScaledDotProductFlashAttentionFunctor>("ScaledDotProductFlashAttention");
 }
 
 }  // namespace functional
