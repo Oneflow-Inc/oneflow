@@ -68,6 +68,7 @@ class ScaledDotProductFlashAttentionFunctor {
                          .Input("value")
                          .Output("out")
                          .Output("softmax_lse")
+                         .Output("rng_state")
                          .Build());
   }
 

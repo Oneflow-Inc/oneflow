@@ -2887,7 +2887,8 @@ def OneFlow_ScaledDotProductFlashAttentionOp : OneFlow_BaseOp<"scaled_dot_produc
   );
   let output = (outs
     OneFlow_Tensor:$out,
-    OneFlow_Tensor:$softmax_lse
+    OneFlow_Tensor:$softmax_lse,
+    OneFlow_Tensor:$rng_state
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$p_dropout,

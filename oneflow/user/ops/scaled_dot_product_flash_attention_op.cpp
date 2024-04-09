@@ -70,7 +70,10 @@ Maybe<void> ScaledDotProductFlashAttentionOp::InferLogicalTensorDesc(user_op::In
   CHECK_EQ_OR_RETURN(num_heads % num_heads_k, 0) << "number of heads in key/value must devide number of heads in query.";
 
   ctx->SetOutputShape("out", 0, Shape({batch_size, seqlen_q, num_heads, head_size_og}));
+  // save for backward
   ctx->SetOutputShape("softmax_lse", 0, Shape({batch_size, num_heads, seqlen_q}));
+  // save seed and offset for backward.
+  ctx->SetOutputShape("rng_state", 0, Shape({2}));
 
   return Maybe<void>::Ok();
 }
@@ -99,6 +102,7 @@ Maybe<void> ScaledDotProductFlashAttentionOp::InferDataType(user_op::InferContex
 
   ctx->SetOutputDType("out", 0, q_datatype);
   ctx->SetOutputDType("softmax_lse", 0, DataType::kFloat);
+  ctx->SetOutputDType("rng_state", 0, DataType::kUInt64);
 
   return Maybe<void>::Ok();
 }

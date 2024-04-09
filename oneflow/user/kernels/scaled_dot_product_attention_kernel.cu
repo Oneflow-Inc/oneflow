@@ -338,7 +338,7 @@ static size_t InferTmpBufferSizeForFlashAttentionKernel(InferContext* ctx) {
   const int num_n_blocks = (seqlen_k + block_n - 1) / block_n;
   const int num_m_blocks = (seqlen_q + 64 - 1) / 64;
   size_t buffer_size = 0;
-  buffer_size += GetCudaAlignedSize(2 * GetSizeOfDataType(DataType::kInt64));
+  // for splitKV and splitKV is not implemented for dropout.
   if (p_dropout == 0.0f) {
     int num_splits =
         num_splits_heuristic(batch_size * num_heads * num_m_blocks, sm_count, num_n_blocks, 128);
@@ -387,6 +387,7 @@ class ScaledDotProductFlashAttentionKernel final : public user_op::OpKernel,
 
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     Tensor* softmax_lse = ctx->Tensor4ArgNameAndIndex("softmax_lse", 0);
+    Tensor* rng_state= ctx->Tensor4ArgNameAndIndex("rng_state", 0);
     Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     void* tmp_ptr = tmp->mut_dptr();
 
@@ -471,8 +472,7 @@ class ScaledDotProductFlashAttentionKernel final : public user_op::OpKernel,
                      window_size_left, window_size_right);
 
     int64_t counter_offset = params.b * params.h * 32;
-    params.rng_state = reinterpret_cast<uint64_t*>(tmp_ptr);
-    tmp_ptr = reinterpret_cast<char*>(tmp_ptr) + GetCudaAlignedSize(2 * sizeof(int64_t));
+    params.rng_state = rng_state->mut_dptr<uint64_t>();
 
     set_params_splitkv(params, batch_size, num_heads, head_size, seqlen_k, seqlen_q,
                        head_size_rounded, p_dropout, /*num_splits*/ 0, dprops, tmp_ptr);
