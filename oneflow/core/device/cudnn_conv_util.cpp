@@ -84,7 +84,8 @@ perf_t GetBestAlgorithm(const CudnnConvArgs& args, CudnnConvResource* res,
   FOR_RANGE(size_t, i, 0, perf_vec.size()) {
     // Note: Shouldn't all returned results be successful?
     CHECK_EQ(perf_vec[i].status, CUDNN_STATUS_SUCCESS);
-    // if (perf_vec[i].memory > args.params.max_ws_size) { continue; }
+    // TODO workspace size limit will lead to dismatch result with pytorch for large tensor
+    if (perf_vec[i].memory > args.params.max_ws_size) { continue; }
     if (args.deterministic && perf_vec[i].determinism == CUDNN_NON_DETERMINISTIC) { continue; }
     found_algo_idx = i;
     break;
