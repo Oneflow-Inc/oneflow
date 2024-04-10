@@ -103,6 +103,7 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
     CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
         << "op (" << ctx.op_name()
         << ") find algorithm perference failed. algo: " << algo_perf.algo;
+    // TODO workspace size limit will lead to dismatch result with pytorch for large tensor
     CHECK_LE(algo_perf.memory, workspace_size)
         << "op (" << ctx.op_name() << ") find algorithm " << algo_perf.algo << ", need memory "
         << algo_perf.memory << ", but cudnn_buf_limit_byte is " << workspace_size;
@@ -344,7 +345,9 @@ class ConvGpuKernelV8 final : public user_op::OpKernel, public user_op::CudaGrap
         std::string tag;                                                                           \
         auto configs = GetConfigs(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_FORWARD_DESCRIPTOR,  \
                                   args.xdesc, args.ydesc, args.wdesc, args.cdesc, args.beta, tag); \
-        return GetCudnnConvWorkspaceSizeV8(handle, configs, tag);                                  \
+        size_t workspace_size = GetCudnnConvWorkspaceSizeV8(handle, configs, tag);                 \
+        Singleton<CudnnHandlePool>::Get()->Put(handle);                                            \
+        return workspace_size;                                                                     \
       })                                                                                           \
       .SetPriority(user_op::kKernelPriorityOptimized);
 
@@ -478,9 +481,12 @@ REGISTER_USER_KERNEL("conv_data_grad")
       CudnnConvArgsV8 args(*ctx, input_diff, output_diff, weight);
       auto handle = Singleton<CudnnHandlePool>::Get()->Get();
       std::string tag;
-      auto configs = GetConfigs(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_FORWARD_DESCRIPTOR,
-                                args.xdesc, args.ydesc, args.wdesc, args.cdesc, args.beta, tag);
-      return GetCudnnConvWorkspaceSizeV8(handle, configs, tag);
+      auto configs =
+          GetConfigs(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_DATA_DESCRIPTOR,
+                     args.xdesc, args.ydesc, args.wdesc, args.cdesc, args.beta, tag);
+      size_t workspace_size = GetCudnnConvWorkspaceSizeV8(handle, configs, tag);
+      Singleton<CudnnHandlePool>::Get()->Put(handle);
+      return workspace_size;
     })
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
@@ -600,9 +606,12 @@ REGISTER_USER_KERNEL("conv_filter_grad")
       CudnnConvArgsV8 args(*ctx, input, output_diff, weight_diff);
       auto handle = Singleton<CudnnHandlePool>::Get()->Get();
       std::string tag;
-      auto configs = GetConfigs(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_FORWARD_DESCRIPTOR,
-                                args.xdesc, args.ydesc, args.wdesc, args.cdesc, args.beta, tag);
-      return GetCudnnConvWorkspaceSizeV8(handle, configs, tag);
+      auto configs =
+          GetConfigs(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_FILTER_DESCRIPTOR,
+                     args.xdesc, args.ydesc, args.wdesc, args.cdesc, args.beta, tag);
+      size_t workspace_size = GetCudnnConvWorkspaceSizeV8(handle, configs, tag);
+      Singleton<CudnnHandlePool>::Get()->Put(handle);
+      return workspace_size;
     })
     .SetPriority(user_op::kKernelPriorityOptimized);
 

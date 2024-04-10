@@ -84,7 +84,7 @@ perf_t GetBestAlgorithm(const CudnnConvArgs& args, CudnnConvResource* res,
   FOR_RANGE(size_t, i, 0, perf_vec.size()) {
     // Note: Shouldn't all returned results be successful?
     CHECK_EQ(perf_vec[i].status, CUDNN_STATUS_SUCCESS);
-    if (perf_vec[i].memory > args.params.max_ws_size) { continue; }
+    // if (perf_vec[i].memory > args.params.max_ws_size) { continue; }
     if (args.deterministic && perf_vec[i].determinism == CUDNN_NON_DETERMINISTIC) { continue; }
     found_algo_idx = i;
     break;
@@ -596,7 +596,20 @@ std::vector<cudnn_frontend::GeneratorSource> GetGeneratorSources(
     FilterEngineConfigs(engine_configs, filtered_configs, deterministic);
     return filtered_configs;
   };
-  std::vector<cudnn_frontend::GeneratorSource> sources = {heurgen_method};
+  // Method for engine config generator based on fallback list
+  const auto fallback_method =
+      [desc,
+       deterministic](cudnn_frontend::OperationGraph& opGraph) -> cudnn_frontend::EngineConfigList {
+    auto fallback = cudnn_frontend::EngineFallbackListBuilder()
+                        .setOperationGraph(opGraph)
+                        .setOperation(desc)
+                        .build();
+    auto& fallback_list = fallback.getFallbackList();
+    cudnn_frontend::EngineConfigList filtered_configs;
+    FilterEngineConfigs(fallback_list, filtered_configs, deterministic);
+    return filtered_configs;
+  };
+  std::vector<cudnn_frontend::GeneratorSource> sources = {heurgen_method, fallback_method};
   return sources;
 }
 
@@ -635,7 +648,6 @@ void TryConfigs(const cudnnHandle_t handle, user_op::Tensor* x, user_op::Tensor*
 size_t GetCudnnConvWorkspaceSizeV8(const cudnnHandle_t handle,
                                    cudnn_frontend::EngineConfigList& configs,
                                    const std::string& tag) {
-  size_t workspace_size = 0;
   for (auto& config : configs) {
     try {
       auto plan = cudnn_frontend::ExecutionPlanBuilder()
@@ -643,10 +655,10 @@ size_t GetCudnnConvWorkspaceSizeV8(const cudnnHandle_t handle,
                       .setEngineConfig(config, tag)
                       .build();
       if (PlanErrataException(handle, plan.getTag())) { continue; }
-      if (plan.getWorkspaceSize() > workspace_size) { workspace_size = plan.getWorkspaceSize(); }
+      if (plan.getWorkspaceSize() > 0L) { return plan.getWorkspaceSize(); }
     } catch (cudnn_frontend::cudnnException& e) {}
   }
-  return workspace_size;
+  return 1L;
 }
 
 bool PlanErrataException(const cudnnHandle_t handle, const std::string& executionPlanTag) {
