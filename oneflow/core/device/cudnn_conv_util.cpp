@@ -578,11 +578,7 @@ std::vector<cudnn_frontend::GeneratorSource> GetGeneratorSources(
                            ->resource()
                            .cudnn_conf()
                            .cudnn_conv_use_deterministic_algo_only();
-  bool heuristic = Singleton<ResourceDesc, ForSession>::Get()
-                       ->resource()
-                       .cudnn_conf()
-                       .cudnn_conv_heuristic_search_algo()
-                   || (!LazyMode::is_enabled());
+  bool heuristic = ParseBooleanFromEnv("ONEFLOW_CUDNN_USE_HEURISTIC_MODE_B", false);
   auto heur_mode = heuristic ? CUDNN_HEUR_MODE_B : CUDNN_HEUR_MODE_A;
   // Method for engine config generator based on heuristics
   const auto heurgen_method =
