@@ -323,7 +323,7 @@ if(APPLE)
   set(of_libs ${ALL_ARCHIVE_BEGIN} oneflow of_op_schema ${ALL_ARCHIVE_END})
   target_link_libraries(oneflow of_protoobj of_functional_obj ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs ${ALL_ARCHIVE_BEGIN} of_op_schema ${ALL_ARCHIVE_END} -ldl -lrt)
+  set(of_libs ${ALL_ARCHIVE_BEGIN} oneflow of_op_schema ${ALL_ARCHIVE_END} -ldl -lrt)
   target_link_libraries(
     oneflow
     of_protoobj
