@@ -4,9 +4,7 @@ find_package(Threads)
 
 set(FLASH_ATTENTION_PROJECT flash_attention)
 
-set(FLASH_ATTENTION_URL
-    https://github.com/cccddd77/flash-attention/archive/refs/heads/main.zip
-)
+set(FLASH_ATTENTION_URL https://github.com/cccddd77/flash-attention/archive/refs/heads/main.zip)
 set(FLASH_ATTENTION_MD5 ef7e5630044f25ff066a3a6c861f2db2)
 
 set(FLASH_ATTENTION_INSTALL_DIR ${THIRD_PARTY_DIR}/flash_attention)
