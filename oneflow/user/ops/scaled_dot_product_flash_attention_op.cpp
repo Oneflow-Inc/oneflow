@@ -52,7 +52,8 @@ Maybe<void> ScaledDotProductFlashAttentionOp::InferLogicalTensorDesc(user_op::In
   CHECK_LE_OR_RETURN(head_size_og, 256) << "only support head dimensions at most 256";
 
   // number of heads in key/value must devide number of heads in query.
-  CHECK_EQ_OR_RETURN(num_heads % num_heads_k, 0) << "number of heads in key/value must devide number of heads in query.";
+  CHECK_EQ_OR_RETURN(num_heads % num_heads_k, 0)
+      << "number of heads in key/value must devide number of heads in query.";
 
   ctx->SetOutputShape("out", 0, Shape({batch_size, seqlen_q, num_heads, head_size_og}));
   // save for backward
@@ -68,12 +69,13 @@ Maybe<void> ScaledDotProductFlashAttentionOp::InferPhysicalTensorDesc(user_op::I
 }
 
 Maybe<void> ScaledDotProductFlashAttentionOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().Broadcast(user_op::OpArg("query", 0))
-                   .Broadcast(user_op::OpArg("key", 0))
-                   .Broadcast(user_op::OpArg("value", 0))
-                   .Broadcast(user_op::OpArg("out", 0))
-                   .Broadcast(user_op::OpArg("softmax", 0))
-                   .Build();
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("query", 0))
+      .Broadcast(user_op::OpArg("key", 0))
+      .Broadcast(user_op::OpArg("value", 0))
+      .Broadcast(user_op::OpArg("out", 0))
+      .Broadcast(user_op::OpArg("softmax", 0))
+      .Build();
   return Maybe<void>::Ok();
 }
 

@@ -386,7 +386,7 @@ class ScaledDotProductFlashAttentionKernel final : public user_op::OpKernel,
 
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     Tensor* softmax_lse = ctx->Tensor4ArgNameAndIndex("softmax_lse", 0);
-    Tensor* rng_state= ctx->Tensor4ArgNameAndIndex("rng_state", 0);
+    Tensor* rng_state = ctx->Tensor4ArgNameAndIndex("rng_state", 0);
     Tensor* tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     void* tmp_ptr = tmp->mut_dptr();
 

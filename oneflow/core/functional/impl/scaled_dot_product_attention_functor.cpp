@@ -118,7 +118,8 @@ class ScaledDotProductFlashAttentionFunctor {
         JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {q_, k_, v_}, ctx));
 
     auto output_padded = JUST(functional::Transpose(output_, {0, 2, 1, 3}));
-    return JUST(functional::Slice(output_padded, {0, 0, 0, 0}, {batch_size, num_heads, seqlen_q, og_size}, {1, 1, 1, 1}, false));
+    return JUST(functional::Slice(output_padded, {0, 0, 0, 0},
+                                  {batch_size, num_heads, seqlen_q, og_size}, {1, 1, 1, 1}, false));
   }
 
  private:
