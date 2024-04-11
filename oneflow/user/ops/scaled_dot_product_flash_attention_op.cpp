@@ -52,7 +52,7 @@ Maybe<void> ScaledDotProductFlashAttentionOp::InferLogicalTensorDesc(user_op::In
 
   // check input tensor shape.
   CHECK_EQ_OR_RETURN(batch_size, k_shape.At(0)) << "query has different batch size from key.";
-  CHECK_EQ_OR_RETURN(batch_size, k_shape.At(0)) << "query has different batch size from value.";
+  CHECK_EQ_OR_RETURN(batch_size, v_shape.At(0)) << "query has different batch size from value.";
 
   CHECK_EQ_OR_RETURN(seqlen_k, v_shape.At(1)) << "key has different seqlen from value.";
   CHECK_EQ_OR_RETURN(num_heads_k, v_shape.At(2)) << "key has different num_heads from value.";

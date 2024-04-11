@@ -16,7 +16,6 @@ limitations under the License.
 
 #include <cstddef>
 #include <cstdint>
-#include "_deps/glog-build/glog/logging.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.pb.h"
