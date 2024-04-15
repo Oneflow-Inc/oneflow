@@ -69,13 +69,35 @@ Maybe<void> ScaledDotProductFlashAttentionOp::InferPhysicalTensorDesc(user_op::I
 }
 
 Maybe<void> ScaledDotProductFlashAttentionOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("query", 0))
-      .Broadcast(user_op::OpArg("key", 0))
-      .Broadcast(user_op::OpArg("value", 0))
-      .Broadcast(user_op::OpArg("out", 0))
-      .Broadcast(user_op::OpArg("softmax", 0))
-      .Build();
+  auto parallel_num = ctx->parallel_num();
+  const Shape& q_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("query", 0).shape();
+  const Shape& k_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("key", 0).shape();
+  auto num_heads = q_shape.At(2);
+  auto num_heads_k = k_shape.At(2);
+  bool can_spilt_num_heads = num_heads == num_heads_k
+                             || (!(num_heads % parallel_num) && !(num_heads_k % parallel_num)
+                                 && !((num_heads / num_heads_k) % parallel_num));
+  if (can_spilt_num_heads) {
+    // prior to split on num_heads.
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("query", 0), 2)
+        .Split(user_op::OpArg("key", 0), 2)
+        .Split(user_op::OpArg("value", 0), 2)
+        .Split(user_op::OpArg("out", 0), 2)
+        .Split(user_op::OpArg("softmax", 0), 1)
+        .Broadcast(user_op::OpArg("rng_state", 0))
+        .Build();
+  } else {
+    // otherwise split on batch_size.
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("query", 0), 0)
+        .Split(user_op::OpArg("key", 0), 0)
+        .Split(user_op::OpArg("value", 0), 0)
+        .Split(user_op::OpArg("out", 0), 0)
+        .Split(user_op::OpArg("softmax", 0), 0)
+        .Broadcast(user_op::OpArg("rng_state", 0))
+        .Build();
+  }
   return Maybe<void>::Ok();
 }
 

@@ -2882,7 +2882,6 @@ def OneFlow_ScaledDotProductFlashAttentionOp : OneFlow_BaseOp<"scaled_dot_produc
     OneFlow_Tensor:$query,
     OneFlow_Tensor:$key,
     OneFlow_Tensor:$value,
-    Optional<OneFlow_Tensor>:$out_,
     Optional<OneFlow_Tensor>:$alibi_slopes_
   );
   let output = (outs
