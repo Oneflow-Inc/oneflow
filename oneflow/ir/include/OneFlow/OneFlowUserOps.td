@@ -2877,6 +2877,35 @@ def OneFlow_FusedCrossFeatureInteractionV2GradOp : OneFlow_BaseOp<"fused_cross_f
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_LlamaDecoderLayerForwardOp : OneFlow_BaseOp<"llama_decoder_layer_forward", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$hidden_states,
+    Variadic<OneFlow_Tensor>:$input_norm_weights,
+    Variadic<OneFlow_Tensor>:$qkv_weights,
+    Variadic<OneFlow_Tensor>:$attn_out_weights,
+    OneFlow_Tensor:$position_ids,
+    Variadic<OneFlow_Tensor>:$post_norm_weights,
+    Variadic<OneFlow_Tensor>:$glu_weights,
+    Variadic<OneFlow_Tensor>:$mlp_down_weights,
+    Variadic<OneFlow_Tensor>:$past_keys,
+    Variadic<OneFlow_Tensor>:$past_values
+  );
+  let output = (outs
+    OneFlow_Tensor:$output,
+    Variadic<OneFlow_Tensor>:$concat_keys,
+    Variadic<OneFlow_Tensor>:$concat_values
+  );
+  let attrs = (ins
+    SI64Attr:$head_size,
+    SI64Attr:$num_layers,
+    StrAttr:$parallel_conf
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_FusedMultiHeadAttentionInferenceOp : OneFlow_BaseOp<"fused_multi_head_attention_inference", [NoMemoryEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$query,

@@ -806,4 +806,73 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   return Maybe<void>::Ok();
 }
 
+/*static*/ Maybe<void> LlamaDecoderLayerForwardOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  int64_t n = ctx->Attr<int64_t>("num_layers");
+  const user_op::TensorDesc& hidden_states_desc = ctx->InputTensorDesc("hidden_states", 0);
+  const int64_t head_size = ctx->Attr<int64_t>("head_size");
+  const Shape& hidden_states_shape = hidden_states_desc.shape();
+  auto b = hidden_states_shape.at(0), m = hidden_states_shape.at(1);
+  const Shape& qkv_weight_shape = ctx->InputTensorDesc("qkv_weights", 0).shape();
+  const int64_t h = qkv_weight_shape.at(0) / head_size / 3;
+  if (ctx->has_input("past_keys", 0)) {  // past_key: BHMK
+    for (int i = 0; i < n; ++i) {
+      const Shape& past_key_shape = ctx->InputTensorDesc("past_keys", i).shape();
+      auto past_m = past_key_shape.at(2);
+      ctx->SetOutputShape("concat_keys", i, Shape({b, h, past_m + m, head_size}));
+      ctx->SetOutputShape("concat_values", i, Shape({b, h, past_m + m, head_size}));
+    }
+  } else {
+    for (int i = 0; i < n; ++i) {
+      ctx->SetOutputShape("concat_keys", i, Shape({b, h, m, head_size}));
+      ctx->SetOutputShape("concat_values", i, Shape({b, h, m, head_size}));
+    }
+  }
+  ctx->SetOutputShape("output", 0, hidden_states_shape);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> LlamaDecoderLayerForwardOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return LlamaDecoderLayerForwardOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> LlamaDecoderLayerForwardOp::GetSbp(user_op::SbpContext* ctx) {
+  int n = ctx->Attr<int64_t>("head_size");
+  bool has_past_kv = ctx->user_op_conf().has_input("past_keys", 0);
+  std::vector<user_op::OpArg> s0_args, s1_args, broadcast_args;
+  for (int i = 0; i < n; ++i) {
+    broadcast_args.emplace_back("input_norm_weights", i);
+    s0_args.emplace_back("qkv_weights", i);
+    s1_args.emplace_back("attn_out_weights", i);
+    s1_args.emplace_back("concat_keys", i);
+    s1_args.emplace_back("concat_values", i);
+    broadcast_args.emplace_back("post_norm_weights", i);
+    s0_args.emplace_back("glu_weights", i);
+    s1_args.emplace_back("mlp_down_weights", i);
+    if (has_past_kv) {
+      s1_args.emplace_back("past_keys", i);
+      s1_args.emplace_back("past_values", i);
+    }
+  }
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("hidden_states", 0))
+      .Broadcast(broadcast_args)
+      .Split(s0_args, 0)
+      .Split(s1_args, 1)
+      .Broadcast(user_op::OpArg("position_ids", 0))
+      .Broadcast(user_op::OpArg("output", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> LlamaDecoderLayerForwardOp::InferDataType(user_op::InferContext* ctx) {
+  auto data_type = ctx->InputDType("hidden_states", 0);
+  int64_t n = ctx->Attr<int64_t>("num_layers");
+  for (int i = 0; i < n; ++i) {
+    ctx->SetOutputDType("concat_keys", i, data_type);
+    ctx->SetOutputDType("concat_values", i, data_type);
+  }
+  ctx->SetOutputDType("output", 0, data_type);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow
