@@ -5439,6 +5439,7 @@ Maybe<one::Tensor> pad_last_dim(const std::shared_ptr<one::Tensor>& input) {
 class ScaledDotProductFlashAttentionFunctor {
  public:
   ScaledDotProductFlashAttentionFunctor() {
+#if CUDA_VERSION >= 11060
     op_ = CHECK_JUST(one::OpBuilder("scaled_dot_product_flash_attention")
                          .Input("query")
                          .Input("key")
@@ -5447,6 +5448,7 @@ class ScaledDotProductFlashAttentionFunctor {
                          .Output("softmax_lse")
                          .Output("rng_state")
                          .Build());
+#endif  // CUDA_VERSION >= 11060
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& query,
@@ -5455,6 +5457,7 @@ class ScaledDotProductFlashAttentionFunctor {
                            const Optional<one::Tensor>& attn_mask, const float& dropout_p,
                            const bool& is_causal, const Optional<float>& scale,
                            const int64_t& seed = 0) const {
+#if CUDA_VERSION >= 11060
     const auto og_size = query->shape()->At(3);
     const auto batch_size = query->shape()->At(0);
     const auto seqlen_q = query->shape()->At(2);
@@ -5524,10 +5527,15 @@ class ScaledDotProductFlashAttentionFunctor {
     }
 
     return output;
+#endif  // CUDA_VERSION >= 11060
+
+    UNIMPLEMENTED_THEN_RETURN() << "only support CUDA_VERSION >= 11060.";
   }
 
  private:
+#if CUDA_VERSION >= 11060
   std::shared_ptr<OpExpr> op_;
+#endif  // CUDA_VERSION >= 11060
 };
 
 }  // namespace impl

@@ -26,6 +26,9 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/user_op_tensor.h"
+
+#if CUDA_VERSION >= 11060
+
 #ifdef WITH_CUTLASS
 
 #include "oneflow/core/framework/framework.h"
@@ -242,9 +245,7 @@ class ScaledDotProductFlashAttentionKernel final : public user_op::OpKernel,
       .SetInferTmpSizeFn(InferTmpBufferSizeForFlashAttentionKernel);
 
 REGISTER_SCALED_DOT_PRODUCT_FLASH_ATTENTION_KERNEL(DataType::kFloat16)
-#if CUDA_VERSION >= 11000
 REGISTER_SCALED_DOT_PRODUCT_FLASH_ATTENTION_KERNEL(DataType::kBFloat16)
-#endif
 
 }  // namespace
 
@@ -253,3 +254,5 @@ REGISTER_SCALED_DOT_PRODUCT_FLASH_ATTENTION_KERNEL(DataType::kBFloat16)
 }  // namespace oneflow
 
 #endif  // WITH_CUTLASS
+
+#endif  // CUDA_VERSION >= 11060
