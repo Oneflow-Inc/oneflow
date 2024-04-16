@@ -27,7 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/user_op_tensor.h"
 
-#if CUDA_VERSION >= 11060
+#if CUDA_VERSION >= 11070
 
 #ifdef WITH_CUTLASS
 
@@ -255,4 +255,4 @@ REGISTER_SCALED_DOT_PRODUCT_FLASH_ATTENTION_KERNEL(DataType::kBFloat16)
 
 #endif  // WITH_CUTLASS
 
-#endif  // CUDA_VERSION >= 11060
+#endif  // CUDA_VERSION >= 11070
