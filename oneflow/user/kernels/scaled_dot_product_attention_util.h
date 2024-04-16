@@ -229,4 +229,4 @@ void set_params_alibi(Flash_fwd_params& params, const Tensor* alibi_slopes_, int
 
 }  // namespace oneflow
 
-#endif
+#endif // ONEFLOW_USER_KERNELS_FLASH_ATTENTION_UTIL_H_
