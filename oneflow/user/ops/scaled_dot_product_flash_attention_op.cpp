@@ -74,9 +74,8 @@ Maybe<void> ScaledDotProductFlashAttentionOp::GetSbp(user_op::SbpContext* ctx) {
   const Shape& k_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("key", 0).shape();
   auto num_heads = q_shape.At(2);
   auto num_heads_k = k_shape.At(2);
-  bool can_spilt_num_heads = num_heads == num_heads_k
-                             || (!(num_heads % parallel_num) && !(num_heads_k % parallel_num)
-                                 && !((num_heads / num_heads_k) % parallel_num));
+  bool can_spilt_num_heads =
+      num_heads == num_heads_k || (!(num_heads % parallel_num) && !(num_heads_k % parallel_num));
   if (can_spilt_num_heads) {
     // prior to split on num_heads.
     ctx->NewBuilder()
