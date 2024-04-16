@@ -117,6 +117,7 @@ def _test_graph_clip_grad_value_impl(test_case, shape, device, clip_value):
     )
 
 
+# TODO(lml): find why fail on ci machine
 def _test_clip_grad_norm_global_impl(
     test_case, shape, sbp, placement, max_norm, norm_type
 ):
@@ -133,18 +134,18 @@ def _test_clip_grad_norm_global_impl(
         of_input, max_norm, norm_type
     ).to_local()
     np_total_norm, np_grad = _clip_grad_norm_np(np_input, max_norm, norm_type)
-    # test_case.assertTrue(
-    #    np.allclose(of_total_norm.numpy(), np_total_norm, 1e-2, 1e-2, equal_nan=True)
-    # )
-    # test_case.assertTrue(
-    #    np.allclose(
-    #        of_input.grad.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
-    #        np_grad,
-    #        1e-2,
-    #        1e-2,
-    #        equal_nan=True,
-    #    )
-    # )
+    test_case.assertTrue(
+       np.allclose(of_total_norm.numpy(), np_total_norm, 1e-4, 1e-4, equal_nan=True)
+    )
+    test_case.assertTrue(
+       np.allclose(
+           of_input.grad.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
+           np_grad,
+           1e-4,
+           1e-4,
+           equal_nan=True,
+       )
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
