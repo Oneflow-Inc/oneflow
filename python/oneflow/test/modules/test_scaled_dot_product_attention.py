@@ -21,7 +21,6 @@ import math
 import os
 
 import oneflow as flow
-import oneflow.sysconfig
 
 
 def _scaled_dot_product_attention(
@@ -85,10 +84,6 @@ def _test_scaled_dot_product_attention(
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipUnless(oneflow.sysconfig.with_cuda(), "needs -DBUILD_CUDA=ON")
-@unittest.skipUnless(
-    flow.cuda.get_device_capability()[0] >= 7, "needs CUDA compatibility >= 8"
-)
 class TestScaledDotProductAttention(flow.unittest.TestCase):
     def test_scaled_dot_product_attention(test_case):
         args_dict = OrderedDict()
@@ -99,8 +94,11 @@ class TestScaledDotProductAttention(flow.unittest.TestCase):
         args_dict["head_size"] = [40, 80, 160, 41]
         args_dict["dtype"] = [flow.float16, flow.bfloat16]
 
-        for arg in GenArgList(args_dict):
-            arg[0](test_case, *arg[1:])
+        if flow._oneflow_internal.flags.with_cuda():
+            if flow._oneflow_internal.flags.cuda_version() >= 11070:
+                if flow.cuda.get_device_capability()[0] >= 8:
+                    for arg in GenArgList(args_dict):
+                        arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
