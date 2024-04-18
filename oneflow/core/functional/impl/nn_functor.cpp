@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/user/kernels/random_seed_util.h"
+#include "oneflow/user/kernels/scaled_dot_product_attention_kernel.h"
 
 #include "oneflow/core/common/container_util.h"
 #include "fmt/core.h"
@@ -5420,6 +5421,123 @@ class NonContiguousBinaryOpGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+namespace {
+
+template<int alignment_size>
+Maybe<one::Tensor> pad_last_dim(const std::shared_ptr<one::Tensor>& input) {
+  auto num_dims = input->shape()->NumAxes();
+  auto last_dim_size = input->shape()->At(num_dims - 1);
+  if (last_dim_size % alignment_size == 0) { return input; }
+  auto pad_count = alignment_size - (last_dim_size % alignment_size);
+
+  return JUST(functional::Pad(input, {0, pad_count}, "constant", Scalar(0)));
+  ;
+}
+
+}  // namespace
+
+class ScaledDotProductFlashAttentionFunctor {
+ public:
+  ScaledDotProductFlashAttentionFunctor() {
+#if CUDA_VERSION >= 11070
+    op_ = CHECK_JUST(one::OpBuilder("scaled_dot_product_flash_attention")
+                         .Input("query")
+                         .Input("key")
+                         .Input("value")
+                         .Output("out")
+                         .Output("softmax_lse")
+                         .Output("rng_state")
+                         .Build());
+#endif  // CUDA_VERSION >= 11070
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& query,
+                           const std::shared_ptr<one::Tensor>& key,
+                           const std::shared_ptr<one::Tensor>& value,
+                           const Optional<one::Tensor>& attn_mask, const float& dropout_p,
+                           const bool& is_causal, const Optional<float>& scale,
+                           const int64_t& seed = 0) const {
+#if CUDA_VERSION >= 11070
+    const auto og_size = query->shape()->At(3);
+    const auto batch_size = query->shape()->At(0);
+    const auto seqlen_q = query->shape()->At(2);
+    const auto num_heads = query->shape()->At(1);
+    const auto num_heads_k = key->shape()->At(1);
+    const auto max_seqlen_batch_k = key->shape()->At(2);
+    const auto max_seqlen_batch_v = value->shape()->At(2);
+
+    CHECK_EQ_OR_RETURN(batch_size, key->shape()->At(0))
+        << " key has different batch size from query.";
+    CHECK_EQ_OR_RETURN(batch_size, value->shape()->At(0))
+        << " value has different batch size from query.";
+    CHECK_EQ_OR_RETURN(num_heads_k, value->shape()->At(1))
+        << " value has different num_heads from key.";
+    CHECK_EQ_OR_RETURN(max_seqlen_batch_k, max_seqlen_batch_v)
+        << "value has different seqlen from key.";
+    CHECK_EQ_OR_RETURN(og_size, key->shape()->At(3)) << " key has different head dims from query.";
+    CHECK_EQ_OR_RETURN(og_size, value->shape()->At(3))
+        << " value has different head dims from query.";
+
+    // Query (Batch x Num_heads x Q_seq_len  x Dim_per_head)
+    // Key   (Batch x Num_heads x KV_seq_len x Dim_per_head)
+    // Value (Batch x Num_heads x KV_seq_len x Dim_per_head)
+    std::shared_ptr<Tensor> q_padded, k_padded, v_padded;
+    bool padded = og_size % 8;
+    if (padded) {
+      q_padded = JUST(pad_last_dim<8>(query));
+      k_padded = JUST(pad_last_dim<8>(key));
+      v_padded = JUST(pad_last_dim<8>(value));
+    } else {
+      q_padded = query;
+      k_padded = key;
+      v_padded = value;
+    }
+
+    auto q_ = JUST(functional::Transpose(q_padded, {0, 2, 1, 3}));
+    auto k_ = JUST(functional::Transpose(k_padded, {0, 2, 1, 3}));
+    auto v_ = JUST(functional::Transpose(v_padded, {0, 2, 1, 3}));
+    // Query -> Query(Batch x Q_seq_len  x Num_heads x Dim_per_head)
+    // Key   -> Key  (Batch x KV_seq_len x Num_heads x Dim_per_head)
+    // Value -> Value(Batch x KV_seq_len x Num_heads x Dim_per_head)
+
+    const auto& scale_ =
+        scale.has_value() ? scale : (1.0f / std::sqrt(static_cast<float>(query->shape()->At(3))));
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("p_dropout", "softmax_scale", "is_causal",
+                                                 "window_size_left", "window_size_right", "seed");
+    attrs.SetAllAttrs(dropout_p, scale_, is_causal, -1, -1, seed);
+
+    auto gen = JUST(one::DefaultAutoGenerator());
+    gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), query));
+    const auto& state = std::make_shared<ScaledDotProductFlashAttentionKernelState>(gen);
+    OpExprInterpContext ctx(attrs, state);
+
+    std::shared_ptr<one::Tensor> output_ =
+        JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {q_, k_, v_}, ctx));
+
+    auto output_padded = JUST(functional::Transpose(output_, {0, 2, 1, 3}));
+
+    std::shared_ptr<Tensor> output;
+    if (padded) {
+      output =
+          JUST(functional::Slice(output_padded, {0, 0, 0, 0},
+                                 {batch_size, num_heads, seqlen_q, og_size}, {1, 1, 1, 1}, false));
+    } else {
+      output = output_padded;
+    }
+
+    return output;
+#endif  // CUDA_VERSION >= 11070
+
+    UNIMPLEMENTED_THEN_RETURN() << "only support CUDA_VERSION >= 11070.";
+  }
+
+ private:
+#if CUDA_VERSION >= 11070
+  std::shared_ptr<OpExpr> op_;
+#endif  // CUDA_VERSION >= 11070
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -5557,6 +5675,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NonContiguousBinaryOpGradFunctor>("NonContiguousBinaryOpGrad");
   m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");
   m.add_functor<impl::FusedClipGradFunctor>("FusedClipGrad");
+  m.add_functor<impl::ScaledDotProductFlashAttentionFunctor>("ScaledDotProductFlashAttention");
 }
 
 }  // namespace functional
