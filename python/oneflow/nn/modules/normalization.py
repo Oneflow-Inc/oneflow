@@ -137,8 +137,12 @@ class GroupNorm(Module):
         if dtype:
             factory_kwargs["dtype"] = dtype
         if self.affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(num_channels).to(**factory_kwargs))
-            self.bias = flow.nn.Parameter(flow.Tensor(num_channels).to(**factory_kwargs))
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(num_channels).to(**factory_kwargs)
+            )
+            self.bias = flow.nn.Parameter(
+                flow.Tensor(num_channels).to(**factory_kwargs)
+            )
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
