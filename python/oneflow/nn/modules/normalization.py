@@ -44,7 +44,7 @@ def group_norm(
     ), "The channels of input tensor must equal num_channels"
 
     affine = weight is not None and bias is not None
-    if input.is_cuda:
+    if not input.is_cpu:
         return flow._C.group_norm(input, weight, bias, affine, num_groups, eps)
     else:
         origin_shape = input.shape
