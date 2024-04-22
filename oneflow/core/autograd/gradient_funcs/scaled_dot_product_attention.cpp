@@ -109,4 +109,4 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("scaled_dot_product_flash_attention",
 
 }  // namespace oneflow
 
-#endif // CUDA_VERSION >= 11070
+#endif  // CUDA_VERSION >= 11070
