@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/common/container_util.h"
+#if CUDA_VERSION >= 11070
 
 namespace oneflow {
 
@@ -107,3 +108,5 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("scaled_dot_product_flash_attention",
 }  // namespace one
 
 }  // namespace oneflow
+
+#endif // CUDA_VERSION >= 11070
