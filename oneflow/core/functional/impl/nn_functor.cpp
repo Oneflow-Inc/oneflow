@@ -5620,10 +5620,6 @@ class ScaledDotProductFlashAttentionGradFunctor {
     auto grad_k_ = (*output_)[1];
     auto grad_v_ = (*output_)[2];
 
-    //     auto grad_q_padded = JUST(functional::Transpose(grad_q_, {0, 2, 1, 3}));
-    // auto grad_k_padded_expanded = JUST(functional::Transpose(grad_k_, {0, 2, 1, 3}));
-    // auto grad_v_padded_expanded = JUST(functional::Transpose(grad_v_, {0, 2, 1, 3}));
-
     std::shared_ptr<Tensor> grad_q_padded, grad_k_padded, grad_v_padded;
 
     bool expanded = num_heads != num_heads_k;
