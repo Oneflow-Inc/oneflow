@@ -644,6 +644,7 @@ class FusedApplyRotaryEmbFunctor {
                            const Optional<int64_t>& tensor_index, const Optional<int64_t>& k_size,
                            const float base, const Optional<int64_t>& rotary_size) const {
     int64_t b = 0, m = 0, h = 0, k = 0;
+    // std::cout << "go here!" << std::endl;
 
     if (tensor_index) {
       CHECK_OR_RETURN((JUST(tensor_index) >= 0) && (JUST(tensor_index) <= 2))
@@ -653,7 +654,8 @@ class FusedApplyRotaryEmbFunctor {
         << "mode should be \"intervel\" or \"plane\"";
 
     ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(), k_size, &b, &m, &h, &k);
-
+    // std::cout << "cpp head_size: " << h << std::endl;
+    // printf("k_size: %ld\n", k_size);
     if (k_size) {
       CHECK_EQ_OR_RETURN(JUST(k_size), k)
           << "k_size if given should be equal to K of cos, sin and x.";
@@ -709,6 +711,7 @@ class FusedApplyRotaryEmbFunctor {
     attrs.SetAllAttrs(x_layout, output_layout.value_or(x_layout), mode, tensor_index.value_or(0),
                       k_size.value_or(k), base, rotary_size.value_or(k));
 
+    // std::cout << "dispatch!" << std::endl;
     if (position_ids) {
       if (cos && sin) {
         return OpInterpUtil::Dispatch<Tensor>(*op_with_position_sinuous_,
@@ -733,6 +736,55 @@ class FusedApplyRotaryEmbFunctor {
   std::shared_ptr<OpExpr> op_without_position_sinuous_;
 };
 
+class FusedApplyRotaryEmbGradFunctor {
+ public:
+  FusedApplyRotaryEmbGradFunctor() {
+    op_with_position_sinuous_ = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb_grad")
+                                               .Input("x")
+                                               .Input("dy")
+                                               .Input("cos")
+                                               .Input("sin")
+                                               .Input("position_ids")
+                                               .Output("out")
+                                               .Build());
+    op_with_position_ = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb_grad")
+                                       .Input("x")
+                                       .Input("dy")
+                                       .Input("position_ids")
+                                       .Output("out")
+                                       .Build());
+    op_without_position_ = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb_grad")
+                                          .Input("x")
+                                          .Input("dy")
+                                          .Input("cos")
+                                          .Input("sin")
+                                          .Output("out")
+                                          .Build());
+    op_without_position_sinuous_ =
+        CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb_grad").Input("x")
+                                                                .Input("dy")
+                                                                .Output("out")
+                                                                .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const Optional<one::Tensor>& cos,
+                           const Optional<one::Tensor>& sin,
+                           const Optional<one::Tensor>& position_ids, const std::string& x_layout,
+                           const Optional<std::string>& output_layout, const std::string& mode,
+                           const Optional<int64_t>& tensor_index, const Optional<int64_t>& k_size,
+                           const float base, const Optional<int64_t>& rotary_size) const {
+      std::cout << "FusedApplyRotaryEmbGradFunctor" << std::endl;
+      return dy;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_with_position_;
+  std::shared_ptr<OpExpr> op_with_position_sinuous_;
+  std::shared_ptr<OpExpr> op_without_position_;
+  std::shared_ptr<OpExpr> op_without_position_sinuous_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -741,6 +793,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedMultiHeadAttentionInferenceV2");
   m.add_functor<impl::FusedAttentionConcatPastKeyValueFunctor>("FusedAttentionConcatPastKeyValue");
   m.add_functor<impl::FusedApplyRotaryEmbFunctor>("FusedApplyRotaryEmb");
+  m.add_functor<impl::FusedApplyRotaryEmbGradFunctor>("FusedApplyRotaryEmbGrad");
 }
 
 }  // namespace functional
