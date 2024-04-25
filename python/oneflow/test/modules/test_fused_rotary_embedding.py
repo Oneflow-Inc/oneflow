@@ -289,7 +289,7 @@ def _test_without_position(
             for m in range(M)
         ]
     ).reshape(M, rotary_size // rotary_ndims)
-    fused_x = flow.tensor(x, dtype=dtype, device=device)
+    fused_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
     fused_cos = flow.tensor(fused_cos, dtype=dtype, device=device)
     fused_sin = flow.tensor(fused_sin, dtype=dtype, device=device)
 
@@ -435,7 +435,7 @@ def _test_without_position_sinuous(
         mode,
     )
 
-    fused_x = flow.tensor(x, dtype=dtype, device=device)
+    fused_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
 
     if x_layout == "BM(H3K)":
         out0 = flow._C.fused_apply_rotary_emb(
@@ -627,7 +627,7 @@ def _test_with_position_sinuous(
         ]
     )
 
-    fused_x = flow.tensor(x, dtype=dtype, device=device)
+    fused_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
     fused_cos = flow.tensor(fused_cos, dtype=dtype, device=device)
     fused_sin = flow.tensor(fused_sin, dtype=dtype, device=device)
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device=device)
@@ -778,7 +778,7 @@ def _test_with_position(
         mode,
     )
 
-    fused_x = flow.tensor(x, dtype=dtype, device=device)
+    fused_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device=device)
 
     if x_layout == "BM(H3K)":
@@ -935,7 +935,7 @@ def _test_plane(
         mode,
     )
 
-    fused_x = flow.tensor(x, dtype=dtype, device=device)
+    fused_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device=device)
 
     if x_layout == "MB(H3K)":
