@@ -644,7 +644,6 @@ class FusedApplyRotaryEmbFunctor {
                            const Optional<int64_t>& tensor_index, const Optional<int64_t>& k_size,
                            const float base, const Optional<int64_t>& rotary_size) const {
     int64_t b = 0, m = 0, h = 0, k = 0;
-    // std::cout << "go here!" << std::endl;
 
     if (tensor_index) {
       CHECK_OR_RETURN((JUST(tensor_index) >= 0) && (JUST(tensor_index) <= 2))
@@ -654,8 +653,7 @@ class FusedApplyRotaryEmbFunctor {
         << "mode should be \"intervel\" or \"plane\"";
 
     ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(), k_size, &b, &m, &h, &k);
-    // std::cout << "cpp head_size: " << h << std::endl;
-    // printf("k_size: %ld\n", k_size);
+
     if (k_size) {
       CHECK_EQ_OR_RETURN(JUST(k_size), k)
           << "k_size if given should be equal to K of cos, sin and x.";
@@ -711,7 +709,6 @@ class FusedApplyRotaryEmbFunctor {
     attrs.SetAllAttrs(x_layout, output_layout.value_or(x_layout), mode, tensor_index.value_or(0),
                       k_size.value_or(k), base, rotary_size.value_or(k));
 
-    // std::cout << "dispatch!" << std::endl;
     if (position_ids) {
       if (cos && sin) {
         return OpInterpUtil::Dispatch<Tensor>(*op_with_position_sinuous_,
@@ -745,25 +742,25 @@ class FusedApplyRotaryEmbGradFunctor {
                                                .Input("cos")
                                                .Input("sin")
                                                .Input("position_ids")
-                                               .Output("out")
+                                               .Output("dx")
                                                .Build());
     op_with_position_ = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb_grad")
                                        .Input("x")
                                        .Input("dy")
                                        .Input("position_ids")
-                                       .Output("out")
+                                       .Output("dx")
                                        .Build());
     op_without_position_ = CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb_grad")
                                           .Input("x")
                                           .Input("dy")
                                           .Input("cos")
                                           .Input("sin")
-                                          .Output("out")
+                                          .Output("dx")
                                           .Build());
     op_without_position_sinuous_ =
         CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb_grad").Input("x")
                                                                 .Input("dy")
-                                                                .Output("out")
+                                                                .Output("dx")
                                                                 .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -774,8 +771,89 @@ class FusedApplyRotaryEmbGradFunctor {
                            const Optional<std::string>& output_layout, const std::string& mode,
                            const Optional<int64_t>& tensor_index, const Optional<int64_t>& k_size,
                            const float base, const Optional<int64_t>& rotary_size) const {
-      std::cout << "FusedApplyRotaryEmbGradFunctor" << std::endl;
-      return dy;
+    int64_t b = 0, m = 0, h = 0, k = 0;
+    
+    if (tensor_index) {
+      CHECK_OR_RETURN((JUST(tensor_index) >= 0) && (JUST(tensor_index) <= 2))
+          << "tensor_index should be set between [0, 2]";
+    }
+    CHECK_OR_RETURN((mode == "interval") || (mode == "plane"))
+        << "mode should be \"intervel\" or \"plane\"";
+
+    ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(), k_size, &b, &m, &h, &k);
+
+    if (k_size) {
+      CHECK_EQ_OR_RETURN(JUST(k_size), k)
+          << "k_size if given should be equal to K of cos, sin and x.";
+    }
+    if (rotary_size) {
+      CHECK_LE_OR_RETURN(JUST(rotary_size), k) << "rotary_size should be no more than k.";
+    }
+
+    int64_t rotary_emd_dim = 1;
+
+    if (position_ids) {
+      CHECK_EQ_OR_RETURN(JUST(position_ids)->shape()->NumAxes(), 3)
+          << "ndims of position_ids should be equal to 3, either in form of B1M or B2M.";
+      CHECK_EQ_OR_RETURN(JUST(position_ids)->shape()->At(0), b)
+          << "1st dim of position_ids should be equal to B.";
+      CHECK_EQ_OR_RETURN(JUST(position_ids)->shape()->At(2), m)
+          << "3rd dim of position_ids should be equal to M.";
+      rotary_emd_dim = JUST(position_ids)->shape()->At(1);
+      CHECK_OR_RETURN(rotary_emd_dim == 1 || rotary_emd_dim == 2)
+          << "2nd dim of position_ids should be 1 or 2.";
+    }
+
+    const int64_t actual_rotary_size = rotary_size.value_or(k) / rotary_emd_dim;
+    CHECK_EQ_OR_RETURN(actual_rotary_size % 2, 0)
+        << "k ,or rotary_size if given, should be a multiple of 2 * rotary_encoding_dim.";
+
+    if (cos && sin) {
+      CHECK_EQ_OR_RETURN(JUST(cos)->shape()->NumAxes(), 2)
+          << "The number of dimensions of cos should be equal to 2.";
+      CHECK_OR_RETURN(JUST(cos)->shape() == JUST(sin)->shape())
+          << "Each dimension of cos & sin should be the same.";
+      CHECK_EQ_OR_RETURN(JUST(cos)->shape()->At(1), actual_rotary_size)
+          << "The 1st dimension of cos & sin should equal to rotary_size // "
+             "rotary_embedding_dimension.";
+    } else if (!cos && !sin) {
+      // do nothing
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "cos & sin should both be given or not given.";
+    }
+
+    if (!position_ids) {
+      if (cos && sin) {
+        CHECK_GE_OR_RETURN(JUST(cos)->shape()->At(0), m)
+            << "M of cos & sin should be to no less than "
+               "M of x when position_ids is not "
+               "given.";  // K of cos & sin is checked
+                          // inside ParseDims
+      }
+    }
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("x_layout", "output_layout", "mode",
+                                                 "tensor_index", "k_size", "base", "rotary_size");
+    attrs.SetAllAttrs(x_layout, output_layout.value_or(x_layout), mode, tensor_index.value_or(0),
+                      k_size.value_or(k), base, rotary_size.value_or(k));
+
+    if (position_ids) {
+      if (cos && sin) {
+        return OpInterpUtil::Dispatch<Tensor>(*op_with_position_sinuous_,
+                                              {x, dy, JUST(cos), JUST(sin), JUST(position_ids)}, attrs);
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*op_with_position_, {x, dy, JUST(position_ids)}, attrs);
+      }
+    } else {
+      if (cos && sin) {
+        return OpInterpUtil::Dispatch<Tensor>(*op_without_position_, {x, dy, JUST(cos), JUST(sin)},
+                                              attrs);
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*op_without_position_sinuous_, {x, dy}, attrs);
+      }
+    }
+
+    return dy;
   }
 
  private:

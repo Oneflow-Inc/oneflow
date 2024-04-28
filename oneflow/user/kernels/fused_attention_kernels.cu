@@ -1405,6 +1405,22 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+template<typename T, typename PositionType>
+class FusedApplyRotaryEmbGradKernel final : public user_op::OpKernel {
+ public:
+  FusedApplyRotaryEmbGradKernel() = default;
+  ~FusedApplyRotaryEmbGradKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    printf("%s\n", "FusedApplyRotaryEmbGradKernel");
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+
 #define REGISTER_FUSED_APPLY_ROTARY_EMB_GPU(dtype, position_type)          \
   REGISTER_USER_KERNEL("fused_apply_rotary_emb")                           \
       .SetCreateFn<FusedApplyRotaryEmbKernel<dtype, position_type>>()      \
@@ -1427,6 +1443,31 @@ REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(float);
 REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(half);
 #if CUDA_VERSION >= 11000
 REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(nv_bfloat16);
+#endif  // CUDA_VERSION >= 11000
+
+
+#define REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU(dtype, position_type)          \
+  REGISTER_USER_KERNEL("fused_apply_rotary_emb_grad")                           \
+      .SetCreateFn<FusedApplyRotaryEmbGradKernel<dtype, position_type>>()      \
+      .SetIsMatchedHob(                                                    \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+          && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value) \
+          && (user_op::HobInputSize("position_ids") == 1)                  \
+          && (user_op::HobDataType("position_ids", 0) == GetDataType<position_type>::value));
+
+#define REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU_DTYPE(dtype)                                \
+  REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU(dtype, int64_t);                                  \
+  REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU(dtype, int32_t);                                  \
+  REGISTER_USER_KERNEL("fused_apply_rotary_emb_grad")                                        \
+      .SetCreateFn<FusedApplyRotaryEmbGradKernel<dtype, int64_t>>()                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobInputSize("position_ids") == 0));
+
+REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU_DTYPE(float);
+REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU_DTYPE(half);
+#if CUDA_VERSION >= 11000
+REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU_DTYPE(nv_bfloat16);
 #endif  // CUDA_VERSION >= 11000
 
 }  // namespace

@@ -815,6 +815,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   const int64_t k_size = ctx->Attr<int64_t>("k_size");
   const int64_t tensor_index = ctx->Attr<int64_t>("tensor_index");
 
+  auto Inputs = ctx->inputs();
+
   CHECK_OR_RETURN((tensor_index >= 0) && (tensor_index <= 2))
       << "tensor_index should be in range [0, 2].";
   CHECK_OR_RETURN((mode == "interval") || (mode == "plane"))
@@ -833,18 +835,20 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 
   int64_t rotary_emb_dim = 1;
 
+  
   if (ctx->has_input("position_ids", 0)) {
-    const user_op::TensorDesc& position_ids_desc = ctx->InputTensorDesc("position_ids", 0);
-    CHECK_EQ_OR_RETURN(position_ids_desc.shape().NumAxes(), 3)
+    const Shape& position_id_shape = ctx->InputShape("position_ids", 0);
+    CHECK_EQ_OR_RETURN(position_id_shape.NumAxes(), 3)
         << "ndims of position_ids should be equal to 3, either in form of B1M or B2M.";
-    CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(0), b)
+    CHECK_EQ_OR_RETURN(position_id_shape.At(0), b)
         << "1st dim of position_ids should be equal to B.";
-    CHECK_EQ_OR_RETURN(position_ids_desc.shape().At(2), m)
+    CHECK_EQ_OR_RETURN(position_id_shape.At(2), m)
         << "3rd dim of position_ids should be equal to M.";
-    rotary_emb_dim = position_ids_desc.shape().At(1);
+    rotary_emb_dim = position_id_shape.At(1);
     CHECK_OR_RETURN(rotary_emb_dim == 1 || rotary_emb_dim == 2)
         << "2nd dim of position_ids should be 1 or 2.";
   }
+  // 这里是重复检查，且会报错;
 
   const int64_t actual_rotary_size = rotary_size / rotary_emb_dim;
   CHECK_EQ_OR_RETURN(actual_rotary_size % 2, 0)
@@ -854,13 +858,14 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   bool has_sin = ctx->has_input("sin", 0);
   // TODO: fused_apply_rotary_emb have same logic no matter name
   if (has_cos && has_sin) {
-    const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
-    const user_op::TensorDesc& sin_desc = ctx->InputTensorDesc("sin", 0);
-    CHECK_EQ_OR_RETURN(cos_desc.shape().NumAxes(), 2)
+    const Shape& cos_shape = ctx->InputShape("cos", 0);
+    const Shape& sin_shape = ctx->InputShape("sin", 0);
+    CHECK_EQ_OR_RETURN(cos_shape.NumAxes(), 2)
         << "The number of dimensions of cos should be equal to 2.";
-    CHECK_OR_RETURN(cos_desc.shape() == sin_desc.shape())
+
+    CHECK_OR_RETURN(cos_shape == sin_shape)
         << "The dimensions of cos & sin should be the same.";
-    CHECK_EQ_OR_RETURN(cos_desc.shape().At(1), actual_rotary_size)
+    CHECK_EQ_OR_RETURN(cos_shape.At(1), actual_rotary_size)
         << "The 1st dimension of cos & sin should equal to rotary_size // "
            "rotary_embedding_dimension.";
   } else if (!has_cos && !has_sin) {
@@ -871,8 +876,9 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 
   if (!ctx->has_input("position_ids", 0)) {
     if (has_cos && has_sin) {
-      const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
-      CHECK_GE_OR_RETURN(cos_desc.shape().At(0), m)
+      // const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
+      const Shape& cos_shape = ctx->InputShape("cos", 0);
+      CHECK_GE_OR_RETURN(cos_shape.At(0), m)
           << "M of cos should be no less than M of x if position_ids is not given.";
       // K of cos & sin is checked inside ParseDims
     }
@@ -969,7 +975,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 }
 
 /* static */ Maybe<void> FusedApplyRotaryEmbGradOp::InferDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("dy", 0);
+  const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("x", 0);
 
   bool has_sinuous = ctx->has_input("cos", 0);
 
