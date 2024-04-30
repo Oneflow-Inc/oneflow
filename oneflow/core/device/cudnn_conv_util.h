@@ -17,6 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_DEVICE_CUDNN_CONV_UTIL_H_
 
 #ifdef WITH_CUDA
+
+#include "cudnn_frontend.h"
+#include "cudnn_frontend_EngineConfigGenerator.h"
 #include "oneflow/core/common/tensor_desc.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/common/protobuf.h"
