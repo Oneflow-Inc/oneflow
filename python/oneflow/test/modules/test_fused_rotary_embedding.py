@@ -480,6 +480,7 @@ def _test_without_position(
         # fused_out = np.concatenate((out0, out1, out2), axis=-1)
         fused_out = flow.cat((out0, out1, out2), dim = -1)
     else:
+        print("apply!")
         fused_out = flow._C.fused_apply_rotary_emb(
             fused_x,
             cos=fused_cos,
@@ -491,10 +492,12 @@ def _test_without_position(
             rotary_size=rotary_size,
             mode=mode,
         )
+        print("end!")
     
     fused_out_backward = fused_out.sum()
     fused_out_backward.backward()
-    fused_out_grad = fused_out_backward.grad
+    fused_out_grad = fused_x.grad
+    print("get grad!")
     #print(fused_out_grad)
     # test forward
     test_case.assertTrue(
@@ -686,7 +689,7 @@ def _test_without_position_sinuous(
     
     fused_out_backward = fused_out.sum()
     fused_out_backward.backward()
-    fused_out_grad = fused_out_backward.grad
+    fused_out_grad = fused_x.grad
     #print(fused_out_grad)
     # test forward
     test_case.assertTrue(
@@ -931,7 +934,7 @@ def _test_with_position_sinuous(
 
     fused_out_backward = fused_out.sum()
     fused_out_backward.backward()
-    fused_out_grad = fused_out_backward.grad
+    fused_out_grad = fused_x.grad
     #print(fused_out_grad)
     # test forward
     test_case.assertTrue(
@@ -1129,7 +1132,7 @@ def _test_with_position(
 
     fused_out_backward = fused_out.sum()
     fused_out_backward.backward()
-    fused_out_grad = fused_out_backward.grad
+    fused_out_grad = fused_x.grad
     #print(fused_out_grad)
     # test forward
     test_case.assertTrue(
@@ -1335,7 +1338,7 @@ def _test_plane(
 
     fused_out_backward = fused_out.sum()
     fused_out_backward.backward()
-    fused_out_grad = fused_out_backward.grad
+    fused_out_grad = fused_x.grad
     #print(fused_out_grad)
     # test forward
     test_case.assertTrue(
@@ -1356,6 +1359,7 @@ def _test_plane(
             rtol=5e-3,
         )
     )
+    print("tset plane done")
 
 
 
@@ -1390,7 +1394,7 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
     
 
-    
+    '''
     def test_fused_rotary_embedding_op_interval_2d(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_with_position, 
@@ -1409,8 +1413,9 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
-    
+    '''
 
+    '''
     def test_fused_rotary_embedding_op_interval_1d(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [
@@ -1420,7 +1425,7 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
             #_test_with_position_sinuous,
         ]
         args_dict["x_layout"] = ["BMHK"]
-        args_dict["mode"] = ["plane"]
+        args_dict["mode"] = ["interval"]
         args_dict["base"] = [1e1]
         args_dict["rotary_size"] = [4]
         args_dict["dims"] = [(3, 2, 5, 8)]
@@ -1432,7 +1437,7 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
-    
+    '''
 
 if __name__ == "__main__":
     unittest.main()

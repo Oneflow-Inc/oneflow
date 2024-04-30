@@ -852,8 +852,6 @@ class FusedApplyRotaryEmbGradFunctor {
         return OpInterpUtil::Dispatch<Tensor>(*op_without_position_sinuous_, {x, dy}, attrs);
       }
     }
-
-    return dy;
   }
 
  private:

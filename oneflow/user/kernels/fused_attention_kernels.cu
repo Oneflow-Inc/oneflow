@@ -1128,6 +1128,15 @@ __global__ void IntervalKernel(
   }
 }
 
+template<typename T, typename PositionType, typename IndexType, size_t PackSize, size_t num_dims,
+         size_t rotary_emb_dim>
+__global__ void IntervalGradKernel(
+    FusedApplyRotaryEmbParam<T, PositionType, IndexType, num_dims, rotary_emb_dim> param) {
+    printf("IntervalGradKernel TODO!\n");
+  }
+}
+
+
 template<typename T, typename PositionType, typename IndexType, size_t num_dims,
          size_t rotary_emb_dim>
 __global__ void PlaneKernel(
@@ -1199,6 +1208,86 @@ __global__ void PlaneKernel(
   }
 }
 
+template<typename T, typename PositionType, typename IndexType, size_t num_dims,
+         size_t rotary_emb_dim>
+__global__ void PlaneGradKernel(
+  FusedApplyRotaryEmbParam<T, PositionType, IndexType, num_dims, rotary_emb_dim> param) {
+    for (IndexType offset = threadIdx.x + blockIdx.x * blockDim.x; offset < param.num_elements;
+         offset += blockDim.x * gridDim.x) {
+    using LoadPack = cuda::elementwise::Packed<T, 2>;
+    IndexType temp_offset = offset;
+    IndexType index[num_dims];
+#pragma unroll
+    for (int i = 0; i < num_dims - 1; i++) {
+      IndexType ref_stride = param.ref_stride[i];
+      IndexType idx = temp_offset / ref_stride;
+      index[i] = idx;
+      temp_offset = temp_offset - idx * ref_stride;
+    }
+    index[num_dims - 1] = temp_offset;
+
+    const IndexType b_index = index[0], m_index = index[1], k_index = index[num_dims - 1];
+    const IndexType position_rotate_index = (k_index >= param.k0) ? 1 : 0;
+    const IndexType position_id_offset = b_index * param.position_b_stride
+                                         + position_rotate_index * param.position_rotate_stride
+                                         + m_index;
+
+    const PositionType position =
+        param.position_ids ? param.position_ids[position_id_offset] : m_index;
+    const IndexType actual_k_index = k_index % param.actual_rotary_size;
+    const IndexType sinuous_offset = position * param.k + actual_k_index;
+
+    T cos_val, sin_val, out_val;
+
+    if (param.cos && param.sin) {
+      cos_val = *(param.cos + sinuous_offset);
+      IndexType offset_;     // 针对grad, sin_val需要有 size / 2的偏移;
+      if (k_index < param.k0) {
+        offset_ = (param.k0 - k_index > param.rotate_stride) ? param.rotate_stride : -param.rotate_stride;
+      } else if (k_index < param.k1) {
+        offset_ = (param.k1 - k_index > param.rotate_stride) ? param.rotate_stride : -param.rotate_stride;
+      } 
+
+      sin_val = *(param.sin + sinuous_offset + offset_);
+    } else {
+      // TODO: plane grad kernel without sin & cos;
+      
+      T val = position
+              * expf(2.0f * static_cast<float>(k_index % (param.actual_rotary_size >> 1))
+                     * param.inv_actual_rotary_size * logf(param.theta));
+      cos_val = cosf(val);
+      sin_val = sinf(val);
+    }
+    
+    LoadPack x_vec;
+    IndexType x_offset = param.x_offset;
+    IndexType out_offset = 0;
+#pragma unroll
+    for (int i = 0; i < num_dims; i++) {
+      x_offset = x_offset + param.x_stride[i] * index[i];
+      out_offset = out_offset + param.out_stride[i] * index[i];
+    }
+
+    if (k_index < param.k0) {
+      x_vec.elem[0] = *(param.x + x_offset);
+      x_vec.elem[1] = (param.k0 - k_index > param.rotate_stride)
+                          ? static_cast<T>(*(param.x + x_offset + param.rotate_stride))
+                          : -*(param.x + x_offset - param.rotate_stride);
+      out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
+    } else if (k_index < param.k1) {
+      x_vec.elem[0] = *(param.x + x_offset);
+      x_vec.elem[1] = (param.k1 - k_index > param.rotate_stride)
+                          ? static_cast<T>(*(param.x + x_offset + param.rotate_stride))
+                          : -*(param.x + x_offset - param.rotate_stride);
+      out_val = cos_val * x_vec.elem[0] + sin_val * x_vec.elem[1];
+    } else {
+      out_val = *(param.x + x_offset);
+    }
+
+    *(param.out + out_offset) = out_val;
+  }
+}
+
 template<typename T, typename PositionType, typename IndexType, size_t PackSize, size_t num_dims,
          size_t rotary_emb_dim>
 void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin,
@@ -1209,7 +1298,7 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
                   const IndexType x_b_stride, const IndexType x_m_stride,
                   const IndexType x_h_stride, const IndexType x_offset,
                   const IndexType out_b_stride, const IndexType out_m_stride,
-                  const IndexType out_h_stride, IndexType num_elements) {
+                  const IndexType out_h_stride, IndexType num_elements, const bool is_forward) {
   const IndexType k0 = rotary_size / rotary_emb_dim,
                   k1 = rotary_size;  // TODO: this only support 1d, 2d, rotary postional encoding
 
@@ -1243,16 +1332,31 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
 
   constexpr size_t blk_size = 128;
 
-  if (mode == "plane") {
+  if (is_forward) {
+    if (mode == "plane") {
     param.num_elements = param.num_elements * PackSize;
     PlaneKernel<T, PositionType, IndexType, num_dims, rotary_emb_dim>
         <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
             param);
-  } else {
+    } else {
     IntervalKernel<T, PositionType, IndexType, PackSize, num_dims, rotary_emb_dim>
         <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
             param);
+    }
   }
+  else {
+    if (mode == "plane") {
+    param.num_elements = param.num_elements * PackSize;
+    PlaneGradKernel<T, PositionType, IndexType, num_dims, rotary_emb_dim>
+        <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
+            param);
+    } else {
+    IntervalGradKernel<T, PositionType, IndexType, PackSize, num_dims, rotary_emb_dim>
+        <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
+            param);
+    }
+  }
+  
 }
 
 template<typename T, typename PositionType, typename IndexType, size_t num_dims,
@@ -1265,7 +1369,7 @@ void DispatchPackSize(ep::CudaStream* stream, const T* x, const T* cos, const T*
                       const IndexType x_b_stride, const IndexType x_m_stride,
                       const IndexType x_h_stride, const IndexType x_offset,
                       const IndexType out_b_stride, const IndexType out_m_stride,
-                      const IndexType out_h_stride, IndexType num_elements) {
+                      const IndexType out_h_stride, IndexType num_elements, const bool is_forward) {
   const auto CheckPackSize = [&](const size_t PackSize) {
     bool r = (((reinterpret_cast<uintptr_t>(x) % (sizeof(T) * PackSize)) == 0)
               && (((rotary_size / rotary_emb_dim) % PackSize) == 0)
@@ -1278,19 +1382,19 @@ void DispatchPackSize(ep::CudaStream* stream, const T* x, const T* cos, const T*
     LaunchKernel<T, PositionType, IndexType, 8, num_dims, rotary_emb_dim>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
         theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride,
-        out_m_stride, out_h_stride, num_elements);
+        out_m_stride, out_h_stride, num_elements, is_forward);
   } else if (CheckPackSize(4)) {
     num_elements /= 4;
     LaunchKernel<T, PositionType, IndexType, 4, num_dims, rotary_emb_dim>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
         theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride,
-        out_m_stride, out_h_stride, num_elements);
+        out_m_stride, out_h_stride, num_elements, is_forward);
   } else {
     num_elements /= 2;
     LaunchKernel<T, PositionType, IndexType, 2, num_dims, rotary_emb_dim>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
         theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride,
-        out_m_stride, out_h_stride, num_elements);
+        out_m_stride, out_h_stride, num_elements, is_forward);
   }
 }
 
@@ -1302,8 +1406,9 @@ void DispatchIndex(ep::CudaStream* stream, const T* x, const T* cos, const T* si
                    const int64_t b, const int64_t m, const int64_t h, const int64_t k,
                    const int64_t x_b_stride, const int64_t x_m_stride, const int64_t x_h_stride,
                    const int64_t x_offset, const int64_t out_b_stride, const int64_t out_m_stride,
-                   const int64_t out_h_stride) {
+                   const int64_t out_h_stride, const bool is_forward) {
   int64_t num_elements = b * m * h * k;
+
   if (num_elements < (1 << 30)) {
     DispatchPackSize<T, PositionType, int32_t, num_dims, rotary_emb_dim>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
@@ -1312,12 +1417,12 @@ void DispatchIndex(ep::CudaStream* stream, const T* x, const T* cos, const T* si
         static_cast<int32_t>(x_m_stride), static_cast<int32_t>(x_h_stride),
         static_cast<int32_t>(x_offset), static_cast<int32_t>(out_b_stride),
         static_cast<int32_t>(out_m_stride), static_cast<int32_t>(out_h_stride),
-        static_cast<int32_t>(num_elements));
+        static_cast<int32_t>(num_elements), is_forward);
   } else {
     DispatchPackSize<T, PositionType, int64_t, num_dims, rotary_emb_dim>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
         theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride,
-        out_m_stride, out_h_stride, num_elements);
+        out_m_stride, out_h_stride, num_elements, is_forward);
   }
 }
 
@@ -1331,17 +1436,17 @@ void DispatchRotaryEmbeddingDimension(ep::CudaStream* stream, const T* x, const 
                                       const int64_t h, const int64_t k, const int64_t x_b_stride,
                                       const int64_t x_m_stride, const int64_t x_h_stride,
                                       const int64_t x_offset, const int64_t out_b_stride,
-                                      const int64_t out_m_stride, const int64_t out_h_stride) {
+                                      const int64_t out_m_stride, const int64_t out_h_stride, const bool is_forward) {
   if (rotary_emb_dim == 1) {
     DispatchIndex<T, PositionType, num_dims, 1>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
         theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride,
-        out_m_stride, out_h_stride);
+        out_m_stride, out_h_stride, is_forward);
   } else if (rotary_emb_dim == 2) {
     DispatchIndex<T, PositionType, num_dims, 2>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
         theta, rotary_size, b, m, h, k, x_b_stride, x_m_stride, x_h_stride, x_offset, out_b_stride,
-        out_m_stride, out_h_stride);
+        out_m_stride, out_h_stride, is_forward);
   }
 }
 
@@ -1389,7 +1494,7 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
               &out_b_stride, &out_m_stride, &out_h_stride, &out_offset);
     ParseDims(x->shape_view(), x_layout, Optional<int64_t>(), k_size, tensor_index, &b, &m, &h, &k,
               &x_b_stride, &x_m_stride, &x_h_stride, &x_offset);
-
+    bool is_forward = true;
     // TODO: hard code num_dims & seems redundant template problem...
     DispatchRotaryEmbeddingDimension<T, PositionType, ndims>(
         ctx->stream()->As<ep::CudaStream>(), reinterpret_cast<const T*>(x->dptr()),
@@ -1399,7 +1504,7 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
         reinterpret_cast<T*>(out->mut_dptr()),
         position_ids ? position_ids->shape_view().data() : nullptr, x_layout, output_layout, mode,
         static_cast<T>(theta), rotary_size, rotary_emb_dim, b, m, h, k, x_b_stride, x_m_stride,
-        x_h_stride, x_offset, out_b_stride, out_m_stride, out_h_stride);
+        x_h_stride, x_offset, out_b_stride, out_m_stride, out_h_stride, is_forward);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -1414,7 +1519,53 @@ class FusedApplyRotaryEmbGradKernel final : public user_op::OpKernel {
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    printf("%s\n", "FusedApplyRotaryEmbGradKernel");
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* cos = nullptr;
+    user_op::Tensor* sin = nullptr;
+    user_op::Tensor* position_ids = nullptr;
+    user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    const std::string& x_layout = ctx->Attr<std::string>("x_layout");
+    const std::string& output_layout = ctx->Attr<std::string>("output_layout");
+    const std::string& mode = ctx->Attr<std::string>("mode");
+    const int64_t tensor_index = ctx->Attr<int64_t>("tensor_index");
+    const int64_t k_size = ctx->Attr<int64_t>("k_size");
+    const int64_t rotary_size = ctx->Attr<int64_t>("rotary_size");
+    const float theta = 1.0f / ctx->Attr<float>("base");
+    int rotary_emb_dim = 1;
+
+    if (ctx->has_input("cos", 0)) { cos = ctx->Tensor4ArgNameAndIndex("cos", 0); }
+
+    if (ctx->has_input("sin", 0)) { sin = ctx->Tensor4ArgNameAndIndex("sin", 0); }
+
+    if (ctx->has_input("position_ids", 0)) {
+      position_ids = ctx->Tensor4ArgNameAndIndex("position_ids", 0);
+      rotary_emb_dim = position_ids->shape_view().At(1);
+    }
+
+    constexpr size_t ndims = 4;
+    int64_t b = 0;
+    int64_t m = 0;
+    int64_t h = 0;
+    int64_t k = 0;
+    int64_t out_b_stride = 0, out_m_stride = 0, out_h_stride = 0, out_offset = 0;
+    int64_t x_b_stride = 0, x_m_stride = 0, x_h_stride = 0, x_offset = 0;
+
+    ParseDims(dx->shape_view(), output_layout, Optional<int64_t>(), k_size, 0, &b, &m, &h, &k,
+              &out_b_stride, &out_m_stride, &out_h_stride, &out_offset);
+    ParseDims(dy->shape_view(), x_layout, Optional<int64_t>(), k_size, tensor_index, &b, &m, &h, &k,
+              &x_b_stride, &x_m_stride, &x_h_stride, &x_offset);
+    bool is_forward = false;
+    // TODO: hard code num_dims & seems redundant template problem...
+    DispatchRotaryEmbeddingDimension<T, PositionType, ndims>(
+        ctx->stream()->As<ep::CudaStream>(), reinterpret_cast<const T*>(dy->dptr()),
+        cos ? reinterpret_cast<const T*>(cos->dptr()) : nullptr,
+        sin ? reinterpret_cast<const T*>(sin->dptr()) : nullptr,
+        position_ids ? reinterpret_cast<const PositionType*>(position_ids->dptr()) : nullptr,
+        reinterpret_cast<T*>(dx->mut_dptr()),
+        position_ids ? position_ids->shape_view().data() : nullptr, x_layout, output_layout, mode,
+        static_cast<T>(theta), rotary_size, rotary_emb_dim, b, m, h, k, x_b_stride, x_m_stride,
+        x_h_stride, x_offset, out_b_stride, out_m_stride, out_h_stride, is_forward);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
