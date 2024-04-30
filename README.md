@@ -13,49 +13,52 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 
 ## Latest News
 
-- Version 0.9.0 is out!
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.9.0)
+- Version 1.0.0 is out!
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v1.0.0)
 
 ## Publication
 
 - [OneFlow: Redesign the Distributed Deep Learning Framework from Scratch](https://arxiv.org/abs/2110.15032)
-- Bibtex Citation
 
-  ```
-  @misc{yuan2021oneflow,
-        title={OneFlow: Redesign the Distributed Deep Learning Framework from Scratch},
-        author={Jinhui Yuan and Xinqi Li and Cheng Cheng and Juncheng Liu and Ran Guo and Shenghang Cai and Chi Yao and Fei Yang and Xiaodong Yi and Chuan Wu and Haoran Zhang and Jie Zhao},
-        year={2021},
-        eprint={2110.15032},
-        archivePrefix={arXiv},
-        primaryClass={cs.DC}
-  }
-  ```
+## System Requirements
 
-## Install OneFlow
+### General
+- Linux
+- Python 3.7, 3.8, 3.9, 3.10, 3.11
 
-### System Requirements
+### CUDA
+- CUDA arch 60 or above
+- CUDA Toolkit version 10.0 or above
+- Nvidia driver version 440.33 or above
 
-- Linux. As for now, there is no pre-built release for macOS, Windows.
-- Python 3.7, 3.8, 3.9, 3.10
+  OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
+
+## Install
+
+### Preinstall docker image
+
+```
+docker pull oneflowinc/oneflow:nightly-cuda11.7
+```
+
+### Pip Install
+
 - (**Highly recommended**) Upgrade pip
 
   ```
   python3 -m pip install --upgrade pip #--user
   ```
 
-- CUDA Toolkit Linux x86_64 Driver
-
-  - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
-
-  - Please upgrade your Nvidia driver to version 440.33 or above and install OneFlow for CUDA 10.2 if possible.
-
-### Install with Pip Package
-
 - To install latest stable release of OneFlow with CUDA support:
 
   ```bash
   python3 -m pip install oneflow
+  ```
+
+- To install nightly release of OneFlow with CPU-only support:
+
+  ```bash
+  python3 -m pip install --pre oneflow -f https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cpu
   ```
 
 - To install nightly release of OneFlow with CUDA support:
@@ -64,35 +67,13 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
   python3 -m pip install --pre oneflow -f https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cu118
   ```
 
-- To install other available builds for different variants:
-
-  - Stable
-    ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.9.0+cu118
-    ```
-  - Nightly
-    ```
-    python3 -m pip install --pre oneflow -f https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/[PLATFORM]
-    ```
-  - All available `[PLATFORM]`:
-    | Platform |CUDA Driver Version| Supported GPUs |
-    |---|---|---|
-    | cu118 | >= 450.80.02 | GTX 10xx, RTX 20xx, A100, RTX 30xx |
-    | cpu | N/A | N/A |
-
-- If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
+  If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
   ```
   python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
   ```
   For more information on this, please refer to [pypi 镜像使用帮助](https://mirror.tuna.tsinghua.edu.cn/help/pypi/)
 
-### Use docker image
-
-```
-docker pull oneflowinc/oneflow:nightly-cuda11.7
-```
-
-### Build from Source
+### Install from Source
 
 <details>
 <summary>Clone Source Code</summary>
@@ -100,12 +81,10 @@ docker pull oneflowinc/oneflow:nightly-cuda11.7
 - #### Option 1: Clone source code from GitHub
 
   ```bash
-  git clone https://github.com/Oneflow-Inc/oneflow --depth=1
+  git clone https://github.com/Oneflow-Inc/oneflow.git
   ```
 
-- #### Option 2: Download from Aliyun
-
-  If you are in China, please download OneFlow source code from: https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip
+- #### Option 2: Download from Aliyun(Only available in China)
 
   ```bash
   curl https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip -o oneflow-src.zip
@@ -117,97 +96,77 @@ docker pull oneflowinc/oneflow:nightly-cuda11.7
 <details>
 <summary>Build OneFlow</summary>
 
-- #### Option 1: Build with Conda (recommended)
+- Install dependencies
+  ```
+  apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake autoconf libtool
+  ```
+  These dependencies are preinstalled in offical conda environment and docker image, you can use the offical conda environment [here](https://github.com/Oneflow-Inc/conda-env) or use the docker image by:
+  ```bash
+  docker pull oneflowinc/manylinux2014_x86_64_cuda11.2
+  ```
+- In the root directory of OneFlow source code, run:
 
-  Please refer to [this repo](https://github.com/Oneflow-Inc/conda-env)
+  ```
+  mkdir build
+  cd build
+  ```
 
-- #### Option 2: Build in docker container (recommended)
+- Config the project, inside `build` directory:
 
-  - Pull the docker image:
+  - If you are in China
 
-    ```bash
-    docker pull oneflowinc/manylinux2014_x86_64_cuda11.2
-    ```
-
-  - Follow the instructions in the bare metal build guide below.
-
-- #### Option 3: Build on bare metal
-
-  - Install dependencies (not required if you are using docker):
-    - on Ubuntu 20.04, run:
-      ```
-      sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake autoconf libtool
-      ```
-    - on macOS, run:
-      ```
-      brew install nasm
-      ```
-  - In the root directory of OneFlow source code, run:
+    config for CPU-only like this:
 
     ```
-    mkdir build
-    cd build
+    cmake .. -C ../cmake/caches/cn/cpu.cmake
     ```
 
-  - Config the project, inside `build` directory:
-
-    - If you are in China
-
-      run this to config for CUDA:
-
-      ```
-      cmake .. -C ../cmake/caches/cn/cuda.cmake
-      ```
-
-      run this to config for CPU-only:
-
-      ```
-      cmake .. -C ../cmake/caches/cn/cpu.cmake
-      ```
-
-    - If you are not in China
-
-      run this to config for CUDA:
-
-      ```
-      cmake .. -C ../cmake/caches/international/cuda.cmake
-      ```
-
-      run this to config for CPU-only:
-
-      ```
-      cmake .. -C ../cmake/caches/international/cpu.cmake
-      ```
-
-  - Build the project, inside `build` directory, run:
+    config for CUDA like this:
 
     ```
-    make -j$(nproc)
+    cmake .. -C ../cmake/caches/cn/cuda.cmake -DCMAKE_CUDA_ARCHITECTURES=80 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda -DCUDNN_ROOT_DIR=/usr/local/cudnn
     ```
 
-  - Add oneflow to your PYTHONPATH, inside `build` directory, run:
+  - If you are not in China
+
+    config for CPU-only like this:
 
     ```
-    source source.sh
+    cmake .. -C ../cmake/caches/international/cpu.cmake
     ```
 
-    Please note that this change is not permanent.
-
-  - Simple validation
+    config for CUDA like this:
 
     ```
-    python3 -m oneflow --doctor
+    cmake .. -C ../cmake/caches/international/cuda.cmake -DCMAKE_CUDA_ARCHITECTURES=80 -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda -DCUDNN_ROOT_DIR=/usr/local/cudnn
     ```
+    Here the DCMAKE\_CUDA\_ARCHITECTURES macro is used to specify the CUDA architecture, and the DCUDA\_TOOLKIT\_ROOT\_DIR and DCUDNN\_ROOT\_DIR macros are used to specify the root path of the CUDA Toolkit and CUDNN.
 
-    </details>
+- Build the project, inside `build` directory, run:
+
+  ```
+  make -j$(nproc)
+  ```
+
+- Add oneflow to your PYTHONPATH, inside `build` directory, run:
+
+  ```
+  source source.sh
+  ```
+
+  Please note that this change is not permanent.
+
+- Simple validation
+
+  ```
+  python3 -m oneflow --doctor
+  ```
+
+  </details>
 
 ### Troubleshooting
 
 Please refer to [troubleshooting](docs/source/troubleshooting.md) for common issues you might encounter when compiling and running OneFlow.
-
-### Advanced features
-
-- [OneFlow-XRT](https://github.com/Oneflow-Inc/oneflow-xrt): An extension for OneFlow to target third-party compiler, such as XLA, TensorRT and OpenVINO etc.
 
 ## Getting Started
 
@@ -229,7 +188,7 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
   - [VisionTransformer](https://libai.readthedocs.io/en/latest/modules/libai.models.html#id1)
   - [SwinTransformer](https://libai.readthedocs.io/en/latest/modules/libai.models.html#id2)
 - [FlowVision(Toolbox for Computer Vision Datasets, SOTA Models and Utils)](https://github.com/Oneflow-Inc/vision)
-- [OneFlow-Models(Examples of How to Implement Models in Various Fields with OneFlow)](https://github.com/Oneflow-Inc/models)
+- [OneFlow-Models(Outdated)](https://github.com/Oneflow-Inc/models)
   - [ResNet-50](https://github.com/Oneflow-Inc/models/tree/main/Vision/classification/image/resnet50)
   - [Wide&Deep](https://github.com/Oneflow-Inc/models/tree/main/RecommenderSystems/wide_and_deep)
 - [OneFlow-Benchmark(Outdated)](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
