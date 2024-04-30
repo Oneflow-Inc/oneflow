@@ -6,3 +6,11 @@ FetchContent_Declare(
 )
 set(CUDNN_FRONTEND_BUILD_SAMPLES OFF)
 FetchContent_MakeAvailable(cudnn_frontend)
+
+set(CUDNN_FRONTEND_INSTALL_DIR ${THIRD_PARTY_DIR}/cudnn_frontend)
+install(
+  TARGETS cudnn_frontend
+  EXPORT oneflow
+  LIBRARY DESTINATION ${CUDNN_FRONTEND_INSTALL_DIR}/lib
+  ARCHIVE DESTINATION ${CUDNN_FRONTEND_INSTALL_DIR}/lib
+)
