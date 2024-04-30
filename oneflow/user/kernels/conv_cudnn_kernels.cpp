@@ -305,8 +305,8 @@ class ConvGpuKernelV8 final : public user_op::OpKernel, public user_op::CudaGrap
 
     // trigger conv compute
     auto handle = ctx->stream()->As<ep::CudaStream>()->cudnn_handle();
-    RunSingleConv(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_FORWARD_DESCRIPTOR, input, output,
-                  weight, buffer, args);
+    CudnnFrontendRunConv(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_FORWARD_DESCRIPTOR, input,
+                         output, weight, buffer, args);
 
     // process bias
     auto bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
@@ -331,24 +331,25 @@ class ConvGpuKernelV8 final : public user_op::OpKernel, public user_op::CudaGrap
   }
 };
 
-#define REGISTER_CONV_KERNEL_V8(op_name, ndims)                                                    \
-  REGISTER_USER_KERNEL(#op_name)                                                                   \
-      .SetCreateFn<ConvGpuKernelV8<ndims>>()                                                       \
-      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA                               \
-                       && user_op::HobEnvBool("ONEFLOW_KERNEL_ENABLE_CUDNN_V8", false))            \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
-        auto& input = ctx->InputTensorDesc("in", 0);                                               \
-        auto& output = ctx->InputTensorDesc("out", 0);                                             \
-        auto& weight = ctx->InputTensorDesc("weight", 0);                                          \
-        CudnnConvArgsV8 args(*ctx, input, output, weight);                                         \
-        auto handle = Singleton<CudnnHandlePool>::Get()->Get();                                    \
-        std::string tag;                                                                           \
-        auto configs = GetConfigs(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_FORWARD_DESCRIPTOR,  \
-                                  args.xdesc, args.ydesc, args.wdesc, args.cdesc, args.beta, tag); \
-        size_t workspace_size = GetCudnnConvWorkspaceSizeV8(handle, configs, tag);                 \
-        Singleton<CudnnHandlePool>::Get()->Put(handle);                                            \
-        return workspace_size;                                                                     \
-      })                                                                                           \
+#define REGISTER_CONV_KERNEL_V8(op_name, ndims)                                         \
+  REGISTER_USER_KERNEL(#op_name)                                                        \
+      .SetCreateFn<ConvGpuKernelV8<ndims>>()                                            \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA                    \
+                       && user_op::HobEnvBool("ONEFLOW_KERNEL_ENABLE_CUDNN_V8", false)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                     \
+        auto& input = ctx->InputTensorDesc("in", 0);                                    \
+        auto& output = ctx->InputTensorDesc("out", 0);                                  \
+        auto& weight = ctx->InputTensorDesc("weight", 0);                               \
+        CudnnConvArgsV8 args(*ctx, input, output, weight);                              \
+        auto handle = Singleton<CudnnHandlePool>::Get()->Get();                         \
+        std::string tag;                                                                \
+        auto configs = CudnnFrontendGetConfigs(                                         \
+            handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_FORWARD_DESCRIPTOR, args.xdesc, \
+            args.ydesc, args.wdesc, args.cdesc, args.beta, tag);                        \
+        size_t workspace_size = GetCudnnConvWorkspaceSizeV8(handle, configs, tag);      \
+        Singleton<CudnnHandlePool>::Get()->Put(handle);                                 \
+        return workspace_size;                                                          \
+      })                                                                                \
       .SetPriority(user_op::kKernelPriorityOptimized);
 
 REGISTER_CONV_KERNEL_V8(conv1d, 1);
@@ -457,8 +458,8 @@ class ConvDataGradGpuKernelV8 final : public user_op::OpKernel, public user_op::
 
     // trigger conv compute
     auto handle = ctx->stream()->As<ep::CudaStream>()->cudnn_handle();
-    RunSingleConv(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_DATA_DESCRIPTOR, input_diff,
-                  output_diff, weight, buffer, args);
+    CudnnFrontendRunConv(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_DATA_DESCRIPTOR,
+                         input_diff, output_diff, weight, buffer, args);
   }
 
   bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
@@ -481,9 +482,9 @@ REGISTER_USER_KERNEL("conv_data_grad")
       CudnnConvArgsV8 args(*ctx, input_diff, output_diff, weight);
       auto handle = Singleton<CudnnHandlePool>::Get()->Get();
       std::string tag;
-      auto configs =
-          GetConfigs(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_DATA_DESCRIPTOR,
-                     args.xdesc, args.ydesc, args.wdesc, args.cdesc, args.beta, tag);
+      auto configs = CudnnFrontendGetConfigs(
+          handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_DATA_DESCRIPTOR, args.xdesc,
+          args.ydesc, args.wdesc, args.cdesc, args.beta, tag);
       size_t workspace_size = GetCudnnConvWorkspaceSizeV8(handle, configs, tag);
       Singleton<CudnnHandlePool>::Get()->Put(handle);
       return workspace_size;
@@ -582,8 +583,8 @@ class ConvFilterGradGpuKernelV8 final : public user_op::OpKernel, public user_op
 
     // trigger conv compute
     auto handle = ctx->stream()->As<ep::CudaStream>()->cudnn_handle();
-    RunSingleConv(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_FILTER_DESCRIPTOR, input,
-                  output_diff, weight_diff, buffer, args);
+    CudnnFrontendRunConv(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_FILTER_DESCRIPTOR,
+                         input, output_diff, weight_diff, buffer, args);
   }
 
   bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
@@ -606,9 +607,9 @@ REGISTER_USER_KERNEL("conv_filter_grad")
       CudnnConvArgsV8 args(*ctx, input, output_diff, weight_diff);
       auto handle = Singleton<CudnnHandlePool>::Get()->Get();
       std::string tag;
-      auto configs =
-          GetConfigs(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_FILTER_DESCRIPTOR,
-                     args.xdesc, args.ydesc, args.wdesc, args.cdesc, args.beta, tag);
+      auto configs = CudnnFrontendGetConfigs(
+          handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_FILTER_DESCRIPTOR, args.xdesc,
+          args.ydesc, args.wdesc, args.cdesc, args.beta, tag);
       size_t workspace_size = GetCudnnConvWorkspaceSizeV8(handle, configs, tag);
       Singleton<CudnnHandlePool>::Get()->Put(handle);
       return workspace_size;

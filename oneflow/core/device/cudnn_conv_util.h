@@ -186,54 +186,21 @@ cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvReso
 cudnnStatus_t GetCudnnConvWorkspaceSize(const CudnnConvArgs& args, CudnnConvResource* res,
                                         cudnnConvolutionBwdFilterAlgo_t algo, size_t* sz);
 
-void RunSingleConv(const cudnnHandle_t handle, const cudnnBackendDescriptorType_t desc,
-                   user_op::Tensor* x, user_op::Tensor* y, user_op::Tensor* w, user_op::Tensor* b,
-                   const CudnnConvArgsV8& args);
+cudnn_frontend::EngineConfigList CudnnFrontendGetConfigs(const cudnnHandle_t handle,
+                                                         const cudnnBackendDescriptorType_t desc,
+                                                         const cudnn_frontend::Tensor& xdesc,
+                                                         const cudnn_frontend::Tensor& ydesc,
+                                                         const cudnn_frontend::Tensor& wdesc,
+                                                         const cudnn_frontend::ConvDesc& cdesc,
+                                                         float beta, std::string& tag);
 
-cudnn_frontend::EngineConfigList GetConfigs(const cudnnHandle_t handle,
-                                            const cudnnBackendDescriptorType_t desc,
-                                            const cudnn_frontend::Tensor& xdesc,
-                                            const cudnn_frontend::Tensor& ydesc,
-                                            const cudnn_frontend::Tensor& wdesc,
-                                            const cudnn_frontend::ConvDesc& cdesc, float beta,
-                                            std::string& tag);
-
-cudnn_frontend::OperationGraph BuildConvOpGraph(const cudnnHandle_t handle,
-                                                const cudnnBackendDescriptorType_t desc,
-                                                const cudnn_frontend::Tensor& xdesc,
-                                                const cudnn_frontend::Tensor& ydesc,
-                                                const cudnn_frontend::Tensor& wdesc,
-                                                const cudnn_frontend::ConvDesc& cdesc, float beta);
-
-cudnn_frontend::Tensor GetTensorDescriptor(const user_op::Tensor* t, const int64_t id);
-
-cudnn_frontend::Tensor GetTensorDescriptor(const user_op::TensorDesc& t, const int64_t id);
-
-cudnn_frontend::ConvDesc GetConvDescriptor(const user_op::InferContext& ctx,
-                                           cudnnDataType_t data_type);
-
-cudnn_frontend::ConvDesc GetConvDescriptor(const user_op::KernelComputeContext& ctx,
-                                           cudnnDataType_t data_type);
-
-std::vector<cudnn_frontend::GeneratorSource> GetGeneratorSources(
-    const cudnnBackendDescriptorType_t desc);
-
-void FilterEngineConfigs(cudnn_frontend::EngineConfigList& from,
-                         cudnn_frontend::EngineConfigList& to, bool deterministic);
-
-void TryConfigs(const cudnnHandle_t handle, user_op::Tensor* x, user_op::Tensor* y,
-                user_op::Tensor* w, user_op::Tensor* buf, cudnn_frontend::EngineConfigList& configs,
-                const std::string& tag);
+void CudnnFrontendRunConv(const cudnnHandle_t handle, const cudnnBackendDescriptorType_t desc,
+                          user_op::Tensor* x, user_op::Tensor* y, user_op::Tensor* w,
+                          user_op::Tensor* b, const CudnnConvArgsV8& args);
 
 size_t GetCudnnConvWorkspaceSizeV8(const cudnnHandle_t handle,
                                    cudnn_frontend::EngineConfigList& configs,
                                    const std::string& tag);
-
-bool PlanErrataException(const cudnnHandle_t handle, const std::string& executionPlanTag);
-
-void RunConvPlan(const cudnnHandle_t handle, user_op::Tensor* x, user_op::Tensor* y,
-                 user_op::Tensor* w, user_op::Tensor* buf,
-                 const cudnn_frontend::ExecutionPlan& plan);
 
 template<typename perf_t>
 perf_t FindCudnnConvAlgorithm(CudnnConvArgs* args);
