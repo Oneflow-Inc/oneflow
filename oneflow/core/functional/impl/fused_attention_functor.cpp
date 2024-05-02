@@ -757,22 +757,18 @@ class FusedApplyRotaryEmbGradFunctor {
                                           .Input("sin")
                                           .Output("dx")
                                           .Build());
-    op_without_position_sinuous_ =
-        CHECK_JUST(one::OpBuilder("fused_apply_rotary_emb_grad").Input("x")
-                                                                .Input("dy")
-                                                                .Output("dx")
-                                                                .Build());
+    op_without_position_sinuous_ = CHECK_JUST(
+        one::OpBuilder("fused_apply_rotary_emb_grad").Input("x").Input("dy").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& dy,
-                           const Optional<one::Tensor>& cos,
+                           const std::shared_ptr<one::Tensor>& dy, const Optional<one::Tensor>& cos,
                            const Optional<one::Tensor>& sin,
                            const Optional<one::Tensor>& position_ids, const std::string& x_layout,
                            const Optional<std::string>& output_layout, const std::string& mode,
                            const Optional<int64_t>& tensor_index, const Optional<int64_t>& k_size,
                            const float base, const Optional<int64_t>& rotary_size) const {
     int64_t b = 0, m = 0, h = 0, k = 0;
-    
+
     if (tensor_index) {
       CHECK_OR_RETURN((JUST(tensor_index) >= 0) && (JUST(tensor_index) <= 2))
           << "tensor_index should be set between [0, 2]";
@@ -780,7 +776,7 @@ class FusedApplyRotaryEmbGradFunctor {
     CHECK_OR_RETURN((mode == "interval") || (mode == "plane"))
         << "mode should be \"intervel\" or \"plane\"";
 
-    ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(), k_size, &b, &m, &h, &k);
+    JUST(ParseDims("x", *x->shape(), x_layout, Optional<int64_t>(), k_size, &b, &m, &h, &k));
 
     if (k_size) {
       CHECK_EQ_OR_RETURN(JUST(k_size), k)
@@ -839,10 +835,11 @@ class FusedApplyRotaryEmbGradFunctor {
 
     if (position_ids) {
       if (cos && sin) {
-        return OpInterpUtil::Dispatch<Tensor>(*op_with_position_sinuous_,
-                                              {x, dy, JUST(cos), JUST(sin), JUST(position_ids)}, attrs);
+        return OpInterpUtil::Dispatch<Tensor>(
+            *op_with_position_sinuous_, {x, dy, JUST(cos), JUST(sin), JUST(position_ids)}, attrs);
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*op_with_position_, {x, dy, JUST(position_ids)}, attrs);
+        return OpInterpUtil::Dispatch<Tensor>(*op_with_position_, {x, dy, JUST(position_ids)},
+                                              attrs);
       }
     } else {
       if (cos && sin) {

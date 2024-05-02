@@ -806,7 +806,8 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedApplyRotaryEmbGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedApplyRotaryEmbGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const std::string& x_layout = ctx->Attr<std::string>("x_layout");
   const std::string& output_layout = ctx->Attr<std::string>("output_layout");
@@ -829,13 +830,12 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   int64_t b = 0, m = 0, h = 0, k = 0;
 
   JUST(ParseDims(x_desc.shape(), x_layout, Optional<int64_t>(), Optional<int64_t>(k_size), &b, &m,
-                 &h, &k));    // 这里需要检查是否正确;
+                 &h, &k));
 
   CHECK_LE_OR_RETURN(rotary_size, k) << "rotary_size should be no more than K of input x.";
 
   int64_t rotary_emb_dim = 1;
 
-  
   if (ctx->has_input("position_ids", 0)) {
     const Shape& position_id_shape = ctx->InputShape("position_ids", 0);
     CHECK_EQ_OR_RETURN(position_id_shape.NumAxes(), 3)
@@ -848,7 +848,6 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     CHECK_OR_RETURN(rotary_emb_dim == 1 || rotary_emb_dim == 2)
         << "2nd dim of position_ids should be 1 or 2.";
   }
-  // 这里是重复检查，且会报错;
 
   const int64_t actual_rotary_size = rotary_size / rotary_emb_dim;
   CHECK_EQ_OR_RETURN(actual_rotary_size % 2, 0)
@@ -856,15 +855,14 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 
   bool has_cos = ctx->has_input("cos", 0);
   bool has_sin = ctx->has_input("sin", 0);
-  // TODO: fused_apply_rotary_emb have same logic no matter name
+  // TODO: fused_apply_rotary_emb_grad have same logic no matter name
   if (has_cos && has_sin) {
     const Shape& cos_shape = ctx->InputShape("cos", 0);
     const Shape& sin_shape = ctx->InputShape("sin", 0);
     CHECK_EQ_OR_RETURN(cos_shape.NumAxes(), 2)
         << "The number of dimensions of cos should be equal to 2.";
 
-    CHECK_OR_RETURN(cos_shape == sin_shape)
-        << "The dimensions of cos & sin should be the same.";
+    CHECK_OR_RETURN(cos_shape == sin_shape) << "The dimensions of cos & sin should be the same.";
     CHECK_EQ_OR_RETURN(cos_shape.At(1), actual_rotary_size)
         << "The 1st dimension of cos & sin should equal to rotary_size // "
            "rotary_embedding_dimension.";
@@ -876,7 +874,6 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 
   if (!ctx->has_input("position_ids", 0)) {
     if (has_cos && has_sin) {
-      // const user_op::TensorDesc& cos_desc = ctx->InputTensorDesc("cos", 0);
       const Shape& cos_shape = ctx->InputShape("cos", 0);
       CHECK_GE_OR_RETURN(cos_shape.At(0), m)
           << "M of cos should be no less than M of x if position_ids is not given.";
@@ -889,19 +886,12 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedApplyRotaryEmbGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> FusedApplyRotaryEmbGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-
 /* static */ Maybe<void> FusedApplyRotaryEmbGradOp::GetSbp(user_op::SbpContext* ctx) {
-  /*
-    1. 获取layout;
-    2. check dy shape;
-    3. 获取split_axis;
-    4. 设置sbp;
-    反向算子中的split应该与前向一致;
-  */
   const user_op::TensorDesc& x_desc = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   int num_heads = -1;
   const int64_t k_size = ctx->Attr<int64_t>("k_size");
@@ -957,7 +947,7 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
     if (ctx->user_op_conf().has_input("cos", 0))
       builder = builder.Broadcast(user_op::OpArg("cos", 0)).Broadcast(user_op::OpArg("sin", 0));
     if (ctx->user_op_conf().has_input("position_ids", 0))
-      builder = builder.Split(user_op::OpArg("position_ids", 0), 0);   // 这里怎么split?
+      builder = builder.Split(user_op::OpArg("position_ids", 0), 0);
     builder.Build();
   }
   if (x_h_split_axis >= 0 && o_h_split_axis >= 0) {

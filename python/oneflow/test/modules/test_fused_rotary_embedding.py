@@ -24,20 +24,20 @@ import math
 
 # tensor version:
 def plane_shuffle_tensor(x):
-    x1, x2 = x[..., :x.shape[-1] // 2], x[..., x.shape[-1] // 2:]
+    x1, x2 = x[..., : x.shape[-1] // 2], x[..., x.shape[-1] // 2 :]
     return flow.cat((-x2, x1), dim=-1)
 
 
 def shuffle_adjacent_two_elem_tensor(x):
-    y = x.clone()  # 使用.clone()以确保我们不会在原始输入上进行操作
+    y = x.clone()
     for i in range(x.shape[-1] // 2):
-        y[..., 2*i] = -x[..., 2*i + 1]
-        y[..., 2*i + 1] = x[..., 2*i]
+        y[..., 2 * i] = -x[..., 2 * i + 1]
+        y[..., 2 * i + 1] = x[..., 2 * i]
     return y
 
 
 def parseDims_tensor(dims, x_layout):
-    B, M, H, K = 1, 1, 1, 1  # 初始化维度
+    B, M, H, K = 1, 1, 1, 1
     merged_dims = dims
     if x_layout == "BHMK":
         B, H, M, K = dims
@@ -61,7 +61,21 @@ def parseDims_tensor(dims, x_layout):
     return B, M, H, K, merged_dims
 
 
-def naive_embedding_tensor(x, cos, sin, x_layout, B, M, H, K, dims, merged_dims, rotary_size, rotary_ndims, mode):
+def naive_embedding_tensor(
+    x,
+    cos,
+    sin,
+    x_layout,
+    B,
+    M,
+    H,
+    K,
+    dims,
+    merged_dims,
+    rotary_size,
+    rotary_ndims,
+    mode,
+):
     naive_out = None
     if mode == "plane":
         if rotary_ndims == 2:
@@ -109,23 +123,15 @@ def naive_embedding_tensor(x, cos, sin, x_layout, B, M, H, K, dims, merged_dims,
 
         naive_out = flow.cat((out0, out1, out2), axis=-1)
     elif x_layout == "MB(H3K)":
-        #test = cos.transpose([2, 0, 1, 3]).reshape( [M, B, 1, K] )
-        #test = cos.permute([2, 0, 1, 3])
         out0 = x[..., 0, :].reshape(dims) * cos.permute([2, 0, 1, 3]).reshape(
             [M, B, 1, K]
-        ) + y[..., 0, :].reshape(dims) * sin.permute([2, 0, 1, 3]).reshape(
-            [M, B, 1, K]
-        )
+        ) + y[..., 0, :].reshape(dims) * sin.permute([2, 0, 1, 3]).reshape([M, B, 1, K])
         out1 = x[..., 1, :].reshape(dims) * cos.permute([2, 0, 1, 3]).reshape(
             [M, B, 1, K]
-        ) + y[..., 1, :].reshape(dims) * sin.permute([2, 0, 1, 3]).reshape(
-            [M, B, 1, K]
-        )
+        ) + y[..., 1, :].reshape(dims) * sin.permute([2, 0, 1, 3]).reshape([M, B, 1, K])
         out2 = x[..., 2, :].reshape(dims) * cos.permute([2, 0, 1, 3]).reshape(
             [M, B, 1, K]
-        ) + y[..., 2, :].reshape(dims) * sin.permute([2, 0, 1, 3]).reshape(
-            [M, B, 1, K]
-        )
+        ) + y[..., 2, :].reshape(dims) * sin.permute([2, 0, 1, 3]).reshape([M, B, 1, K])
 
         naive_out = flow.cat((out0, out1, out2), dim=-1)
 
@@ -361,7 +367,9 @@ def _test_without_position(
         mode,
     )
 
-    naive_x_tensor = flow.tensor(naive_x, dtype=dtype, device=device, requires_grad=True)
+    naive_x_tensor = flow.tensor(
+        naive_x, dtype=dtype, device=device, requires_grad=True
+    )
     naive_cos_tensor = flow.tensor(naive_cos, dtype=dtype, device=device)  # 不用grad
     naive_sin_tensor = flow.tensor(naive_sin, dtype=dtype, device=device)
     naive_out_tensor = naive_embedding_tensor(
@@ -380,7 +388,7 @@ def _test_without_position(
         mode,
     )
 
-    # 验证这里的naive_out_tensor与naive_out是否有精度误差;
+    # check naive_out_tensor and naive_out;
     test_case.assertTrue(
         np.allclose(
             naive_out.reshape(merged_dims),
@@ -390,6 +398,7 @@ def _test_without_position(
         )
     )
 
+    # get naive_out_grad
     naive_out_backward = naive_out_tensor.sum()
     naive_out_backward.backward()
     naive_out_grad = naive_x_tensor.grad
@@ -477,10 +486,8 @@ def _test_without_position(
             tensor_index=2,
         )
 
-        # fused_out = np.concatenate((out0, out1, out2), axis=-1)
-        fused_out = flow.cat((out0, out1, out2), dim = -1)
+        fused_out = flow.cat((out0, out1, out2), dim=-1)
     else:
-        print("apply!")
         fused_out = flow._C.fused_apply_rotary_emb(
             fused_x,
             cos=fused_cos,
@@ -492,13 +499,12 @@ def _test_without_position(
             rotary_size=rotary_size,
             mode=mode,
         )
-        print("end!")
-    
+
+    # get fused_out_grad
     fused_out_backward = fused_out.sum()
     fused_out_backward.backward()
     fused_out_grad = fused_x.grad
-    print("get grad!")
-    #print(fused_out_grad)
+
     # test forward
     test_case.assertTrue(
         np.allclose(
@@ -518,7 +524,6 @@ def _test_without_position(
             rtol=5e-3,
         )
     )
-
 
 # this assume that rotary_ndims is by default 1
 def _test_without_position_sinuous(
@@ -596,8 +601,10 @@ def _test_without_position_sinuous(
         rotary_ndims,
         mode,
     )
-    naive_x_tensor = flow.tensor(naive_x, dtype=dtype, device=device, requires_grad=True)
-    naive_cos_tensor = flow.tensor(naive_cos, dtype=dtype, device=device)  # 不用grad
+    naive_x_tensor = flow.tensor(
+        naive_x, dtype=dtype, device=device, requires_grad=True
+    )
+    naive_cos_tensor = flow.tensor(naive_cos, dtype=dtype, device=device)
     naive_sin_tensor = flow.tensor(naive_sin, dtype=dtype, device=device)
     naive_out_tensor = naive_embedding_tensor(
         naive_x_tensor,
@@ -615,7 +622,7 @@ def _test_without_position_sinuous(
         mode,
     )
 
-    # 验证这里的naive_out_tensor与naive_out是否有精度误差;
+    # check naive_out_tensor and naive_out;
     test_case.assertTrue(
         np.allclose(
             naive_out.reshape(merged_dims),
@@ -625,12 +632,13 @@ def _test_without_position_sinuous(
         )
     )
 
+    # get naive_out_grad
     naive_out_backward = naive_out_tensor.sum()
     naive_out_backward.backward()
     naive_out_grad = naive_x_tensor.grad
 
     fused_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
-    
+
     if x_layout == "BM(H3K)":
         out0 = flow._C.fused_apply_rotary_emb(
             fused_x,
@@ -672,8 +680,7 @@ def _test_without_position_sinuous(
             tensor_index=2,
         )
 
-        #fused_out = np.concatenate((out0, out1, out2), axis=-1)
-        fused_out = flow.cat((out0, out1, out2), dim = -1)
+        fused_out = flow.cat((out0, out1, out2), dim=-1)
     else:
         fused_out = flow._C.fused_apply_rotary_emb(
             fused_x,
@@ -686,11 +693,11 @@ def _test_without_position_sinuous(
             rotary_size=rotary_size,
             mode=mode,
         )
-    
+    # get fused_out_grad
     fused_out_backward = fused_out.sum()
     fused_out_backward.backward()
     fused_out_grad = fused_x.grad
-    #print(fused_out_grad)
+
     # test forward
     test_case.assertTrue(
         np.allclose(
@@ -781,7 +788,7 @@ def _test_with_position_sinuous(
         naive_x = x.reshape([B, M, H, -1, K])
     elif x_layout == "MB(HK)" or x_layout == "MB(H2K)" or x_layout == "MB(H3K)":
         naive_x = x.reshape([M, B, H, -1, K])
-    
+
     naive_out = naive_embedding(
         naive_x,
         naive_cos,
@@ -798,8 +805,10 @@ def _test_with_position_sinuous(
         mode,
     )
 
-    naive_x_tensor = flow.tensor(naive_x, dtype=dtype, device=device, requires_grad=True)
-    naive_cos_tensor = flow.tensor(naive_cos, dtype=dtype, device=device)  # 不用grad
+    naive_x_tensor = flow.tensor(
+        naive_x, dtype=dtype, device=device, requires_grad=True
+    )
+    naive_cos_tensor = flow.tensor(naive_cos, dtype=dtype, device=device)
     naive_sin_tensor = flow.tensor(naive_sin, dtype=dtype, device=device)
     naive_out_tensor = naive_embedding_tensor(
         naive_x_tensor,
@@ -817,7 +826,7 @@ def _test_with_position_sinuous(
         mode,
     )
 
-    # 验证这里的naive_out_tensor与naive_out是否有精度误差;
+    # check naive_out_tensor and naive_out;
     test_case.assertTrue(
         np.allclose(
             naive_out.reshape(merged_dims),
@@ -827,10 +836,10 @@ def _test_with_position_sinuous(
         )
     )
 
+    # get naive_out_grad;
     naive_out_backward = naive_out_tensor.sum()
     naive_out_backward.backward()
     naive_out_grad = naive_x_tensor.grad
-    #print(naive_out_grad)
 
     fused_cos = np.array(
         [
@@ -917,8 +926,7 @@ def _test_with_position_sinuous(
             tensor_index=2,
         )
 
-        #fused_out = np.concatenate((out0, out1, out2), axis=-1)
-        fused_out = flow.cat((out0, out1, out2), dim = -1)
+        fused_out = flow.cat((out0, out1, out2), dim=-1)
     else:
         fused_out = flow._C.fused_apply_rotary_emb(
             fused_x,
@@ -931,11 +939,11 @@ def _test_with_position_sinuous(
             rotary_size=rotary_size,
             mode=mode,
         )
-
+    # get fused_out_grad;
     fused_out_backward = fused_out.sum()
     fused_out_backward.backward()
     fused_out_grad = fused_x.grad
-    #print(fused_out_grad)
+
     # test forward
     test_case.assertTrue(
         np.allclose(
@@ -1038,7 +1046,9 @@ def _test_with_position(
         mode,
     )
 
-    naive_x_tensor = flow.tensor(naive_x, dtype=dtype, device=device, requires_grad=True)
+    naive_x_tensor = flow.tensor(
+        naive_x, dtype=dtype, device=device, requires_grad=True
+    )
     naive_cos_tensor = flow.tensor(naive_cos, dtype=dtype, device=device)  # 不用grad
     naive_sin_tensor = flow.tensor(naive_sin, dtype=dtype, device=device)
     naive_out_tensor = naive_embedding_tensor(
@@ -1057,7 +1067,7 @@ def _test_with_position(
         mode,
     )
 
-    # 验证这里的naive_out_tensor与naive_out是否有精度误差;
+    # check naive_out_tensor and naive_out;
     test_case.assertTrue(
         np.allclose(
             naive_out.reshape(merged_dims),
@@ -1066,7 +1076,7 @@ def _test_with_position(
             rtol=5e-3,
         )
     )
-
+    # get naive_out_grad
     naive_out_backward = naive_out_tensor.sum()
     naive_out_backward.backward()
     naive_out_grad = naive_x_tensor.grad
@@ -1115,7 +1125,6 @@ def _test_with_position(
             tensor_index=2,
         )
 
-        #fused_out = np.concatenate((out0, out1, out2), axis=-1)
         fused_out = flow.cat((out0, out1, out2), dim=-1)
     else:
         fused_out = flow._C.fused_apply_rotary_emb(
@@ -1129,11 +1138,10 @@ def _test_with_position(
             rotary_size=rotary_size,
             mode=mode,
         )
-
+    # get fused_out_grad
     fused_out_backward = fused_out.sum()
     fused_out_backward.backward()
     fused_out_grad = fused_x.grad
-    #print(fused_out_grad)
     # test forward
     test_case.assertTrue(
         np.allclose(
@@ -1244,7 +1252,9 @@ def _test_plane(
         mode,
     )
 
-    naive_x_tensor = flow.tensor(naive_x, dtype=dtype, device=device, requires_grad=True)
+    naive_x_tensor = flow.tensor(
+        naive_x, dtype=dtype, device=device, requires_grad=True
+    )
     naive_cos_tensor = flow.tensor(naive_cos, dtype=dtype, device=device)  # 不用grad
     naive_sin_tensor = flow.tensor(naive_sin, dtype=dtype, device=device)
     naive_out_tensor = naive_embedding_tensor(
@@ -1263,7 +1273,7 @@ def _test_plane(
         mode,
     )
 
-    # 验证这里的naive_out_tensor与naive_out是否有精度误差;
+    # check naive_out_tensor and naive_out;
     test_case.assertTrue(
         np.allclose(
             naive_out.reshape(merged_dims),
@@ -1276,10 +1286,9 @@ def _test_plane(
     naive_out_backward = naive_out_tensor.sum()
     naive_out_backward.backward()
     naive_out_grad = naive_x_tensor.grad
-    
+
     fused_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
     fused_position_ids = flow.tensor(position_ids, dtype=flow.int32, device=device)
-
 
     if x_layout == "MB(H3K)":
         out0 = flow._C.fused_apply_rotary_emb(
@@ -1339,7 +1348,6 @@ def _test_plane(
     fused_out_backward = fused_out.sum()
     fused_out_backward.backward()
     fused_out_grad = fused_x.grad
-    #print(fused_out_grad)
     # test forward
     test_case.assertTrue(
         np.allclose(
@@ -1362,7 +1370,6 @@ def _test_plane(
     print("tset plane done")
 
 
-
 """
 1. if cos&sin is given, then base will not be used
 2. if cos&sin is not given, then any form of x_layout which cannot infer the dimension of k is not allowed, e.g. BM(HK)
@@ -1374,11 +1381,11 @@ def _test_plane(
 @flow.unittest.skip_unless_1n1d()
 class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     # because rule no.2, kernels without cos&sin cannot work under specific x_layout
-    
+
     def test_fused_rotary_embedding_op_plane(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_plane]
-        #args_dict["x_layout"] = ["MB(H3K)", "MB(HK)"]
+        # args_dict["x_layout"] = ["MB(H3K)", "MB(HK)"]
         args_dict["x_layout"] = ["BMHK"]
         args_dict["mode"] = ["plane"]
         args_dict["base"] = [1e1]
@@ -1392,9 +1399,8 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
-    
 
-    '''
+    """ TODO: interval mode grad kernel 
     def test_fused_rotary_embedding_op_interval_2d(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_with_position, 
@@ -1413,9 +1419,9 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
-    '''
+    """
 
-    '''
+    """ TODO: interval mode grad kernel
     def test_fused_rotary_embedding_op_interval_1d(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [
@@ -1437,7 +1443,8 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
-    '''
+    """
+
 
 if __name__ == "__main__":
     unittest.main()
