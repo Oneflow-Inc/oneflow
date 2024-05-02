@@ -1133,7 +1133,6 @@ template<typename T, typename PositionType, typename IndexType, size_t PackSize,
 __global__ void IntervalGradKernel(
     FusedApplyRotaryEmbParam<T, PositionType, IndexType, num_dims, rotary_emb_dim> param) {
     printf("IntervalGradKernel TODO!\n");
-  }
 }
 
 
@@ -1356,7 +1355,6 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
             param);
     }
   }
-  
 }
 
 template<typename T, typename PositionType, typename IndexType, size_t num_dims,

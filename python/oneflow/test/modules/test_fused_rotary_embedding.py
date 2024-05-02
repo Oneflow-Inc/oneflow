@@ -1163,6 +1163,7 @@ def _test_with_position(
     )
 
 
+# TODO: with cos & sin test
 def _test_plane(
     test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype, device
 ):
@@ -1367,7 +1368,6 @@ def _test_plane(
             rtol=5e-3,
         )
     )
-    print("tset plane done")
 
 
 """
@@ -1385,8 +1385,8 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     def test_fused_rotary_embedding_op_plane(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_plane]
-        # args_dict["x_layout"] = ["MB(H3K)", "MB(HK)"]
-        args_dict["x_layout"] = ["BMHK"]
+        #args_dict["x_layout"] = ["MB(H3K)", "MB(HK)"]
+        args_dict["x_layout"] = ["BMHK", "MB(H3K)"]  # TODO: MB(H3K) paramdims bug;
         args_dict["mode"] = ["plane"]
         args_dict["base"] = [1e1]
         args_dict["rotary_size"] = [4, 8]
