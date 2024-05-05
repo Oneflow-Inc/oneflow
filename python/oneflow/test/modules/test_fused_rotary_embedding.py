@@ -525,6 +525,7 @@ def _test_without_position(
         )
     )
 
+
 # this assume that rotary_ndims is by default 1
 def _test_without_position_sinuous(
     test_case, x_layout, mode, base, rotary_size, dims, rotary_ndims, dtype, device
@@ -1385,8 +1386,8 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     def test_fused_rotary_embedding_op_plane(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_plane]
-        #args_dict["x_layout"] = ["MB(H3K)", "MB(HK)"]
-        args_dict["x_layout"] = ["BMHK", "MB(H3K)"]  # TODO: MB(H3K) paramdims bug;
+        # args_dict["x_layout"] = ["MB(H3K)"]
+        args_dict["x_layout"] = ["BMHK", "MB(HK)"]  # TODO: MB(H3K) paramdims bug;
         args_dict["mode"] = ["plane"]
         args_dict["base"] = [1e1]
         args_dict["rotary_size"] = [4, 8]

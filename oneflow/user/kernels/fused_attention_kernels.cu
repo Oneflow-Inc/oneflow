@@ -1132,9 +1132,8 @@ template<typename T, typename PositionType, typename IndexType, size_t PackSize,
          size_t rotary_emb_dim>
 __global__ void IntervalGradKernel(
     FusedApplyRotaryEmbParam<T, PositionType, IndexType, num_dims, rotary_emb_dim> param) {
-    printf("IntervalGradKernel TODO!\n");
+  printf("IntervalGradKernel TODO!\n");
 }
-
 
 template<typename T, typename PositionType, typename IndexType, size_t num_dims,
          size_t rotary_emb_dim>
@@ -1210,9 +1209,9 @@ __global__ void PlaneKernel(
 template<typename T, typename PositionType, typename IndexType, size_t num_dims,
          size_t rotary_emb_dim>
 __global__ void PlaneGradKernel(
-  FusedApplyRotaryEmbParam<T, PositionType, IndexType, num_dims, rotary_emb_dim> param) {
-    for (IndexType offset = threadIdx.x + blockIdx.x * blockDim.x; offset < param.num_elements;
-         offset += blockDim.x * gridDim.x) {
+    FusedApplyRotaryEmbParam<T, PositionType, IndexType, num_dims, rotary_emb_dim> param) {
+  for (IndexType offset = threadIdx.x + blockIdx.x * blockDim.x; offset < param.num_elements;
+       offset += blockDim.x * gridDim.x) {
     using LoadPack = cuda::elementwise::Packed<T, 2>;
     IndexType temp_offset = offset;
     IndexType index[num_dims];
@@ -1240,24 +1239,26 @@ __global__ void PlaneGradKernel(
 
     if (param.cos && param.sin) {
       cos_val = *(param.cos + sinuous_offset);
-      IndexType offset_;     // 针对grad, sin_val需要有 size / 2的偏移;
+      IndexType offset_;  // 针对grad, sin_val需要有 size / 2的偏移;
       if (k_index < param.k0) {
-        offset_ = (param.k0 - k_index > param.rotate_stride) ? param.rotate_stride : -param.rotate_stride;
+        offset_ =
+            (param.k0 - k_index > param.rotate_stride) ? param.rotate_stride : -param.rotate_stride;
       } else if (k_index < param.k1) {
-        offset_ = (param.k1 - k_index > param.rotate_stride) ? param.rotate_stride : -param.rotate_stride;
-      } 
+        offset_ =
+            (param.k1 - k_index > param.rotate_stride) ? param.rotate_stride : -param.rotate_stride;
+      }
 
       sin_val = *(param.sin + sinuous_offset + offset_);
     } else {
       // TODO: plane grad kernel without sin & cos;
-      
+
       T val = position
               * expf(2.0f * static_cast<float>(k_index % (param.actual_rotary_size >> 1))
                      * param.inv_actual_rotary_size * logf(param.theta));
       cos_val = cosf(val);
       sin_val = sinf(val);
     }
-    
+
     LoadPack x_vec;
     IndexType x_offset = param.x_offset;
     IndexType out_offset = 0;
@@ -1333,26 +1334,25 @@ void LaunchKernel(ep::CudaStream* stream, const T* x, const T* cos, const T* sin
 
   if (is_forward) {
     if (mode == "plane") {
-    param.num_elements = param.num_elements * PackSize;
-    PlaneKernel<T, PositionType, IndexType, num_dims, rotary_emb_dim>
-        <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
-            param);
+      param.num_elements = param.num_elements * PackSize;
+      PlaneKernel<T, PositionType, IndexType, num_dims, rotary_emb_dim>
+          <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
+              param);
     } else {
-    IntervalKernel<T, PositionType, IndexType, PackSize, num_dims, rotary_emb_dim>
-        <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
-            param);
+      IntervalKernel<T, PositionType, IndexType, PackSize, num_dims, rotary_emb_dim>
+          <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
+              param);
     }
-  }
-  else {
+  } else {
     if (mode == "plane") {
-    param.num_elements = param.num_elements * PackSize;
-    PlaneGradKernel<T, PositionType, IndexType, num_dims, rotary_emb_dim>
-        <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
-            param);
+      param.num_elements = param.num_elements * PackSize;
+      PlaneGradKernel<T, PositionType, IndexType, num_dims, rotary_emb_dim>
+          <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
+              param);
     } else {
-    IntervalGradKernel<T, PositionType, IndexType, PackSize, num_dims, rotary_emb_dim>
-        <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
-            param);
+      IntervalGradKernel<T, PositionType, IndexType, PackSize, num_dims, rotary_emb_dim>
+          <<<(param.num_elements + blk_size - 1) / blk_size, blk_size, 0, stream->cuda_stream()>>>(
+              param);
     }
   }
 }
@@ -1434,7 +1434,8 @@ void DispatchRotaryEmbeddingDimension(ep::CudaStream* stream, const T* x, const 
                                       const int64_t h, const int64_t k, const int64_t x_b_stride,
                                       const int64_t x_m_stride, const int64_t x_h_stride,
                                       const int64_t x_offset, const int64_t out_b_stride,
-                                      const int64_t out_m_stride, const int64_t out_h_stride, const bool is_forward) {
+                                      const int64_t out_m_stride, const int64_t out_h_stride,
+                                      const bool is_forward) {
   if (rotary_emb_dim == 1) {
     DispatchIndex<T, PositionType, num_dims, 1>(
         stream, x, cos, sin, position_ids, out, position_shape, x_layout, output_layout, mode,
@@ -1487,7 +1488,6 @@ class FusedApplyRotaryEmbKernel final : public user_op::OpKernel {
     int64_t k = 0;
     int64_t out_b_stride = 0, out_m_stride = 0, out_h_stride = 0, out_offset = 0;
     int64_t x_b_stride = 0, x_m_stride = 0, x_h_stride = 0, x_offset = 0;
-
     ParseDims(out->shape_view(), output_layout, Optional<int64_t>(), k_size, 0, &b, &m, &h, &k,
               &out_b_stride, &out_m_stride, &out_h_stride, &out_offset);
     ParseDims(x->shape_view(), x_layout, Optional<int64_t>(), k_size, tensor_index, &b, &m, &h, &k,
@@ -1549,10 +1549,10 @@ class FusedApplyRotaryEmbGradKernel final : public user_op::OpKernel {
     int64_t out_b_stride = 0, out_m_stride = 0, out_h_stride = 0, out_offset = 0;
     int64_t x_b_stride = 0, x_m_stride = 0, x_h_stride = 0, x_offset = 0;
 
-    ParseDims(dx->shape_view(), output_layout, Optional<int64_t>(), k_size, 0, &b, &m, &h, &k,
+    ParseDims(dx->shape_view(), x_layout, Optional<int64_t>(), k_size, 0, &b, &m, &h, &k,
               &out_b_stride, &out_m_stride, &out_h_stride, &out_offset);
-    ParseDims(dy->shape_view(), x_layout, Optional<int64_t>(), k_size, tensor_index, &b, &m, &h, &k,
-              &x_b_stride, &x_m_stride, &x_h_stride, &x_offset);
+    ParseDims(dy->shape_view(), output_layout, Optional<int64_t>(), k_size, tensor_index, &b, &m,
+              &h, &k, &x_b_stride, &x_m_stride, &x_h_stride, &x_offset);
     bool is_forward = false;
     // TODO: hard code num_dims & seems redundant template problem...
     DispatchRotaryEmbeddingDimension<T, PositionType, ndims>(
@@ -1568,7 +1568,6 @@ class FusedApplyRotaryEmbGradKernel final : public user_op::OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
 
 #define REGISTER_FUSED_APPLY_ROTARY_EMB_GPU(dtype, position_type)          \
   REGISTER_USER_KERNEL("fused_apply_rotary_emb")                           \
@@ -1594,22 +1593,21 @@ REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(half);
 REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(nv_bfloat16);
 #endif  // CUDA_VERSION >= 11000
 
-
-#define REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU(dtype, position_type)          \
-  REGISTER_USER_KERNEL("fused_apply_rotary_emb_grad")                           \
-      .SetCreateFn<FusedApplyRotaryEmbGradKernel<dtype, position_type>>()      \
-      .SetIsMatchedHob(                                                    \
-          (user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+#define REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU(dtype, position_type)    \
+  REGISTER_USER_KERNEL("fused_apply_rotary_emb_grad")                     \
+      .SetCreateFn<FusedApplyRotaryEmbGradKernel<dtype, position_type>>() \
+      .SetIsMatchedHob(                                                   \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                 \
           && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value) \
-          && (user_op::HobInputSize("position_ids") == 1)                  \
+          && (user_op::HobInputSize("position_ids") == 1)                 \
           && (user_op::HobDataType("position_ids", 0) == GetDataType<position_type>::value));
 
-#define REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU_DTYPE(dtype)                                \
-  REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU(dtype, int64_t);                                  \
-  REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU(dtype, int32_t);                                  \
-  REGISTER_USER_KERNEL("fused_apply_rotary_emb_grad")                                        \
-      .SetCreateFn<FusedApplyRotaryEmbGradKernel<dtype, int64_t>>()                         \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+#define REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU_DTYPE(dtype)                          \
+  REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU(dtype, int64_t);                            \
+  REGISTER_FUSED_APPLY_ROTARY_EMB_GRAD_GPU(dtype, int32_t);                            \
+  REGISTER_USER_KERNEL("fused_apply_rotary_emb_grad")                                  \
+      .SetCreateFn<FusedApplyRotaryEmbGradKernel<dtype, int64_t>>()                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobInputSize("position_ids") == 0));
 
