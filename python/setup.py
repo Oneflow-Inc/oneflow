@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 from __future__ import absolute_import
 
 import argparse
@@ -63,14 +64,14 @@ REQUIRED_PACKAGES = [
 
 ONEFLOW_VERSION = get_version()
 if "cu11" in ONEFLOW_VERSION and "cu112" not in ONEFLOW_VERSION:
-    REQUIRED_PACKAGES.append("nvidia-cudnn-cu11")
+    REQUIRED_PACKAGES.append("nvidia-cudnn-cu11<9")
     REQUIRED_PACKAGES.append("nvidia-cublas-cu11")
     REQUIRED_PACKAGES.append("nvidia-nccl-cu11")
     REQUIRED_PACKAGES.append("nvidia-cusparse-cu11")
     REQUIRED_PACKAGES.append("nvidia-cufft-cu11")
 
 if "cu12" in ONEFLOW_VERSION:
-    REQUIRED_PACKAGES.append("nvidia-cudnn-cu12")
+    REQUIRED_PACKAGES.append("nvidia-cudnn-cu12<9")
     REQUIRED_PACKAGES.append("nvidia-cublas-cu12")
     REQUIRED_PACKAGES.append("nvidia-nccl-cu12")
     REQUIRED_PACKAGES.append("nvidia-cusparse-cu12")
