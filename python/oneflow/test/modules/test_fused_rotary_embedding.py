@@ -1403,9 +1403,7 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
 
     def test_fused_rotary_embedding_op_interval_2d(test_case):
         args_dict = OrderedDict()
-        args_dict["test_fun"] = [_test_with_position, 
-                                 _test_with_position_sinuous
-                                 ]
+        args_dict["test_fun"] = [_test_with_position, _test_with_position_sinuous]
         args_dict["x_layout"] = ["BMHK"]
         args_dict["mode"] = ["interval"]
         args_dict["base"] = [1e1]
