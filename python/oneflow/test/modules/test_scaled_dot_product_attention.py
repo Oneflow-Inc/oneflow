@@ -44,42 +44,69 @@ def _test_scaled_dot_product_attention(
     num_heads_k = num_head_pair[1]
     seq_len_q = seq_len_pair[0]
     seq_len_kv = seq_len_pair[1]
-    query = flow.randn(
-        (batch_size, num_heads, seq_len_q, head_size), device="cuda", dtype=flow.float,
-    ).to(dtype)
-    key = flow.randn(
-        (batch_size, num_heads_k, seq_len_kv, head_size),
-        device="cuda",
-        dtype=flow.float,
-    ).to(dtype)
-    value = flow.randn(
-        (batch_size, num_heads_k, seq_len_kv, head_size),
-        device="cuda",
-        dtype=flow.float,
-    ).to(dtype)
+    query_raw = np.random.uniform(
+        low=-1, high=1, size=(batch_size, num_heads, seq_len_q, head_size)
+    )
+    key_raw = np.random.uniform(
+        low=-1, high=1, size=(batch_size, num_heads_k, seq_len_kv, head_size)
+    )
+    value_raw = np.random.uniform(
+        low=-1, high=1, size=(batch_size, num_heads_k, seq_len_kv, head_size)
+    )
+    query_fused = flow.tensor(query_raw, dtype=dtype, device="cuda", requires_grad=True)
+    query_ref = flow.tensor(query_raw, dtype=dtype, device="cuda", requires_grad=True)
+    key_fused = flow.tensor(key_raw, dtype=dtype, device="cuda", requires_grad=True)
+    key_ref = flow.tensor(key_raw, dtype=dtype, device="cuda", requires_grad=True)
+    value_fused = flow.tensor(value_raw, dtype=dtype, device="cuda", requires_grad=True)
+    value_ref = flow.tensor(value_raw, dtype=dtype, device="cuda", requires_grad=True)
 
-    fused_out = (
-        flow._C.scaled_dot_product_attention(query=query, key=key, value=value,)
-        .cpu()
-        .numpy()
+    fused_out = flow._C.scaled_dot_product_attention(
+        query=query_fused, key=key_fused, value=value_fused,
     )
     if num_heads == num_heads_k:
-        ref_out = _scaled_dot_product_attention(query, key, value,).cpu().numpy()
+        ref_out = _scaled_dot_product_attention(query_ref, key_ref, value_ref,)
     else:  # For GQA
-        ref_out = flow.empty(query.shape, device="cuda", dtype=dtype)
+        ref_out = flow.empty(query_fused.shape, device="cuda", dtype=dtype)
         stride = num_heads / num_heads_k
         for i in range(0, num_heads):
             j = int(i / stride)
             ref_out[:, i, :, :] = _scaled_dot_product_attention(
-                query[:, i, :, :], key[:, j, :, :], value[:, j, :, :]
+                query_ref[:, i, :, :], key_ref[:, j, :, :], value_ref[:, j, :, :]
             )
 
+    total_out = ref_out.sum() + fused_out.sum()
+    total_out.backward()
     if dtype == flow.float16:
-        test_case.assertTrue(np.allclose(ref_out, fused_out, atol=1e-2, rtol=1e-2))
+        error_tol = 1e-2
     elif dtype == flow.bfloat16:
-        test_case.assertTrue(np.allclose(ref_out, fused_out, atol=1e-1, rtol=1e-1))
+        error_tol = 1e-1
     else:
-        test_case.assertTrue(np.allclose(ref_out, fused_out, atol=1e-3, rtol=1e-3))
+        error_tol = 1e-3
+
+    test_case.assertTrue(
+        np.allclose(ref_out.numpy(), fused_out.numpy(), atol=error_tol, rtol=error_tol)
+    )
+    test_case.assertTrue(
+        np.allclose(
+            query_fused.grad.numpy(),
+            query_ref.grad.numpy(),
+            atol=error_tol,
+            rtol=error_tol,
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            key_fused.grad.numpy(), key_ref.grad.numpy(), atol=error_tol, rtol=error_tol
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            value_fused.grad.numpy(),
+            value_ref.grad.numpy(),
+            atol=error_tol,
+            rtol=error_tol,
+        )
+    )
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
