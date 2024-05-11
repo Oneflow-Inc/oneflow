@@ -1194,8 +1194,8 @@ __global__ void IntervalGradKernel(
 
 #pragma unroll
       for (int i = 0; i < PackSize / 2; i++) {
-        out_vec.elem[i * 2] =
-            x_vec.elem[i * 2] * cos_vec.elem[i * 2] + x_vec.elem[i * 2 + 1] * sin_vec.elem[i * 2 + 1];
+        out_vec.elem[i * 2] = x_vec.elem[i * 2] * cos_vec.elem[i * 2]
+                              + x_vec.elem[i * 2 + 1] * sin_vec.elem[i * 2 + 1];
         out_vec.elem[i * 2 + 1] = x_vec.elem[i * 2 + 1] * cos_vec.elem[i * 2 + 1]
                                   - x_vec.elem[i * 2] * sin_vec.elem[i * 2];
       }
