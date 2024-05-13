@@ -900,20 +900,24 @@ Maybe<void> ParseSplitAxis(const std::string& layout, bool can_hk_split, int64_t
 
   if (x_desc.shape().NumAxes() == 2) {
     if (x_layout == "(BM)(HK)") {
-      CHECK_EQ_OR_RETURN(x_desc.shape().At(1) % k_size, 0);
+      CHECK_EQ_OR_RETURN(x_desc.shape().At(1) % k_size, 0)
+          << "shape can not be divided by head dimension size.";
       num_heads = x_desc.shape().At(1) / k_size;
     } else if (x_layout == "(BM)(H3K)") {
-      CHECK_EQ_OR_RETURN(x_desc.shape().At(1) % (k_size * 3), 0);
+      CHECK_EQ_OR_RETURN(x_desc.shape().At(1) % (k_size * 3), 0)
+          << "shape can not be divided by head dimension size.";
       num_heads = x_desc.shape().At(1) / (k_size * 3);
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
   } else if (x_desc.shape().NumAxes() == 3) {
     if (x_layout == "BM(HK)" || x_layout == "MB(HK)") {
-      CHECK_EQ_OR_RETURN(x_desc.shape().At(2) % k_size, 0);
+      CHECK_EQ_OR_RETURN(x_desc.shape().At(2) % k_size, 0)
+          << "shape can not be divided by head dimension size.";
       num_heads = x_desc.shape().At(2) / k_size;
     } else if (x_layout == "BM(H3K)" || x_layout == "MB(H3K)") {
-      CHECK_EQ_OR_RETURN(x_desc.shape().At(2) % (k_size * 3), 0);
+      CHECK_EQ_OR_RETURN(x_desc.shape().At(2) % (k_size * 3), 0)
+          << "shape can not be divided by head dimension size.";
       num_heads = x_desc.shape().At(2) / (k_size * 3);
     } else if (x_layout == "(BM)HK") {
       num_heads = x_desc.shape().At(1);

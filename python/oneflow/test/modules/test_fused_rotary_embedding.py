@@ -121,7 +121,7 @@ def naive_embedding_tensor(
             ..., 2, :
         ].reshape(dims) * sin.reshape([B, M, 1, K])
 
-        naive_out = flow.cat((out0, out1, out2), axis=-1)
+        naive_out = flow.cat((out0, out1, out2), dim=-1)
     elif x_layout == "MB(H3K)":
         out0 = x[..., 0, :].reshape(dims) * cos.permute([2, 0, 1, 3]).reshape(
             [M, B, 1, K]
@@ -1386,8 +1386,7 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     def test_fused_rotary_embedding_op_plane(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_plane]
-        # args_dict["x_layout"] = ["MB(H3K)"]
-        args_dict["x_layout"] = ["MB(HK)"]  # TODO: MB(H3K) bug;
+        args_dict["x_layout"] = ["MB(HK)", "MB(H3K)"]
         args_dict["mode"] = ["plane"]
         args_dict["base"] = [1e1]
         args_dict["rotary_size"] = [4, 8]
@@ -1404,7 +1403,7 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
     def test_fused_rotary_embedding_op_interval_2d(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_with_position, _test_with_position_sinuous]
-        args_dict["x_layout"] = ["BMHK"]
+        args_dict["x_layout"] = ["BMHK", "BM(H3K)"]
         args_dict["mode"] = ["interval"]
         args_dict["base"] = [1e1]
         args_dict["rotary_size"] = [4]
@@ -1426,7 +1425,7 @@ class TestFusedRotaryEmbedding(flow.unittest.TestCase):
             _test_with_position,
             _test_with_position_sinuous,
         ]
-        args_dict["x_layout"] = ["BMHK"]
+        args_dict["x_layout"] = ["BMHK", "BM(H3K)"]
         args_dict["mode"] = ["interval"]
         args_dict["base"] = [1e1]
         args_dict["rotary_size"] = [4]

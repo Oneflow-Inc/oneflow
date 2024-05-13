@@ -21,13 +21,13 @@ namespace oneflow {
 namespace one {
 
 struct FusedApplyRotaryEmbCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = false;
   std::string x_layout{};
   std::string output_layout{};
   std::string mode{};
   int64_t tensor_index{};
   int64_t k_size{};
-  float base;
+  float base = 0.0f;
   int64_t rotary_size{};
 };
 
