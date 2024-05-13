@@ -39,6 +39,7 @@ limitations under the License.
 #include "oneflow/core/job/collective_boxing/scheduler.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
+#include "oneflow/core/framework/folder_rule_table.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -113,6 +114,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Singleton<summary::EventsWriter>::New();
       Singleton<boxing::collective::Scheduler>::New();
       Singleton<VariableTensorMgr>::New();
+      Singleton<FolderRuleTable>::New();
     }
 
     is_inited_ = true;
