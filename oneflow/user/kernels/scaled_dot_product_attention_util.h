@@ -132,6 +132,54 @@ void set_params_fprop(Flash_fwd_params& params,
 #endif
 }
 
+void set_params_dgrad(Flash_bwd_params& params,
+                      // sizes
+                      const size_t b, const size_t seqlen_q, const size_t seqlen_k,
+                      const size_t seqlen_q_rounded, const size_t seqlen_k_rounded, const size_t h,
+                      const size_t h_k, const size_t d, const size_t d_rounded,
+                      // device pointers
+                      const Tensor* q, const Tensor* k, const Tensor* v, const Tensor* out,
+                      const Tensor* dout, Tensor* dq, Tensor* dk, Tensor* dv, void* cu_seqlens_q_d,
+                      void* cu_seqlens_k_d, void* dq_accum_d, void* dk_accum_d, void* dv_accum_d,
+                      void* softmax_lse_d, void* dsoftmax_sum_d, float p_dropout,
+                      float softmax_scale, int window_size_left, int window_size_right,
+                      bool deterministic) {
+  set_params_fprop(params, b, seqlen_q, seqlen_k, seqlen_q_rounded, seqlen_k_rounded, h, h_k, d,
+                   d_rounded, q, k, v, const_cast<Tensor*>(out), cu_seqlens_q_d, cu_seqlens_k_d,
+                   nullptr, nullptr, softmax_lse_d, p_dropout, softmax_scale, window_size_left,
+                   window_size_right);
+
+  // Set the pointers and strides.
+  params.do_ptr = const_cast<void*>(dout->dptr());
+  params.do_row_stride = CHECK_JUST(VectorAt(dout->stride(), 1));
+  params.do_head_stride = CHECK_JUST(VectorAt(dout->stride(), 2));
+  params.dq_ptr = dq->mut_dptr();
+  params.dk_ptr = dk->mut_dptr();
+  params.dv_ptr = dv->mut_dptr();
+  params.dq_row_stride = CHECK_JUST(VectorAt(dq->stride(), 1));
+  params.dk_row_stride = CHECK_JUST(VectorAt(dk->stride(), 1));
+  params.dv_row_stride = CHECK_JUST(VectorAt(dv->stride(), 1));
+  params.dq_head_stride = CHECK_JUST(VectorAt(dq->stride(), 2));
+  params.dk_head_stride = CHECK_JUST(VectorAt(dk->stride(), 2));
+  params.dv_head_stride = CHECK_JUST(VectorAt(dv->stride(), 2));
+
+  if (cu_seqlens_q_d == nullptr) {
+    params.do_batch_stride = CHECK_JUST(VectorAt(dout->stride(), 0));
+    params.dq_batch_stride = CHECK_JUST(VectorAt(dq->stride(), 0));
+    params.dk_batch_stride = CHECK_JUST(VectorAt(dk->stride(), 0));
+    params.dv_batch_stride = CHECK_JUST(VectorAt(dv->stride(), 0));
+  }
+
+  params.dq_accum_ptr = dq_accum_d;
+  params.dk_accum_ptr = dk_accum_d;
+  params.dv_accum_ptr = dv_accum_d;
+
+  // Softmax sum
+  params.dsoftmax_sum = dsoftmax_sum_d;
+
+  params.deterministic = deterministic;
+}
+
 void run_mha_fwd(Flash_fwd_params& params, cudaStream_t stream, bool force_split_kernel = false) {
   FP16_SWITCH(!params.is_bf16, [&] {
     HEADDIM_SWITCH(params.d, [&] {
@@ -141,6 +189,12 @@ void run_mha_fwd(Flash_fwd_params& params, cudaStream_t stream, bool force_split
         run_mha_fwd_splitkv_dispatch<elem_type, kHeadDim>(params, stream);
       }
     });
+  });
+}
+
+void run_mha_bwd(Flash_bwd_params& params, cudaStream_t stream) {
+  FP16_SWITCH(!params.is_bf16, [&] {
+    HEADDIM_SWITCH(params.d, [&] { run_mha_bwd_<elem_type, kHeadDim>(params, stream); });
   });
 }
 
