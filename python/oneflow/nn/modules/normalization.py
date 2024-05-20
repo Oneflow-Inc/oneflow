@@ -20,45 +20,9 @@ import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn import init
 from oneflow.nn.modules.module import Module
+import oneflow.nn.functional as F
 
 _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
-
-
-def group_norm(
-    input: Tensor,
-    num_groups: int,
-    weight: Tensor = None,
-    bias: Tensor = None,
-    eps: float = 1e-05,
-    num_channels: int = None,
-):
-    r"""Apply Group Normalization for last certain number of dimensions.
-
-    See :class:`~oneflow.nn.GroupNorm` for details.
-    """
-    assert len(input.shape) >= 3, "The dimensions of input tensor must larger than 2"
-    if num_channels is None:
-        num_channels = input.shape[1]
-    assert (
-        input.shape[1] == num_channels
-    ), "The channels of input tensor must equal num_channels"
-
-    affine = weight is not None and bias is not None
-    if input.is_cuda:
-        return flow._C.group_norm(input, weight, bias, affine, num_groups, eps)
-    else:
-        origin_shape = input.shape
-        reshape_to_1d = flow.reshape(input, shape=[origin_shape[0], num_groups, -1])
-        mean = flow.mean(reshape_to_1d, dim=2, keepdim=True)
-        variance = flow.var(reshape_to_1d, dim=2, unbiased=False, keepdim=True)
-        normalized = (reshape_to_1d - mean) / flow.sqrt(variance + eps)
-        normalized = flow.reshape(normalized, shape=[origin_shape[0], num_channels, -1])
-        if weight is not None:
-            normalized = normalized * weight.reshape(1, num_channels, 1)
-        if bias is not None:
-            normalized = normalized + bias.reshape(1, num_channels, 1)
-        res = flow.reshape(normalized, shape=tuple(input.shape))
-        return res
 
 
 class GroupNorm(Module):
@@ -154,7 +118,7 @@ class GroupNorm(Module):
             flow.nn.init.zeros_(self.bias)
 
     def forward(self, input: Tensor) -> Tensor:
-        return group_norm(
+        return F.group_norm(
             input, self.num_groups, self.weight, self.bias, self.eps, self.num_channels
         )
 
@@ -162,69 +126,6 @@ class GroupNorm(Module):
         return "{num_groups}, {num_channels}, eps={eps}, affine={affine}".format(
             **self.__dict__
         )
-
-
-def layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05):
-    assert len(input.shape) > len(
-        normalized_shape
-    ), "Input tensor dim must greater than normalized dim!"
-    begin_norm_axis = len(input.shape) - len(normalized_shape)
-    begin_params_axis = len(input.shape) - len(normalized_shape)
-
-    elementwise_affine = True if (weight is not None and bias is not None) else False
-
-    for i in range(0, len(normalized_shape)):
-        if input.shape[i + begin_params_axis] != normalized_shape[i]:
-            raise RuntimeError(
-                f"Given normalized_shape={normalized_shape}, expected input with shape [*, {str(normalized_shape)[1:-1]}], but got input of size {input.shape}"
-            )
-
-    if input.is_cpu:
-        reduce_axis = []
-        for dim in range(len(input.shape)):
-            if dim >= begin_norm_axis:
-                reduce_axis.append(dim)
-        mean = input.mean(dim=reduce_axis, keepdim=True)
-        variance = input.var(dim=reduce_axis, unbiased=False, keepdim=True)
-        params_shape = input.shape[begin_params_axis:]
-        if len(mean.shape) == 1:
-            nd_params_shape = [1] * len(input.shape)
-            nd_params_shape[begin_norm_axis] = params_shape[0]
-            mean = flow.reshape(mean, shape=nd_params_shape)
-            variance = flow.reshape(variance, nd_params_shape)
-            if weight is not None and params_shape[0] == weight.nelement():
-                weight = flow.reshape(weight, shape=nd_params_shape)
-            if bias is not None and params_shape[0] == bias.nelement():
-                bias = flow.reshape(bias, shape=nd_params_shape)
-        elif len(mean.shape) == len(input.shape):
-            pass
-        else:
-            raise ValueError(
-                "shape of mean and variance should be 1D or has number of axes and x's"
-            )
-        variance += eps
-        normalized = (input - mean) * variance.rsqrt()
-        if elementwise_affine:
-            normalized = normalized * weight + bias
-        return normalized
-    else:
-        if elementwise_affine:
-            res = flow._C.layer_norm_affine(
-                input,
-                weight,
-                bias,
-                begin_norm_axis=begin_norm_axis,
-                begin_params_axis=begin_params_axis,
-                epsilon=eps,
-            )
-        else:
-            res = flow._C.layer_norm(
-                input,
-                begin_norm_axis=begin_norm_axis,
-                begin_params_axis=begin_params_axis,
-                epsilon=eps,
-            )
-        return res
 
 
 class LayerNorm(Module):
@@ -319,16 +220,27 @@ class LayerNorm(Module):
         normalized_shape: _shape_t,
         eps: float = 1e-05,
         elementwise_affine: bool = True,
+        bias=True,
+        device=None,
+        dtype=None,
     ) -> None:
         super(LayerNorm, self).__init__()
+        factory_kwargs = {"device": device, "dtype": dtype}
         if isinstance(normalized_shape, int):
             normalized_shape = (normalized_shape,)
         self.normalized_shape = tuple(normalized_shape)
         self.eps = eps
         self.elementwise_affine = elementwise_affine
         if self.elementwise_affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(*self.normalized_shape))
-            self.bias = flow.nn.Parameter(flow.Tensor(*self.normalized_shape))
+            self.weight = flow.nn.Parameter(
+                flow.empty(self.normalized_shape, **factory_kwargs)
+            )
+            if bias:
+                self.bias = flow.nn.Parameter(
+                    flow.empty(self.normalized_shape, **factory_kwargs)
+                )
+            else:
+                self.register_parameter("bias", None)
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
@@ -337,10 +249,11 @@ class LayerNorm(Module):
     def reset_parameters(self) -> None:
         if self.elementwise_affine:
             init.ones_(self.weight)
-            init.zeros_(self.bias)
+            if self.bias is not None:
+                init.zeros_(self.bias)
 
-    def forward(self, x):
-        return layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
+    def forward(self, x: Tensor) -> Tensor:
+        return F.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
 
     def extra_repr(self) -> str:
         return "{normalized_shape}, eps={eps}, elementwise_affine={elementwise_affine}".format(

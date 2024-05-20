@@ -17,6 +17,7 @@ from typing import Optional, Tuple, Union
 
 import oneflow as flow
 from oneflow.nn.modules.module import Module
+import oneflow.nn.functional as F
 
 
 class Upsample(Module):
@@ -109,7 +110,7 @@ class Upsample(Module):
         self.align_corners = align_corners
 
     def forward(self, x):
-        return flow.nn.functional.interpolate(
+        return F.upsample(
             x,
             size=self.size,
             scale_factor=self.scale_factor,

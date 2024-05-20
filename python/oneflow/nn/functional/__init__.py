@@ -13,10 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.nn.modules.interpolate import interpolate
-from oneflow.nn.modules.affine_grid import affine_grid
-from oneflow.nn.modules.grid_sample import grid_sample
-from oneflow.nn.modules.sparse_softmax_cross_entropy import sparse_softmax_cross_entropy
+from .interpolate import interpolate, upsample
+from .affine_grid import affine_grid
+from .grid_sample import grid_sample
+from .sparse_softmax_cross_entropy import sparse_softmax_cross_entropy
 from oneflow._C import conv1d
 from oneflow._C import conv2d
 from oneflow._C import conv3d
@@ -65,7 +65,7 @@ from oneflow._C import tanh
 from oneflow._C import threshold
 from oneflow._C import silu
 from oneflow._C import mish
-from oneflow.nn.modules.normalization import layer_norm, group_norm
+from .normalization import layer_norm, group_norm
 from oneflow._C import dropout, dropout1d, dropout2d, dropout3d
 from oneflow._C import smooth_l1_loss
 from .pad import pad
@@ -82,10 +82,9 @@ from oneflow._C import binary_cross_entropy_loss as binary_cross_entropy
 from oneflow._C import (
     binary_cross_entropy_with_logits_loss as binary_cross_entropy_with_logits,
 )
-from oneflow.nn.modules.sparse import embedding
-from oneflow.nn.modules.linear import linear
-from oneflow.nn.modules.activation import relu6
-from oneflow.nn.modules.upsampling import Upsample as upsample
+from .sparse import embedding
+from .linear import linear
+from .activation import relu6
 from oneflow._C import unfold
 from oneflow._C import fold
 from .deform_conv import deform_conv2d
