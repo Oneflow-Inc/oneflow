@@ -5538,6 +5538,135 @@ class ScaledDotProductFlashAttentionFunctor {
 #endif  // CUDA_VERSION >= 11070
 };
 
+class ScaledDotProductFlashAttentionGradFunctor {
+ public:
+  ScaledDotProductFlashAttentionGradFunctor() {
+#if CUDA_VERSION >= 11070
+    op_ = CHECK_JUST(one::OpBuilder("scaled_dot_product_flash_attention_grad")
+                         .Input("grad_out")
+                         .Input("query")
+                         .Input("key")
+                         .Input("value")
+                         .Input("out")
+                         .Input("softmax_lse")
+                         .Input("rng_state")
+                         .Output("grad_q")
+                         .Output("grad_k")
+                         .Output("grad_v")
+                         .Build());
+#endif
+  }
+
+  Maybe<TensorTuple> operator()(
+      const std::shared_ptr<one::Tensor>& grad_out, const std::shared_ptr<one::Tensor>& query,
+      const std::shared_ptr<one::Tensor>& key, const std::shared_ptr<one::Tensor>& value,
+      const std::shared_ptr<one::Tensor>& out, const std::shared_ptr<one::Tensor>& softmax_lse,
+      const std::shared_ptr<one::Tensor>& rng_state, const float& dropout_p, const bool& is_causal,
+      const float& scale) const {
+#if CUDA_VERSION >= 11070
+    // grad_out(batch x q_sqe_len  x num_heads x head_size)
+    // query   (batch x q_seq_len  x num_heads x head_size_padded)
+    // key     (batch x kv_seq_len x num_heads_k x head_size_padded)
+    // value   (batch x kv_seq_len x num_heads_k x head_size_padded)
+    // out     (batch x kv_seq_len x num_heads x head_size_padded)
+    // softmax_lse (batch x num_heads x q_seq_len)
+    const auto head_size = grad_out->shape()->At(3);
+    const auto head_size_padded = query->shape()->At(3);
+    const auto batch_size = query->shape()->At(0);
+    const auto seqlen_q = query->shape()->At(1);
+    const auto seqlen_k = key->shape()->At(1);
+    const auto num_heads = query->shape()->At(2);
+    const auto num_heads_k = key->shape()->At(2);
+    CHECK_EQ_OR_RETURN(batch_size, key->shape()->At(0))
+        << " key has different batch size from query.";
+    CHECK_EQ_OR_RETURN(batch_size, value->shape()->At(0))
+        << " value has different batch size from query.";
+    CHECK_EQ_OR_RETURN(batch_size, grad_out->shape()->At(0))
+        << " grad_out has different batch size from query.";
+    CHECK_EQ_OR_RETURN(batch_size, out->shape()->At(0))
+        << " out has different batch size from query.";
+    CHECK_EQ_OR_RETURN(batch_size, softmax_lse->shape()->At(0))
+        << " softmax_lse has different batch size from query.";
+    CHECK_EQ_OR_RETURN(num_heads, grad_out->shape()->At(2))
+        << " grad_out has different num_heads from query.";
+    CHECK_EQ_OR_RETURN(num_heads, softmax_lse->shape()->At(1))
+        << " softmax_lse has different num_heads from query.";
+    CHECK_EQ_OR_RETURN(num_heads_k, value->shape()->At(2))
+        << " value has different num_heads from key.";
+    CHECK_EQ_OR_RETURN(seqlen_q, grad_out->shape()->At(1))
+        << " grad_out has different seq_len from query.";
+    CHECK_EQ_OR_RETURN(seqlen_q, softmax_lse->shape()->At(2))
+        << " softmax_lse has different seq_len from query.";
+    CHECK_EQ_OR_RETURN(head_size_padded, key->shape()->At(3))
+        << " key has different head dims from query.";
+    CHECK_EQ_OR_RETURN(head_size_padded, value->shape()->At(3))
+        << " key has different head dims from query.";
+    CHECK_EQ_OR_RETURN(head_size_padded, out->shape()->At(3))
+        << " out has different head dims from query.";
+
+    bool padded = head_size % 8;
+
+    auto grad_out_ = padded ? JUST(pad_last_dim<8>(grad_out)) : grad_out;
+
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("p_dropout", "softmax_scale", "is_causal",
+                                                 "window_size_left", "window_size_right");
+    attrs.SetAllAttrs(dropout_p, scale, is_causal, -1, -1);
+
+    auto output = std::make_shared<TensorTuple>(3);
+    auto output_ = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+        *op_, {grad_out_, query, key, value, out, softmax_lse, rng_state}, attrs));
+    CHECK_EQ(output_->size(), 3);
+    auto grad_q_ = (*output_)[0];
+    auto grad_k_ = (*output_)[1];
+    auto grad_v_ = (*output_)[2];
+
+    std::shared_ptr<Tensor> grad_q_padded, grad_k_padded, grad_v_padded;
+
+    bool expanded = num_heads != num_heads_k;
+
+    grad_q_padded = grad_q_;
+    if (expanded) {
+      grad_k_padded = JUST(functional::ReduceSum(
+          JUST(functional::Reshape(grad_k_, {batch_size, seqlen_k, num_heads_k,
+                                             num_heads / num_heads_k, head_size_padded})),
+          {3}, false, grad_k_->dtype()));
+      grad_v_padded = JUST(functional::ReduceSum(
+          JUST(functional::Reshape(grad_v_, {batch_size, seqlen_k, num_heads_k,
+                                             num_heads / num_heads_k, head_size_padded})),
+          {3}, false, grad_v_->dtype()));
+    } else {
+      grad_k_padded = grad_k_;
+      grad_v_padded = grad_v_;
+    }
+
+    auto grad_q = padded ? JUST(functional::Slice(grad_q_padded, {0, 0, 0, 0},
+                                                  {batch_size, seqlen_q, num_heads, head_size},
+                                                  {1, 1, 1, 1}, false))
+                         : grad_q_padded;
+    auto grad_k = padded ? JUST(functional::Slice(grad_k_padded, {0, 0, 0, 0},
+                                                  {batch_size, seqlen_k, num_heads_k, head_size},
+                                                  {1, 1, 1, 1}, false))
+                         : grad_k_padded;
+    auto grad_v = padded ? JUST(functional::Slice(grad_v_padded, {0, 0, 0, 0},
+                                                  {batch_size, seqlen_k, num_heads_k, head_size},
+                                                  {1, 1, 1, 1}, false))
+                         : grad_v_padded;
+
+    (*output)[0] = grad_q;
+    (*output)[1] = grad_k;
+    (*output)[2] = grad_v;
+    return output;
+
+#endif  // CUDA_VERSION >= 11070
+
+    UNIMPLEMENTED_THEN_RETURN() << "only support CUDA_VERSION >= 11070.";
+  }
+
+ private:
+#if CUDA_VERSION >= 11070
+  std::shared_ptr<OpExpr> op_;
+#endif  // CUDA_VERSION >= 11070
+};
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -5676,6 +5805,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MultiTensorYoloV5WeightUpdateFunctor>("MultiTensorYoloV5WeightUpdate");
   m.add_functor<impl::FusedClipGradFunctor>("FusedClipGrad");
   m.add_functor<impl::ScaledDotProductFlashAttentionFunctor>("ScaledDotProductFlashAttention");
+  m.add_functor<impl::ScaledDotProductFlashAttentionGradFunctor>(
+      "ScaledDotProductFlashAttentionGrad");
 }
 
 }  // namespace functional
