@@ -44,7 +44,7 @@ def group_norm(
     ), "The channels of input tensor must equal num_channels"
 
     affine = weight is not None and bias is not None
-    if input.is_cuda:
+    if not input.is_cpu:
         return flow._C.group_norm(input, weight, bias, affine, num_groups, eps)
     else:
         origin_shape = input.shape
@@ -137,8 +137,12 @@ class GroupNorm(Module):
         if dtype:
             factory_kwargs["dtype"] = dtype
         if self.affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(num_channels, **factory_kwargs))
-            self.bias = flow.nn.Parameter(flow.Tensor(num_channels, **factory_kwargs))
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(num_channels).to(**factory_kwargs)
+            )
+            self.bias = flow.nn.Parameter(
+                flow.Tensor(num_channels).to(**factory_kwargs)
+            )
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
