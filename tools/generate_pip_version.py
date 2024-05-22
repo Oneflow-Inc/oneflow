@@ -11,7 +11,7 @@ parser.add_argument("--out", type=str, required=False)
 args = parser.parse_args()
 
 local_label = ""
-version = f"0.9.1"
+version = f"1.0.0"
 
 # set version if release of nightly
 assert (
