@@ -1,7 +1,5 @@
 include(ExternalProject)
 
-find_package(Threads)
-
 set(FLASH_ATTENTION_PROJECT flash_attention)
 
 set(FLASH_ATTENTION_URL https://github.com/Oneflow-Inc/flash-attention-v2/archive/eed2e82b880e06237af3e50ceac4cf6728b15645.zip)
