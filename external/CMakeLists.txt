@@ -20,8 +20,8 @@ set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 set(EXTERNAL_TARGETS)
 
 if(WITH_TBB) # set(WITH_${threading_runtime_item} ON) in threading.cmake
-  add_subdirectory(onetbb)
-  list(APPEND EXTERNAL_TARGETS tbb)
+    add_subdirectory(onetbb)
+    list(APPEND EXTERNAL_TARGETS tbb)
 endif()
 
 add_subdirectory(robin-hood-hashing)
@@ -32,6 +32,11 @@ list(APPEND EXTERNAL_TARGETS fmt)
 
 add_subdirectory(kineto)
 list(APPEND EXTERNAL_TARGETS kineto)
+
+if(CUDA_VERSION VERSION_GREATER_EQUAL "11.7")
+    add_subdirectory(flash_attention)
+    list(APPEND EXTERNAL_TARGETS flash_attention)
+endif()
 
 mark_targets_as_system(${EXTERNAL_TARGETS})
 
