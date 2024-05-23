@@ -904,6 +904,9 @@ class AdaptiveMaxPool1d(_AdaptiveMaxPoolNd):
         assert (
             len(input.shape) == 3 and len(self.output_size) == 1
         ), "the length of 'output_size' does not match the input size, 1 expected"
+        assert (
+            self.output_size[0] >= 0
+        ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
         new_output_size = _generate_output_size(input.shape, self.output_size)
         return flow.nn.functional.adaptive_max_pool1d(
             input, self.output_size, self.return_indices
@@ -976,6 +979,10 @@ class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
         assert (
             len(input.shape) == 4
         ), f"expected 4-dimensional tensor, but got {len(input.shape)}-dimensional tensor"
+        assert len(self.output_size) == 2, "'output_size' must be 2"
+        assert (
+            self.output_size[0] >= 0 and self.output_size[1]
+        ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
         new_output_size = _generate_output_size(input.shape, self.output_size)
         return flow.nn.functional.adaptive_max_pool2d(
             input, self.output_size, self.return_indices, self.channel_pos
@@ -1031,6 +1038,10 @@ class AdaptiveMaxPool3d(_AdaptiveMaxPoolNd):
         assert (
             len(input.shape) == 5
         ), f"expected 5-dimensional tensor, but got {len(input.shape)}-dimensional tensor"
+        assert len(self.output_size) == 3, "'output_size' must be 3"
+        assert (
+            self.output_size[0] >= 0 and self.output_size[1] >= 0 and self.output_size[2] >= 0
+        ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
         new_output_size = _generate_output_size(input.shape, self.output_size)
         return flow.nn.functional.adaptive_max_pool3d(
             input, self.output_size, self.return_indices
