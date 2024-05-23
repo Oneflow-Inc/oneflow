@@ -674,6 +674,10 @@ class AdaptiveAvgPool1d(Module):
         super().__init__()
         assert output_size is not None, "'output_size' cannot be NoneType"
         self.output_size = _single(output_size)
+        assert len(self.output_size) == 1, "'output_size' should contain one int"
+        assert (
+            self.output_size[0] >= 0
+        ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
 
     def forward(self, x):
         assert (
@@ -741,6 +745,10 @@ class AdaptiveAvgPool2d(Module):
         super().__init__()
         assert output_size is not None, "'output_size' cannot be NoneType"
         self.output_size = _pair(output_size)
+        assert len(self.output_size) == 2, "'output_size' must be 2"
+        assert (
+            self.output_size[0] >= 0 and self.output_size[1] >= 0
+        ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
         if data_format:
             if not data_format in ["channels_first", "channels_last"]:
                 raise ValueError(
@@ -824,6 +832,10 @@ class AdaptiveAvgPool3d(Module):
         super().__init__()
         assert output_size is not None, "'output_size' cannot be NoneType"
         self.output_size = _triple(output_size)
+        assert len(self.output_size) == 3, "'output_size' must be 3"
+        assert (
+            self.output_size[0] >= 0 and self.output_size[1] >= 0 and self.output_size[2] >= 0
+        ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
 
     def forward(self, x):
         assert (
