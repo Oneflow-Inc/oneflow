@@ -834,7 +834,9 @@ class AdaptiveAvgPool3d(Module):
         self.output_size = _triple(output_size)
         assert len(self.output_size) == 3, "'output_size' must be 3"
         assert (
-            self.output_size[0] >= 0 and self.output_size[1] >= 0 and self.output_size[2] >= 0
+            self.output_size[0] >= 0
+            and self.output_size[1] >= 0
+            and self.output_size[2] >= 0
         ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
 
     def forward(self, x):
@@ -1040,7 +1042,9 @@ class AdaptiveMaxPool3d(_AdaptiveMaxPoolNd):
         ), f"expected 5-dimensional tensor, but got {len(input.shape)}-dimensional tensor"
         assert len(self.output_size) == 3, "'output_size' must be 3"
         assert (
-            self.output_size[0] >= 0 and self.output_size[1] >= 0 and self.output_size[2] >= 0
+            self.output_size[0] >= 0
+            and self.output_size[1] >= 0
+            and self.output_size[2] >= 0
         ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
         new_output_size = _generate_output_size(input.shape, self.output_size)
         return flow.nn.functional.adaptive_max_pool3d(
@@ -1049,12 +1053,20 @@ class AdaptiveMaxPool3d(_AdaptiveMaxPoolNd):
 
 
 def _unpool_output_size_check(
-    input, kernel_size: List[int], stride: List[int], padding: List[int], output_size: Optional[List[int]]
+    input,
+    kernel_size: List[int],
+    stride: List[int],
+    padding: List[int],
+    output_size: Optional[List[int]],
 ) -> List[int]:
     input_size = input.size()
     default_size = []
     for d in range(len(kernel_size)):
-        default_size.append((input_size[-len(kernel_size) + d] - 1) * stride[d] + kernel_size[d] - 2 * padding[d])
+        default_size.append(
+            (input_size[-len(kernel_size) + d] - 1) * stride[d]
+            + kernel_size[d]
+            - 2 * padding[d]
+        )
     if output_size is None:
         ret = default_size
     else:
@@ -1158,7 +1170,9 @@ class MaxUnpool1d(Module):
         else:
             _stride = kernel_size
         padding = _single(self.padding)
-        check_output_size = _unpool_output_size_check(x, kernel_size, _stride, padding, output_size)
+        check_output_size = _unpool_output_size_check(
+            x, kernel_size, _stride, padding, output_size
+        )
         assert (
             len(check_output_size) == 1
         ), f"There should be exactly one element in output_size, but got {len(check_output_size)}"
@@ -1265,7 +1279,9 @@ class MaxUnpool2d(Module):
         else:
             _stride = kernel_size
         padding = _pair(self.padding)
-        check_output_size = _unpool_output_size_check(x, kernel_size, _stride, padding, output_size)
+        check_output_size = _unpool_output_size_check(
+            x, kernel_size, _stride, padding, output_size
+        )
         assert (
             len(check_output_size) == 2
         ), f"There should be exactly two elements in output_size, but got {len(check_output_size)}"
@@ -1362,7 +1378,9 @@ class MaxUnpool3d(Module):
         else:
             _stride = kernel_size
         padding = _triple(self.padding)
-        check_output_size = _unpool_output_size_check(x, kernel_size, _stride, padding, output_size)
+        check_output_size = _unpool_output_size_check(
+            x, kernel_size, _stride, padding, output_size
+        )
         assert (
             len(check_output_size) == 3
         ), f"There should be exactly three elements in output_size, but got {len(check_output_size)}"
