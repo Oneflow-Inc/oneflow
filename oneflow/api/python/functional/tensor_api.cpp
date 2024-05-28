@@ -205,7 +205,7 @@ class TensorWithShapeGenericCtorFunctor {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     for (const auto& s : shape) {
       CHECK_OR_THROW(s >= 0) << "Trying to create tensor with negative dimension " << s << ": "
-                            << shape;
+                             << shape;
     }
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     Symbol<Device> device_;
