@@ -44,8 +44,8 @@ class _ConstantBase:
             self.device = flow.device(self.device)
         self.requires_grad = requires_grad
         size = _single(size)
-        assert (
-            all(s >= 0 for s in size)
+        assert all(
+            s >= 0 for s in size
         ), f"Trying to create tensor with negative dimension: {size}"
         if dtype is None:
             dtype = flow.get_default_dtype()
