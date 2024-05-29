@@ -39,6 +39,7 @@ Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x);
 Maybe<void> CheckInplaceCastValid(const std::shared_ptr<Tensor>& x,
                                   const std::shared_ptr<Tensor>& x_cast);
 Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand_shape);
+Maybe<void> CheckSizeNonNegative(const Shape& shape);
 Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride, const Shape& target_shape);
 Maybe<Shape> InferShapeUnspecifiedDim(const int64_t& elem_count, const Shape& shape);
 

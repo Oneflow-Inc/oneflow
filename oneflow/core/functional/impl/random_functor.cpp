@@ -202,11 +202,7 @@ class RandFunctor {
         OF_UNIMPLEMENTED() << "Only support floating dtype in rand().";
       }
     }
-
-    for (const auto& s : shape) {
-      CHECK_OR_THROW(s >= 0) << "Trying to create tensor with negative dimension " << s << ": "
-                             << shape;
-    }
+    JUST(CheckSizeNonNegative(shape));
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));

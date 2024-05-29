@@ -204,6 +204,15 @@ Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand
   return Maybe<void>::Ok();
 }
 
+Maybe<void> CheckSizeNonNegative(const Shape& shape) {
+  for (const auto& s : shape) {
+    CHECK_OR_THROW(s >= 0)
+        << "Trying to create tensor with negative dimension " << s << ": "
+        << shape;
+  }
+  return Maybe<void>::Ok();
+}
+
 Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride,
                                const Shape& target_shape) {
   /*************************************************
