@@ -204,7 +204,7 @@ Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CheckSizeNonNegative(const Shape& shape) {
+inline Maybe<void> CheckSizeNonNegative(const Shape& shape) {
   for (const auto& s : shape) {
     CHECK_OR_RETURN(s >= 0) << "Trying to create tensor with negative dimension " << s << ": "
                             << shape;
