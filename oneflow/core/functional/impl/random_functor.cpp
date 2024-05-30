@@ -276,6 +276,7 @@ class RandNFunctor {
     if (dtype.has_value() && !JUST(dtype)->is_floating_point()) {
       OF_UNIMPLEMENTED() << "Only support floating dtype in randn().";
     }
+    JUST(CheckSizeNonNegative(shape));
     const auto& out = Optional<one::Tensor>();
     return Normal(static_cast<double>(0), static_cast<double>(1), shape, out, dtype, device,
                   generator, requires_grad);
