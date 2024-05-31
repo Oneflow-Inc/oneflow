@@ -40,7 +40,7 @@ Maybe<void> CheckInplaceCastValid(const std::shared_ptr<Tensor>& x,
                                   const std::shared_ptr<Tensor>& x_cast);
 Maybe<void> CheckInplaceShapeCanExpandTo(const Shape& shape, const Shape& expand_shape);
 
-inline Maybe<void> CheckSizeNonNegative(const Shape& shape) {
+inline Maybe<void> CheckShapeNonNegative(const Shape& shape) {
   for (const auto& s : shape) {
     CHECK_OR_RETURN(s >= 0) << "Trying to create tensor with negative dimension " << s << ": "
                             << shape;

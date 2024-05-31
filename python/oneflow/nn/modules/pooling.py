@@ -1052,41 +1052,76 @@ class AdaptiveMaxPool3d(_AdaptiveMaxPoolNd):
         )
 
 
-def _unpool_output_size_check(
-    input,
-    kernel_size: List[int],
-    stride: List[int],
-    padding: List[int],
-    output_size: Optional[List[int]],
-) -> List[int]:
-    input_size = input.size()
-    default_size = []
-    for d in range(len(kernel_size)):
-        default_size.append(
-            (input_size[-len(kernel_size) + d] - 1) * stride[d]
-            + kernel_size[d]
-            - 2 * padding[d]
-        )
-    if output_size is None:
-        ret = default_size
-    else:
-        if len(output_size) == len(kernel_size) + 2:
-            output_size = output_size[2:]
-        if len(output_size) != len(kernel_size):
-            raise ValueError(
-                "output_size should be a sequence containing "
-                f"{len(kernel_size)} or {len(kernel_size) + 2} elements, but it has a length of '{len(output_size)}'"
-            )
+def _unpool_input_check(module, x, indices, output_size):
+    def _unpool_output_size_check(
+        input,
+        kernel_size: List[int],
+        stride: List[int],
+        padding: List[int],
+        output_size: Optional[List[int]],
+    ) -> List[int]:
+        input_size = input.size()
+        default_size = []
         for d in range(len(kernel_size)):
-            min_size = default_size[d] - stride[d]
-            max_size = default_size[d] + stride[d]
-            if not (min_size < output_size[d] < max_size):
+            default_size.append(
+                (input_size[-len(kernel_size) + d] - 1) * stride[d]
+                + kernel_size[d]
+                - 2 * padding[d]
+            )
+        if output_size is None:
+            ret = default_size
+        else:
+            if len(output_size) == len(kernel_size) + 2:
+                output_size = output_size[2:]
+            if len(output_size) != len(kernel_size):
                 raise ValueError(
-                    f'invalid output_size "{output_size}" (dim {d} must be between {min_size} and {max_size})'
+                    "output_size should be a sequence containing "
+                    f"{len(kernel_size)} or {len(kernel_size) + 2} elements, but it has a length of '{len(output_size)}'"
                 )
+            for d in range(len(kernel_size)):
+                min_size = default_size[d] - stride[d]
+                max_size = default_size[d] + stride[d]
+                if not (min_size < output_size[d] < max_size):
+                    raise ValueError(
+                        f'invalid output_size "{output_size}" (dim {d} must be between {min_size} and {max_size})'
+                    )
 
-        ret = output_size
-    return ret
+            ret = output_size
+        return ret
+
+    if isinstance(module, MaxUnpool1d):
+        functor = _single
+        expected_out_size = 1
+    elif isinstance(module, MaxUnpool2d):
+        functor = _pair
+        expected_out_size = 2
+    elif isinstance(module, MaxUnpool3d):
+        functor = _triple
+        expected_out_size = 3
+    else:
+        raise NotImplementError("Not implement")
+
+    kernel_size = functor(module.kernel_size)
+    if module.stride is not None:
+        _stride = functor(module.stride)
+    else:
+        _stride = kernel_size
+    padding = functor(module.padding)
+    check_output_size = _unpool_output_size_check(
+        x, kernel_size, _stride, padding, output_size
+    )
+    assert (
+        len(check_output_size) == expected_out_size
+    ), f"There should be exactly {expected_out_size} element in output_size, but got {len(check_output_size)}"
+    assert (
+        indices.dtype == flow.int64
+    ), f"elements in indices should be type int64 but got: {indices.dtype}"
+    assert (
+        (len(x.size()) == (expected_out_size + 1)) or (len(x.size()) == expected_out_size + 2)
+    ), f"Input to max_unpooling1d should be a {expected_out_size + 1}d or {expected_out_size + 2}d Tensor, but got {len(x.size())} dimensions"
+    assert (
+        x.size() == indices.size()
+    ), f"Expected shape of indices to be same as that of the input tensor"
 
 
 class MaxUnpool1d(Module):
@@ -1164,27 +1199,7 @@ class MaxUnpool1d(Module):
         self.padding = padding
 
     def forward(self, x, indices, output_size=None):
-        kernel_size = _single(self.kernel_size)
-        if self.stride is not None:
-            _stride = _single(self.stride)
-        else:
-            _stride = kernel_size
-        padding = _single(self.padding)
-        check_output_size = _unpool_output_size_check(
-            x, kernel_size, _stride, padding, output_size
-        )
-        assert (
-            len(check_output_size) == 1
-        ), f"There should be exactly one element in output_size, but got {len(check_output_size)}"
-        assert (
-            indices.dtype == flow.int64
-        ), f"elements in indices should be type int64 but got: {indices.dtype}"
-        assert (
-            len(x.size()) == 2 or len(x.size()) == 3
-        ), f"Input to max_unpooling1d should be a 2d or 3d Tensor, but got {len(x.size())} dimensions"
-        assert (
-            x.size() == indices.size()
-        ), f"Expected shape of indices to be same as that of the input tensor"
+        _unpool_input_check(self, x, indices, output_size)
         return flow._C.max_unpool1d(
             x, indices, self.kernel_size, self.stride, self.padding, output_size
         )
@@ -1273,27 +1288,7 @@ class MaxUnpool2d(Module):
         self.padding = padding
 
     def forward(self, x, indices, output_size=None):
-        kernel_size = _pair(self.kernel_size)
-        if self.stride is not None:
-            _stride = _pair(self.stride)
-        else:
-            _stride = kernel_size
-        padding = _pair(self.padding)
-        check_output_size = _unpool_output_size_check(
-            x, kernel_size, _stride, padding, output_size
-        )
-        assert (
-            len(check_output_size) == 2
-        ), f"There should be exactly two elements in output_size, but got {len(check_output_size)}"
-        assert (
-            indices.dtype == flow.int64
-        ), f"elements in indices should be type int64 but got: {indices.dtype}"
-        assert (
-            len(x.size()) == 3 or len(x.size()) == 4
-        ), f"Input to max_unpooling1d should be a 3d or 4d Tensor, but got {len(x.size())} dimensions"
-        assert (
-            x.size() == indices.size()
-        ), f"Expected shape of indices to be same as that of the input tensor"
+        _unpool_input_check(self, x, indices, output_size)
         return flow._C.max_unpool2d(
             x, indices, self.kernel_size, self.stride, self.padding, output_size
         )
@@ -1372,27 +1367,7 @@ class MaxUnpool3d(Module):
         self.padding = padding
 
     def forward(self, x, indices, output_size=None):
-        kernel_size = _triple(self.kernel_size)
-        if self.stride is not None:
-            _stride = _triple(self.stride)
-        else:
-            _stride = kernel_size
-        padding = _triple(self.padding)
-        check_output_size = _unpool_output_size_check(
-            x, kernel_size, _stride, padding, output_size
-        )
-        assert (
-            len(check_output_size) == 3
-        ), f"There should be exactly three elements in output_size, but got {len(check_output_size)}"
-        assert (
-            indices.dtype == flow.int64
-        ), f"elements in indices should be type int64 but got: {indices.dtype}"
-        assert (
-            len(x.size()) == 4 or len(x.size()) == 5
-        ), f"Input to max_unpooling1d should be a 4d or 5d Tensor, but got {len(x.size())} dimensions"
-        assert (
-            x.size() == indices.size()
-        ), f"Expected shape of indices to be same as that of the input tensor"
+        _unpool_input_check(self, x, indices, output_size)
         return flow._C.max_unpool3d(
             x, indices, self.kernel_size, self.stride, self.padding, output_size
         )

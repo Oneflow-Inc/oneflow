@@ -202,7 +202,7 @@ class RandFunctor {
         OF_UNIMPLEMENTED() << "Only support floating dtype in rand().";
       }
     }
-    JUST(CheckSizeNonNegative(shape));
+    JUST(CheckShapeNonNegative(shape));
 
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), NullOpt, NullOpt));
@@ -276,7 +276,7 @@ class RandNFunctor {
     if (dtype.has_value() && !JUST(dtype)->is_floating_point()) {
       OF_UNIMPLEMENTED() << "Only support floating dtype in randn().";
     }
-    JUST(CheckSizeNonNegative(shape));
+    JUST(CheckShapeNonNegative(shape));
     const auto& out = Optional<one::Tensor>();
     return Normal(static_cast<double>(0), static_cast<double>(1), shape, out, dtype, device,
                   generator, requires_grad);
