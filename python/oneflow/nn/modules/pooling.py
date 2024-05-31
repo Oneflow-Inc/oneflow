@@ -1116,8 +1116,8 @@ def _unpool_input_check(module, x, indices, output_size):
     assert (
         indices.dtype == flow.int64
     ), f"elements in indices should be type int64 but got: {indices.dtype}"
-    assert (
-        (len(x.size()) == (expected_out_size + 1)) or (len(x.size()) == expected_out_size + 2)
+    assert (len(x.size()) == (expected_out_size + 1)) or (
+        len(x.size()) == expected_out_size + 2
     ), f"Input to max_unpooling1d should be a {expected_out_size + 1}d or {expected_out_size + 2}d Tensor, but got {len(x.size())} dimensions"
     assert (
         x.size() == indices.size()
