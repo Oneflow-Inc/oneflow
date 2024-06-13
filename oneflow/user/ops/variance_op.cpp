@@ -71,4 +71,55 @@ Maybe<void> VarOp::GetSbp(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+REGISTER_USER_OP_GRAD("variance")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("input", 0)) {
+        const auto axis = op.attr<std::vector<int32_t>>("axis");
+        const bool keepdim = op.attr<bool>("keepdim");
+        user_op::UserOpConfWrapperBuilder reduce_sum_out_builder(op.op_name() + "_reduce_sum_out");
+        auto reduce_sum_op = reduce_sum_out_builder.Op("reduce_sum")
+                                 .Input("input_tensor", op.GetGradTensorWithOpOutput("output", 0))
+                                 .Output("output_tensor")
+                                 .Attr("axis", axis)
+                                 .Attr("keepdim", keepdim)
+                                 .Build();
+        AddOp(reduce_sum_op);
+        const auto& in_shape = op.TensorDesc4ArgNameAndIndex("input", 0).shape();
+        size_t elem_cnt = 1;
+        for (const auto& item : axis) { elem_cnt *= in_shape.At(item); }
+        user_op::UserOpConfWrapperBuilder scalar_mul_builder(op.op_name() + "_scalar_mul_out_0");
+        auto scalar_mul_op = scalar_mul_builder.Op("scalar_mul")
+                                 .Input("in", reduce_sum_op.output("output_tensor", 0))
+                                 .Output("out")
+                                 .Attr("has_int_operand", 0)
+                                 .Attr("int_operand", op.attr_or_default<int64_t>("int_operand", 0))
+                                 .Attr("has_float_operand", 1)
+                                 .Attr("float_operand", 1 / elem_cnt)
+                                 .Build();
+        AddOp(scalar_mul_op);
+        user_op::UserOpConfWrapperBuilder sub_builder(op.op_name() + "_sub_out");
+        auto sub_op = sub_builder.Op("broadcast_sub")
+                          .Input("x", op.input("input", 0))
+                          .Input("y", scalar_mul_op.output("out", 0))
+                          .Output("z")
+                          .Build();
+        AddOp(sub_op);
+        bool unbiased = op.attr<bool>("unbiased");
+        const size_t correction = unbiased ? 1 : 0;
+        scalar_mul_builder = user_op::UserOpConfWrapperBuilder(op.op_name() + "_scalar_mul_out_1");
+        scalar_mul_op = scalar_mul_builder.Op("scalar_mul")
+                            .Input("in", sub_op.output("z", 0))
+                            .Output("out")
+                            .Attr("has_int_operand", 0)
+                            .Attr("int_operand", op.attr_or_default<int64_t>("int_operand", 0))
+                            .Attr("has_float_operand", 1)
+                            .Attr("float_operand", 2.0 / (elem_cnt - correction))
+                            .Build();
+        AddOp(scalar_mul_op);
+        op.BindGradTensorWithOpInput(scalar_mul_op.output("out", 0), "input", 0);
+      }
+      return Maybe<void>::Ok();
+    });
+
 }  // namespace oneflow
