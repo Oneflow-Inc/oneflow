@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/exception.h"
+#include "oneflow/maybe/just.h"
 
 namespace oneflow {
 namespace test {
@@ -51,7 +52,7 @@ TEST(Optional, JUST) {
   ASSERT_EQ(CHECK_JUST(f(a)), 233);
   ASSERT_EQ(f(b).error()->msg(), "");
 
-  auto g = [](const Optional<int>& v) -> Optional<int> { return JUST_OPT(v); };
+  auto g = [](const Optional<int>& v) -> Optional<int> { return OPT_JUST(v); };
 
   ASSERT_EQ(CHECK_JUST(g(a)), 233);
 
