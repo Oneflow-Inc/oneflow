@@ -33,6 +33,7 @@ class CustomEventType(Enum):
     Default = 0
     CudaKernel = 1
     CudaRuntime = 2
+    NpuKernel = 3
 
 
 class EventBase:
@@ -84,10 +85,15 @@ class EventBase:
     def has_cuda_time(self) -> bool:
         return self.cuda_time_total is not None
 
+    @property
+    def key(self):
+        return (self.name, self.has_cuda_time())
+
     def __eq__(self, __o: object) -> bool:
+        if self.key != __o.key:
+            return False
         return (
-            self.name == __o.name
-            and self.count == __o.count
+            self.count == __o.count
             and self.cpu_time_total == __o.cpu_time_total
             and self.cuda_time_total == __o.cuda_time_total
         )
@@ -106,11 +112,14 @@ class CustomEvent(EventBase):
 
     @property
     def key(self):
-        return self.name, self.custom_event_type
+        return super().key + (self.custom_event_type,)
 
     @property
     def cuda_time_total(self):
-        if self.custom_event_type == CustomEventType.CudaKernel:
+        if (
+            self.custom_event_type == CustomEventType.CudaKernel
+            or self.custom_event_type == CustomEventType.NpuKernel
+        ):
             return self._time_total
         return None
 
@@ -177,9 +186,9 @@ class KernelEvent(EventBase):
             return tuple(extra_keys)
 
         if len(self.children) == 0:
-            return (self.name,) + get_extra_keys()
+            return super().key + get_extra_keys()
         return (
-            self.name,
+            *(super().key),
             *get_extra_keys(),
             ",".join([x.name for x in self.children]),
         )

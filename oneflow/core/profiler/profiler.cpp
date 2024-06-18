@@ -107,6 +107,9 @@ Maybe<std::string> DisableProfilerAndReturnResult() {
 #if defined(WITH_CUDA)
   OF_CUDA_CHECK(cudaDeviceSynchronize());
 #endif  // WITH_CUDA
+#if defined(WITH_NPU)
+  aclrtSynchronizeDevice();
+#endif  // WITH_NPU
   auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
   std::string results = pmgr->DumpResultsJson();
   Singleton<ProfileManager>::Delete();

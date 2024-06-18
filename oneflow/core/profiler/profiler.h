@@ -17,6 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_PROFILER_PROFILER_H_
 
 #include "oneflow/core/common/util.h"
+#if defined(WITH_NPU)
+#include "acl/acl.h"
+#endif
 
 namespace oneflow {
 
