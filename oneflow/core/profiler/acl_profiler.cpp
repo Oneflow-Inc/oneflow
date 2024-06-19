@@ -72,12 +72,12 @@ aclError AclProfilingDestroyConfig(const aclprofConfig* profilerConfig) {
 aclprofConfig* AclPrepareTrace() {
   // ref: torch_npu/csrc/profiler/profiler_mgr.cpp
   char* profiler_log_dir_env_var = getenv("ASCEND_PROFILER_LOG_DIR");
-  std::string profiler_log_dir(profiler_log_dir_env_var);
-  if (profiler_log_dir == nullptr) {
+  if (profiler_log_dir_env_var == nullptr) {
     char* env_var = getenv("ASCEND_TOOLKIT_HOME");
     std::string ascend_home_path(env_var);
     AclProfilingInit(ascend_home_path.c_str(), ascend_home_path.size());
   } else {
+    std::string profiler_log_dir(profiler_log_dir_env_var);
     AclProfilingInit(profiler_log_dir.c_str(), profiler_log_dir.size());
   }
 
