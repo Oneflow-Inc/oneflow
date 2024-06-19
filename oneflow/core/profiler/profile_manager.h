@@ -37,10 +37,11 @@ class ProfileManager {
  public:
   friend class EventRecorder;
 
-  ProfileManager(bool use_cpu, bool use_cuda, bool record_shapes, bool record_attrs,
+  ProfileManager(bool use_cpu, bool use_cuda, bool use_npu, bool record_shapes, bool record_attrs,
                  bool record_bandwidth)
       : use_cpu_(use_cpu),
         use_cuda_(use_cuda),
+        use_npu_(use_npu),
         record_shapes_(record_shapes),
         record_attrs_(record_attrs),
         record_bandwidth_(record_bandwidth) {
@@ -60,7 +61,7 @@ class ProfileManager {
     auto ret = AclStartTrace(profConfig_);
     if (ret != ACL_ERROR_NONE) {
       LOG(ERROR) << "ProfileManager npu AclProfilingStart() failed: "
-                 << "Profiling start failed.";
+                 << "Profiling start failed, error code:" << ret;
     }
 
 #endif  // WITH_NPU
@@ -74,6 +75,7 @@ class ProfileManager {
  private:
   bool use_cpu_;
   bool use_cuda_;
+  bool use_npu_;
   bool record_shapes_;
   bool record_attrs_;
   bool record_bandwidth_;

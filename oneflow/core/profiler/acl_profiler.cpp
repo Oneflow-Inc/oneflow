@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #if defined(WITH_NPU)
+#include <cstdlib>
+#include <iostream>
+#include <string>
 #include "oneflow/core/profiler/acl_profiler.h"
 
 namespace oneflow {
@@ -68,7 +71,15 @@ aclError AclProfilingDestroyConfig(const aclprofConfig* profilerConfig) {
 
 aclprofConfig* AclPrepareTrace() {
   // ref: torch_npu/csrc/profiler/profiler_mgr.cpp
-  AclProfilingInit("", 0);
+  char* profiler_log_dir_env_var = getenv("ASCEND_PROFILER_LOG_DIR");
+  std::string profiler_log_dir(profiler_log_dir_env_var);
+  if (profiler_log_dir == nullptr) {
+    char* env_var = getenv("ASCEND_TOOLKIT_HOME");
+    std::string ascend_home_path(env_var);
+    AclProfilingInit(ascend_home_path.c_str(), ascend_home_path.size());
+  } else {
+    AclProfilingInit(profiler_log_dir.c_str(), profiler_log_dir.size());
+  }
 
   // torch_npu/profiler/profiler.py
   // torch_npu/profiler/experimental_config.py
