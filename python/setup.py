@@ -55,7 +55,7 @@ def get_version():
 REQUIRED_PACKAGES = [
     f"numpy>={np.__version__}, <2.0",
     "protobuf>=3.9.2, <4.0",
-    "typing-extensions",
+    "typing-extensions>=4.0.0, <5.0",
     "tqdm",
     "requests",
     "pillow",
