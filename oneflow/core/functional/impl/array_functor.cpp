@@ -1558,7 +1558,7 @@ class ReshapeFunctor {
       }
     }
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("shape");
-    attrs.SetAllAttrs(infered_shape);
+    attrs.SetAllAttrs(shape);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1945,6 +1945,24 @@ class UpsampleNearest1DFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class UpsampleNearestLike1DFunctor {
+ public:
+  UpsampleNearestLike1DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_nearest_1d").Input("x").Input("like").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like,
+                           const std::string& data_format) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("data_format");
+    attrs.SetAllAttrs(data_format);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class UpsampleNearest1DGradFunctor {
  public:
   UpsampleNearest1DGradFunctor() {
@@ -1962,6 +1980,29 @@ class UpsampleNearest1DGradFunctor {
       attrs.SetAllAttrs(scale_factor, data_format, NullOpt);
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleNearestLike1DGradFunctor {
+ public:
+  UpsampleNearestLike1DGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_nearest_1d_grad")
+                         .Input("dy")
+                         .Input("x")
+                         .Input("like")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like,
+                           const std::string& data_format) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("data_format");
+    attrs.SetAllAttrs(data_format);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, like}, attrs);
   }
 
  private:
@@ -1991,6 +2032,24 @@ class UpsampleNearest2DFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class UpsampleNearestLike2DFunctor {
+ public:
+  UpsampleNearestLike2DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_nearest_2d").Input("x").Input("like").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like,
+                           const std::string& data_format) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("data_format");
+    attrs.SetAllAttrs(data_format);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class UpsampleNearest2DGradFunctor {
  public:
   UpsampleNearest2DGradFunctor() {
@@ -2010,6 +2069,29 @@ class UpsampleNearest2DGradFunctor {
       attrs.SetAllAttrs(height_scale, width_scale, data_format, NullOpt);
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleNearestLike2DGradFunctor {
+ public:
+  UpsampleNearestLike2DGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_nearest_2d_grad")
+                         .Input("dy")
+                         .Input("x")
+                         .Input("like")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like,
+                           const std::string& data_format) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("data_format");
+    attrs.SetAllAttrs(data_format);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, like}, attrs);
   }
 
  private:
@@ -2135,6 +2217,24 @@ class UpsampleNearest3DFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class UpsampleNearestLike3DFunctor {
+ public:
+  UpsampleNearestLike3DFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("upsample_nearest_3d").Input("x").Input("like").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like,
+                           const std::string& data_format) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("data_format");
+    attrs.SetAllAttrs(data_format);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class UpsampleNearest3DGradFunctor {
  public:
   UpsampleNearest3DGradFunctor() {
@@ -2154,6 +2254,29 @@ class UpsampleNearest3DGradFunctor {
       attrs.SetAllAttrs(depth_scale, height_scale, width_scale, data_format, NullOpt);
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleNearestLike3DGradFunctor {
+ public:
+  UpsampleNearestLike3DGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("upsample_nearest_3d_grad")
+                         .Input("dy")
+                         .Input("x")
+                         .Input("like")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like,
+                           const std::string& data_format) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("data_format");
+    attrs.SetAllAttrs(data_format);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, like}, attrs);
   }
 
  private:
@@ -4118,18 +4241,24 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UnfoldTensorFunctor>("UnfoldTensor");
   m.add_functor<impl::UnfoldTensorGradFunctor>("UnfoldTensorGrad");
   m.add_functor<impl::UpsampleGradFunctor>("UpsampleGrad");
-  m.add_functor<impl::UpsampleNearest2DFunctor>("UpsampleNearest2D");
-  m.add_functor<impl::UpsampleNearest2DGradFunctor>("UpsampleNearest2DGrad");
+  m.add_functor<impl::UpsampleNearest2DFunctor, impl::UpsampleNearestLike2DFunctor>(
+      "UpsampleNearest2D");
+  m.add_functor<impl::UpsampleNearest2DGradFunctor, impl::UpsampleNearestLike2DGradFunctor>(
+      "UpsampleNearest2DGrad");
   m.add_functor<impl::UpsampleBilinear2DFunctor>("UpsampleBilinear2D");
   m.add_functor<impl::UpsampleBilinear2DGradFunctor>("UpsampleBilinear2DGrad");
   m.add_functor<impl::UpsampleLinear1DFunctor>("UpsampleLinear1D");
   m.add_functor<impl::UpsampleLinear1DGradFunctor>("UpsampleLinear1DGrad");
-  m.add_functor<impl::UpsampleNearest1DFunctor>("UpsampleNearest1D");
-  m.add_functor<impl::UpsampleNearest1DGradFunctor>("UpsampleNearest1DGrad");
+  m.add_functor<impl::UpsampleNearest1DFunctor, impl::UpsampleNearestLike1DFunctor>(
+      "UpsampleNearest1D");
+  m.add_functor<impl::UpsampleNearest1DGradFunctor, impl::UpsampleNearestLike1DGradFunctor>(
+      "UpsampleNearest1DGrad");
   m.add_functor<impl::UpsampleBicubic2DFunctor>("UpsampleBicubic2D");
   m.add_functor<impl::UpsampleBicubic2DGradFunctor>("UpsampleBicubic2DGrad");
-  m.add_functor<impl::UpsampleNearest3DFunctor>("UpsampleNearest3D");
-  m.add_functor<impl::UpsampleNearest3DGradFunctor>("UpsampleNearest3DGrad");
+  m.add_functor<impl::UpsampleNearest3DFunctor, impl::UpsampleNearestLike3DFunctor>(
+      "UpsampleNearest3D");
+  m.add_functor<impl::UpsampleNearest3DGradFunctor, impl::UpsampleNearestLike3DGradFunctor>(
+      "UpsampleNearest3DGrad");
   m.add_functor<impl::UpsampleTrilinear3DFunctor>("UpsampleTrilinear3D");
   m.add_functor<impl::UpsampleTrilinear3DGradFunctor>("UpsampleTrilinear3DGrad");
   m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
