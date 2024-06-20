@@ -30,7 +30,7 @@ limitations under the License.
 // huawei ascend sdk headers
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
-#include "op_proto/built-in/inc/all_ops.h"
+#include "built-in/op_proto/inc/all_ops.h"
 #pragma GCC diagnostic pop
 
 namespace mlir {
