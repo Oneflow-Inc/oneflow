@@ -1050,19 +1050,6 @@ def OneFlow_BroadcastSubOp : OneFlow_BaseOp<"broadcast_sub", [NoMemoryEffect, De
   let hasFolder = 1;
 }
 
-def OneFlow_BitwiseNotOp : OneFlow_BaseOp<"bitwise_not", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$x
-  );
-  let output = (outs
-    OneFlow_Tensor:$y
-  );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
-  let has_data_type_infer_fn = 1;
-}
-
 def OneFlow_BroadcastBitwiseAndOp : OneFlow_BaseOp<"broadcast_bitwise_and", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
@@ -1077,6 +1064,21 @@ def OneFlow_BroadcastBitwiseAndOp : OneFlow_BaseOp<"broadcast_bitwise_and", [NoM
   let has_data_type_infer_fn = 1;
 }
 
+
+
+def OneFlow_BroadcastBitwiseLeftShiftOp : OneFlow_BaseOp<"broadcast_bitwise_left_shift", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
+  );
+  let output = (outs
+    OneFlow_Tensor:$z
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 def OneFlow_BroadcastBitwiseOrOp : OneFlow_BaseOp<"broadcast_bitwise_or", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
@@ -1091,6 +1093,19 @@ def OneFlow_BroadcastBitwiseOrOp : OneFlow_BaseOp<"broadcast_bitwise_or", [NoMem
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_BroadcastBitwiseRightShiftOp : OneFlow_BaseOp<"broadcast_bitwise_right_shift", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$y
+  );
+  let output = (outs
+    OneFlow_Tensor:$z
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 def OneFlow_BroadcastBitwiseXorOp : OneFlow_BaseOp<"broadcast_bitwise_xor", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
@@ -1104,6 +1119,7 @@ def OneFlow_BroadcastBitwiseXorOp : OneFlow_BaseOp<"broadcast_bitwise_xor", [NoM
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
+
 
 #endif // GET_ONEFLOW_BROADCAST_OP_DEFINITIONS
 
@@ -9357,6 +9373,70 @@ def OneFlow_ScalarBitwiseXorOp : OneFlow_BaseOp<"scalar_bitwise_xor", [NoMemoryE
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
+
+def OneFlow_ScalarBitwiseLeftShiftOp : OneFlow_BaseOp<"scalar_bitwise_left_shift", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$operand
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_ScalarBitwiseRightShiftOp : OneFlow_BaseOp<"scalar_bitwise_right_shift", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$operand
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_ScalarReverseBitwiseLeftShiftOp : OneFlow_BaseOp<"scalar_reverse_bitwise_left_shift", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$operand
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_ScalarReverseBitwiseRightShiftOp : OneFlow_BaseOp<"scalar_reverse_bitwise_right_shift", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI64Attr, "0">:$operand
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
 #endif // GET_ONEFLOW_SCALAR_OP_DEFINITIONS
 
 
@@ -11137,6 +11217,19 @@ def OneFlow_IsInfOp : OneFlow_BaseOp<"isinf", [NoMemoryEffect, NoGrad, DeclareOp
   );
   let output = (outs
     OneFlow_Tensor:$out
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_BitwiseNotOp : OneFlow_BaseOp<"bitwise_not", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
