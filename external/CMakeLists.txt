@@ -33,6 +33,9 @@ list(APPEND EXTERNAL_TARGETS fmt)
 add_subdirectory(kineto)
 list(APPEND EXTERNAL_TARGETS kineto)
 
+add_subdirectory(opentelemetry)
+list(APPEND EXTERNAL_TARGETS opentelemetry_trace)
+
 mark_targets_as_system(${EXTERNAL_TARGETS})
 
 set_property(GLOBAL PROPERTY EXTERNAL_TARGETS ${EXTERNAL_TARGETS})
