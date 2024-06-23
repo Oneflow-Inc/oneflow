@@ -61,6 +61,8 @@ from oneflow.nn.modules.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 from oneflow.optim.optimizer import Optimizer
 
+from oneflow.nn.graph.tensor_folder_map import TensorFolderMap
+
 
 class Graph(object):
     r"""Base class for training or evaluating a neural network in static graph mode.
@@ -282,6 +284,9 @@ class Graph(object):
 
         if not self._is_compiled:
             self._compile(*args, **kwargs)
+            
+            # generater tensor folder map
+            self.tensor_folder_map = TensorFolderMap(oneflow._oneflow_internal.GetFolderRuleTable())
 
         return self.__run(*args, **kwargs)
 
