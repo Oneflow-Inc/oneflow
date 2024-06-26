@@ -68,7 +68,9 @@ def from_torch(torch_tensor):
         dtype = flow.int64
     elif torch_tensor.dtype != torch.float16:
         print(torch_tensor.dtype)
-    return flow.tensor(torch_tensor.cpu().numpy(), device=flow.device("npu"), dtype=dtype).reshape([x for x in torch_tensor.shape])
+    return flow.tensor(
+        torch_tensor.cpu().numpy(), device=flow.device("npu"), dtype=dtype
+    ).reshape([x for x in torch_tensor.shape])
 
 
 def to_torch(flow_tensor):
@@ -116,4 +118,6 @@ def to_torch(flow_tensor):
         dtype = torch.int64
     elif flow_tensor.dtype != flow.float16:
         print(flow_tensor.dtype)
-    return torch.tensor(flow_tensor.numpy(), device="npu", dtype=dtype).reshape([x for x in flow_tensor.shape])
+    return torch.tensor(flow_tensor.numpy(), device="npu", dtype=dtype).reshape(
+        [x for x in flow_tensor.shape]
+    )
