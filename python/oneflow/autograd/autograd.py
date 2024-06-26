@@ -29,6 +29,7 @@ def grad(
     retain_graph: bool = False,
     create_graph: bool = False,
     allow_unused: bool = False,
+    is_grads_batched: bool = False,
 ) -> Tuple[Tensor]:
     r"""
     Computes and returns the sum of gradients of outputs with respect to the inputs.
@@ -56,6 +57,11 @@ def grad(
         allow_unused (bool, optional): If ``False``, specifying inputs that were not
             used when computing outputs (and therefore their grad is always zero)
             is an error. Defaults to ``False``.
+        is_grads_batched (bool, optional): If True, the first dimension of each tensor in
+            grad_outputs will be interpreted as the batch dimension. Instead of computing a single
+            vector-Jacobian product, we compute a batch of vector-Jacobian products for each “vector”
+            in the batch. This should lead to performance improvements when compared to manually
+            looping and performing backward multiple times. Defaults to ``False``.
 
     Returns:
         Tuple(Tensor): A tuple of tensors containing the gradients for each ``inputs``.
@@ -67,6 +73,7 @@ def grad(
         retain_graph,
         create_graph,
         allow_unused,
+        is_grads_batched,
     )
     return tuple([x for x in in_grads])
 

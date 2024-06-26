@@ -1,0 +1,38 @@
+name: Priv Release
+
+on:
+  push:
+    branches:
+      - "pro/*"
+  schedule:
+    # beijing: 12 pm.
+    # utc: 4 am.
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      priv_branch:
+        required: false
+        default: "main"
+
+concurrency:
+  group: priv-release-${{ github.ref }}-${{ inputs.priv_branch }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    name: Release pip
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: ./.github/workflows/release.yml
+    with:
+      is_priv: true
+      branch: ${{ inputs.priv_branch || 'main' }}
+      cuda_cmake_cache: cmake/caches/ci/release/cuda_pro.cmake
+    secrets:
+      ONEFLOW_PRIV_ORG: ${{ secrets.ONEFLOW_PRIV_ORG }}
+      ONEFLOW_PRIV_GH_TOKEN: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
+      ONEFLOW_PRIV_OSS_BUCKET: ${{ secrets.ONEFLOW_PRIV_OSS_BUCKET }}
+      OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+      OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      ONEFLOW_CI_HTTP_PROXY: ${{ secrets.ONEFLOW_CI_HTTP_PROXY }}

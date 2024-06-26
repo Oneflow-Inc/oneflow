@@ -755,6 +755,14 @@
   signature: "Tensor (Tensor dy, Tensor x) => QuickGeluGrad"
   bind_python: False
 
+- name: "square_relu"
+  signature: "Tensor (Tensor x) => SquareReLU"
+  bind_python: True
+
+- name: "square_relu_grad"
+  signature: "Tensor (Tensor dy, Tensor x) => SquareReLUGrad"
+  bind_python: False
+
 - name: "gelu_with_approximate"
   signature: 'Tensor (Tensor x, String approximate="none") => GeluWithApproximate'
   bind_python: True
@@ -2675,6 +2683,14 @@
 - name: "fused_bias_add_scale_mask_softmax_dropout"
   signature: "TensorTuple (Tensor x, Tensor bias, Tensor mask, *, Float fill_value=0.0, Float scale=1.0, Float p=0.5, Bool training=True, Generator generator=None) => FusedBiasAddScaleMaskSoftmaxDropout"
   bind_python: True
+
+- name: "scaled_dot_product_attention"
+  signature: "Tensor (Tensor query, Tensor key, Tensor value, Tensor attn_mask=None, Float dropout_p=0.0, Bool is_causal=False, Float scale=None, Int64 seed=0) => ScaledDotProductFlashAttention"
+  bind_python: True
+
+- name: "scaled_dot_product_attention_grad"
+  signature: "TensorTuple (Tensor grad_out, Tensor query, Tensor key, Tensor value, Tensor out, Tensor softmax_lse, Tensor rng_state, Float dropout_p=0.0, Bool is_causal=False, Float scale=0.0) => ScaledDotProductFlashAttentionGrad"
+  bind_python: False
 
 - name: "fused_multi_head_attention_inference"
   signature: "Tensor (Tensor query, Tensor key, Tensor value, Int64 num_heads, Bool causal=False, Int64 query_hidden_slice_start=0, Int64 query_hidden_slice_end=-1, Int64 key_hidden_slice_start=0, Int64 key_hidden_slice_end=-1, Int64 value_hidden_slice_start=0, Int64 value_hidden_slice_end=-1, Tensor attn_bias=None, Int64 causal_diagonal_offset=0) => FusedMultiHeadAttentionInference"

@@ -40,6 +40,7 @@ from oneflow._C import max_unpool2d
 from oneflow._C import max_unpool3d
 from oneflow._C import cosine_similarity, pairwise_distance
 from oneflow._C import relu
+from oneflow._C import square_relu
 from oneflow._C import hardtanh
 from oneflow._C import hardsigmoid
 from oneflow._C import hardshrink
@@ -64,7 +65,7 @@ from oneflow._C import tanh
 from oneflow._C import threshold
 from oneflow._C import silu
 from oneflow._C import mish
-from oneflow.nn.modules.normalization import layer_norm
+from oneflow.nn.modules.normalization import layer_norm, group_norm
 from oneflow._C import dropout, dropout1d, dropout2d, dropout3d
 from oneflow._C import smooth_l1_loss
 from .pad import pad

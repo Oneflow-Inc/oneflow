@@ -1,0 +1,234 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/shape.h"
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
+
+namespace oneflow {
+
+Maybe<void> ScaledDotProductFlashAttentionOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& q_shape = ctx->InputShape("query", 0);
+  const Shape& k_shape = ctx->InputShape("key", 0);
+  const Shape& v_shape = ctx->InputShape("value", 0);
+
+  auto batch_size = q_shape.At(0);
+  auto seqlen_q = q_shape.At(1);
+  auto num_heads = q_shape.At(2);
+  auto head_size_og = q_shape.At(3);
+  auto seqlen_k = k_shape.At(1);
+  auto num_heads_k = k_shape.At(2);
+
+  // check input tensor shape.
+  CHECK_EQ_OR_RETURN(batch_size, k_shape.At(0)) << "query has different batch size from key.";
+  CHECK_EQ_OR_RETURN(batch_size, v_shape.At(0)) << "query has different batch size from value.";
+
+  CHECK_EQ_OR_RETURN(seqlen_k, v_shape.At(1)) << "key has different seqlen from value.";
+  CHECK_EQ_OR_RETURN(num_heads_k, v_shape.At(2)) << "key has different num_heads from value.";
+
+  CHECK_EQ_OR_RETURN(head_size_og, k_shape.At(3)) << "query has different head_size from key";
+  CHECK_EQ_OR_RETURN(head_size_og, v_shape.At(3)) << "query has different head_size from value";
+
+  // batch size must be positive.
+  CHECK_GT_OR_RETURN(batch_size, 0) << "batch size must be positive";
+
+  // only support head dimensions at most 256.
+  CHECK_LE_OR_RETURN(head_size_og, 256) << "only support head dimensions at most 256";
+
+  // number of heads in key/value must devide number of heads in query.
+  CHECK_EQ_OR_RETURN(num_heads % num_heads_k, 0)
+      << "number of heads in key/value must devide number of heads in query.";
+
+  ctx->SetOutputShape("out", 0, Shape({batch_size, seqlen_q, num_heads, head_size_og}));
+  // save for backward
+  ctx->SetOutputShape("softmax_lse", 0, Shape({batch_size, num_heads, seqlen_q}));
+  // save seed and offset for backward.
+  ctx->SetOutputShape("rng_state", 0, Shape({2}));
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ScaledDotProductFlashAttentionOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return ScaledDotProductFlashAttentionOp::InferLogicalTensorDesc(ctx);
+}
+
+Maybe<void> ScaledDotProductFlashAttentionOp::GetSbp(user_op::SbpContext* ctx) {
+  auto parallel_num = ctx->parallel_num();
+  const Shape& q_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("query", 0).shape();
+  const Shape& k_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("key", 0).shape();
+  auto num_heads = q_shape.At(2);
+  auto num_heads_k = k_shape.At(2);
+  bool can_spilt_num_heads =
+      num_heads == num_heads_k || (!(num_heads % parallel_num) && !(num_heads_k % parallel_num));
+  if (can_spilt_num_heads) {
+    // prior to split on num_heads.
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("query", 0), 2)
+        .Split(user_op::OpArg("key", 0), 2)
+        .Split(user_op::OpArg("value", 0), 2)
+        .Split(user_op::OpArg("out", 0), 2)
+        .Split(user_op::OpArg("softmax", 0), 1)
+        .Broadcast(user_op::OpArg("rng_state", 0))
+        .Build();
+  } else {
+    // otherwise split on batch_size.
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("query", 0), 0)
+        .Split(user_op::OpArg("key", 0), 0)
+        .Split(user_op::OpArg("value", 0), 0)
+        .Split(user_op::OpArg("out", 0), 0)
+        .Split(user_op::OpArg("softmax", 0), 0)
+        .Broadcast(user_op::OpArg("rng_state", 0))
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ScaledDotProductFlashAttentionOp::InferDataType(user_op::InferContext* ctx) {
+  auto q_datatype = ctx->InputDType("query", 0);
+  auto k_datatype = ctx->InputDType("key", 0);
+  auto v_datatype = ctx->InputDType("value", 0);
+
+  CHECK_EQ_OR_RETURN(q_datatype, k_datatype) << "query has different data type from key.";
+  CHECK_EQ_OR_RETURN(q_datatype, v_datatype) << "query has different data type from value.";
+
+  ctx->SetOutputDType("out", 0, q_datatype);
+  ctx->SetOutputDType("softmax_lse", 0, DataType::kFloat);
+  ctx->SetOutputDType("rng_state", 0, DataType::kUInt64);
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ScaledDotProductFlashAttentionGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  const Shape& dout_shape = ctx->InputShape("grad_out", 0);
+  const Shape& q_shape = ctx->InputShape("query", 0);
+  const Shape& k_shape = ctx->InputShape("key", 0);
+  const Shape& v_shape = ctx->InputShape("value", 0);
+  const Shape& out_shape = ctx->InputShape("out", 0);
+  const Shape& softmax_lse_shape = ctx->InputShape("softmax_lse", 0);
+
+  auto batch_size = q_shape.At(0);
+  auto seqlen_q = q_shape.At(1);
+  auto num_heads = q_shape.At(2);
+  auto head_size = q_shape.At(3);
+  auto seqlen_k = k_shape.At(1);
+  auto num_heads_k = k_shape.At(2);
+  auto head_size_og = dout_shape.At(3);
+
+  // check input tensor shape.
+  CHECK_EQ_OR_RETURN(batch_size, k_shape.At(0)) << "query has different batch size from key.";
+  CHECK_EQ_OR_RETURN(batch_size, v_shape.At(0)) << "query has different batch size from value.";
+  CHECK_EQ_OR_RETURN(batch_size, dout_shape.At(0))
+      << "query has different batch size from grad_out.";
+  CHECK_EQ_OR_RETURN(batch_size, out_shape.At(0)) << "query has different batch size from out.";
+  CHECK_EQ_OR_RETURN(batch_size, softmax_lse_shape.At(0))
+      << "query has different batch size from softmax_lse.";
+
+  CHECK_EQ_OR_RETURN(seqlen_k, v_shape.At(1)) << "key has different seqlen from value.";
+  CHECK_EQ_OR_RETURN(num_heads_k, v_shape.At(2)) << "key has different num_heads from value.";
+
+  // dout should be padded in functional layer if needed.
+  CHECK_EQ_OR_RETURN(head_size_og, head_size) << "grad_out has different head_size from query";
+  CHECK_EQ_OR_RETURN(head_size, k_shape.At(3)) << "query has different head_size from key";
+  CHECK_EQ_OR_RETURN(head_size, v_shape.At(3)) << "query has different head_size from value";
+
+  // batch size must be positive.
+  CHECK_GT_OR_RETURN(batch_size, 0) << "batch size must be positive";
+
+  // only support head dimensions at most 256.
+  CHECK_LE_OR_RETURN(head_size_og, 256) << "only support head dimensions at most 256";
+
+  CHECK_EQ_OR_RETURN(num_heads % num_heads_k, 0)
+      << "number of heads in key/value must devide number of heads in query.";
+
+  // grad_k/v should be expanded if needed(when num_heads != num_heads_k && num_heads % num_heads_k
+  // == 0).
+  ctx->SetOutputShape("grad_q", 0, Shape({batch_size, seqlen_q, num_heads, head_size}));
+  ctx->SetOutputShape("grad_k", 0, Shape({batch_size, seqlen_k, num_heads, head_size}));
+  ctx->SetOutputShape("grad_v", 0, Shape({batch_size, seqlen_k, num_heads, head_size}));
+
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ScaledDotProductFlashAttentionGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return ScaledDotProductFlashAttentionGradOp::InferLogicalTensorDesc(ctx);
+}
+
+Maybe<void> ScaledDotProductFlashAttentionGradOp::GetSbp(user_op::SbpContext* ctx) {
+  auto parallel_num = ctx->parallel_num();
+  const Shape& q_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("query", 0).shape();
+  const Shape& k_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("key", 0).shape();
+  auto num_heads = q_shape.At(2);
+  auto num_heads_k = k_shape.At(2);
+  bool can_spilt_num_heads =
+      num_heads == num_heads_k || (!(num_heads % parallel_num) && !(num_heads_k % parallel_num));
+  if (can_spilt_num_heads) {
+    // prior to split on num_heads.
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("grad_out", 0), 2)
+        .Split(user_op::OpArg("query", 0), 2)
+        .Split(user_op::OpArg("key", 0), 2)
+        .Split(user_op::OpArg("value", 0), 2)
+        .Split(user_op::OpArg("out", 0), 2)
+        .Split(user_op::OpArg("softmax", 0), 1)
+        .Broadcast(user_op::OpArg("rng_state", 0))
+        .Split(user_op::OpArg("grad_q", 0), 2)
+        .Split(user_op::OpArg("grad_k", 0), 2)
+        .Split(user_op::OpArg("grad_v", 0), 2)
+        .Build();
+  } else {
+    // otherwise split on batch_size.
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("grad_out", 0), 0)
+        .Split(user_op::OpArg("query", 0), 0)
+        .Split(user_op::OpArg("key", 0), 0)
+        .Split(user_op::OpArg("value", 0), 0)
+        .Split(user_op::OpArg("out", 0), 0)
+        .Split(user_op::OpArg("softmax", 0), 0)
+        .Broadcast(user_op::OpArg("rng_state", 0))
+        .Split(user_op::OpArg("grad_q", 0), 0)
+        .Split(user_op::OpArg("grad_k", 0), 0)
+        .Split(user_op::OpArg("grad_v", 0), 0)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ScaledDotProductFlashAttentionGradOp::InferDataType(user_op::InferContext* ctx) {
+  auto dout_datatype = ctx->InputDType("grad_out", 0);
+  auto q_datatype = ctx->InputDType("query", 0);
+  auto k_datatype = ctx->InputDType("key", 0);
+  auto v_datatype = ctx->InputDType("value", 0);
+  auto out_datatype = ctx->InputDType("out", 0);
+
+  CHECK_EQ_OR_RETURN(q_datatype, k_datatype) << "query has different data type from key.";
+  CHECK_EQ_OR_RETURN(q_datatype, v_datatype) << "query has different data type from value.";
+  CHECK_EQ_OR_RETURN(q_datatype, dout_datatype) << "query has different data type from grad_out.";
+  CHECK_EQ_OR_RETURN(q_datatype, out_datatype) << "query has different data type from out.";
+
+  ctx->SetOutputDType("grad_q", 0, q_datatype);
+  ctx->SetOutputDType("grad_k", 0, q_datatype);
+  ctx->SetOutputDType("grad_v", 0, q_datatype);
+
+  return Maybe<void>::Ok();
+}
+
+}  // namespace oneflow

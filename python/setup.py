@@ -53,8 +53,9 @@ def get_version():
 
 
 REQUIRED_PACKAGES = [
-    f"numpy>={np.__version__}",
+    f"numpy>={np.__version__}, <2.0",
     "protobuf>=3.9.2, <4.0",
+    "typing-extensions>=4.0.0, <5.0",
     "tqdm",
     "requests",
     "pillow",
@@ -63,8 +64,18 @@ REQUIRED_PACKAGES = [
 
 ONEFLOW_VERSION = get_version()
 if "cu11" in ONEFLOW_VERSION and "cu112" not in ONEFLOW_VERSION:
-    REQUIRED_PACKAGES.append("nvidia-cudnn-cu11")
+    REQUIRED_PACKAGES.append("nvidia-cudnn-cu11>=8.9,<9.0")
     REQUIRED_PACKAGES.append("nvidia-cublas-cu11")
+    REQUIRED_PACKAGES.append("nvidia-nccl-cu11")
+    REQUIRED_PACKAGES.append("nvidia-cusparse-cu11")
+    REQUIRED_PACKAGES.append("nvidia-cufft-cu11")
+
+if "cu12" in ONEFLOW_VERSION:
+    REQUIRED_PACKAGES.append("nvidia-cudnn-cu12>=8.9,<9.0")
+    REQUIRED_PACKAGES.append("nvidia-cublas-cu12")
+    REQUIRED_PACKAGES.append("nvidia-nccl-cu12")
+    REQUIRED_PACKAGES.append("nvidia-cusparse-cu12")
+    REQUIRED_PACKAGES.append("nvidia-cufft-cu12")
 
 # if python version < 3.7.x, than need pip install dataclasses
 if sys.version_info.minor < 7:

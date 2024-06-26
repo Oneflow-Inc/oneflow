@@ -344,6 +344,20 @@ def OneFlow_QuickGeluGradOp : OneFlow_BaseOp<"quick_gelu_grad", [NoMemoryEffect,
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_SquareReLUGradOp : OneFlow_BaseOp<"square_relu_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_GridSampleOp : OneFlow_BaseOp<"grid_sample", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input,
@@ -2856,6 +2870,61 @@ def OneFlow_FusedCrossFeatureInteractionV2GradOp : OneFlow_BaseOp<"fused_cross_f
     OneFlow_Tensor:$dw,
     OneFlow_Tensor:$dx,
     OneFlow_Tensor:$dbias
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_ScaledDotProductFlashAttentionOp : OneFlow_BaseOp<"scaled_dot_product_flash_attention", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$query,
+    OneFlow_Tensor:$key,
+    OneFlow_Tensor:$value,
+    Optional<OneFlow_Tensor>:$alibi_slopes_
+  );
+  let output = (outs
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$softmax_lse,
+    OneFlow_Tensor:$rng_state
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$p_dropout,
+    DefaultValuedAttr<F32Attr, "0.">:$softmax_scale,
+    DefaultValuedAttr<BoolAttr, "false">:$is_causal,
+    SI32Attr:$window_size_left,
+    SI32Attr:$window_size_right,
+    DefaultValuedAttr<SI64Attr, "0">:$seed
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_ScaledDotProductFlashAttentionGradOp : OneFlow_BaseOp<"scaled_dot_product_flash_attention_grad", [NoMemoryEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$grad_out,
+    OneFlow_Tensor:$query,
+    OneFlow_Tensor:$key,
+    OneFlow_Tensor:$value,
+    OneFlow_Tensor:$out,
+    OneFlow_Tensor:$softmax_lse,
+    OneFlow_Tensor:$rng_state,
+    Optional<OneFlow_Tensor>:$alibi_slopes_
+  );
+  let output = (outs
+    OneFlow_Tensor:$grad_q,
+    OneFlow_Tensor:$grad_k,
+    OneFlow_Tensor:$grad_v
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$p_dropout,
+    DefaultValuedAttr<F32Attr, "0.">:$softmax_scale,
+    DefaultValuedAttr<BoolAttr, "false">:$is_causal,
+    SI32Attr:$window_size_left,
+    SI32Attr:$window_size_right
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -10402,6 +10471,19 @@ def OneFlow_FastGeluOp : OneFlow_BaseOp<"fast_gelu", [NoMemoryEffect, DeclareOpI
 }
 
 def OneFlow_QuickGeluOp : OneFlow_BaseOp<"quick_gelu", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_SquareReLUOp : OneFlow_BaseOp<"square_relu", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
   );

@@ -57,7 +57,7 @@ if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_ba
     export ONEFLOW_TEST_DEVICE_NUM=4
     time python3 ${src_dir}/ci/test/multi_launch.py \
         --files "${ONEFLOW_TEST_FILES_WILD}" \
-        -n 4 \
+        -n 3 \
         --group_size 4 \
         --device_num $multi_launch_device_num \
         --auto_cuda_visible_devices \

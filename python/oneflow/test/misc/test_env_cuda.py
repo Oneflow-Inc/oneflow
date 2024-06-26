@@ -16,9 +16,9 @@ limitations under the License.
 import os
 import unittest
 import oneflow as flow
-from oneflow.test_utils.automated_test_util.generators import nothing, oneof
+from oneflow.test_utils.automated_test_util.generators import nothing, oneof, random
+from oneflow.test_utils.automated_test_util import torch
 import oneflow.unittest
-import torch
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -54,6 +54,10 @@ class TestEnv(flow.unittest.TestCase):
 
     def test_cuda_get_device_capability(test_case):
         return torch.cuda.get_device_capability(oneof(0, nothing()))
+
+    def test_cuda_mem_get_info(test_case):
+        device_idx = random(0, flow.cuda.device_count()).to(int).value()
+        return torch.cuda.mem_get_info(device_idx)
 
 
 if __name__ == "__main__":

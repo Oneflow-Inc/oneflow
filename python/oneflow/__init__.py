@@ -86,7 +86,8 @@ def oneflow_deprecate(*api_names, **kwargs):
 
 def is_deprecated(func_or_class):
     return (
-        isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
+        isinstance(func_or_class, collections.abc.Hashable)
+        and func_or_class in _DEPRECATED
     )
 
 
@@ -130,6 +131,7 @@ from oneflow._C import logaddexp
 from oneflow._C import quantile
 from oneflow._C import gelu_with_approximate as gelu
 from oneflow._C import quick_gelu
+from oneflow._C import square_relu
 from oneflow._C import mish
 from oneflow._C import repeat
 from oneflow._C import repeat_interleave

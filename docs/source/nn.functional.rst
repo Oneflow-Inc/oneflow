@@ -27,14 +27,17 @@ Convolution functions
     fold
     unfold
 
-BatchNorm functions
---------------------
+Normalization functions
+-----------------------
 
 .. autosummary::
     :toctree: generated
     :nosignatures:
 
     batch_norm
+    layer_norm
+    normalize
+    group_norm
 
 Pooling functions
 ----------------------------------
@@ -75,6 +78,7 @@ Non-linear activation functions
     selu
     celu
     leaky_relu
+    square_relu
     prelu
     glu
     gelu
@@ -92,8 +96,6 @@ Non-linear activation functions
     hardsigmoid
     silu
     mish
-    layer_norm
-    normalize
 
 Linear functions
 ----------------

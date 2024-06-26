@@ -14,8 +14,36 @@ on:
       placeholder:
         description: "update .github/workflows/release.yml to config your build"
         required: false
+  workflow_call:
+    inputs:
+      is_priv:
+        required: true
+        type: boolean
+      branch:
+        required: false
+        type: string
+        default: "main"
+      upload_override_branch:
+        required: false
+        type: string
+      cuda_cmake_cache:
+        required: false
+        type: string
+    secrets:
+      ONEFLOW_PRIV_ORG:
+        required: true
+      ONEFLOW_PRIV_GH_TOKEN:
+        required: true
+      ONEFLOW_PRIV_OSS_BUCKET:
+        required: true
+      OSS_ACCESS_KEY_ID:
+        required: true
+      OSS_ACCESS_KEY_SECRET:
+        required: true
+      ONEFLOW_CI_HTTP_PROXY:
+        required: false
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ github.ref }}-${{ inputs.branch }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 env:
   ONEFLOW_SRC: .
@@ -31,11 +59,19 @@ jobs:
     steps:
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
+        if: ${{ !inputs.is_priv }}
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@add-nightly-date
-        name: find cache
+      - name: Checkout oneflow
+        uses: actions/checkout@v2
+        if: ${{ inputs.is_priv }}
+        with:
+          ref: ${{ inputs.branch }}
+          repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
+          token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@whl-skip-nccl
+        name: Find build cache
         id: find-cache
         timeout-minutes: 5
         with:
@@ -46,9 +82,9 @@ jobs:
             release
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
+            cu122
+            cu121
             cu118
-            cu117
-            cu116
             cpu
       - name: Get current date
         id: date
@@ -59,14 +95,18 @@ jobs:
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/release/${{ matrix.entry }}
       WHEELHOUSE_DIR: manylinux_wheelhouse
       OSS_DIR: branch/${{ github.ref_name }}/${{ matrix.entry }}/${{ github.sha }}
+      GITHUB_REF_NAME: ${{ github.ref_name }}
+      GITHUB_SHA: ${{ github.sha }}
+      ONEFLOW_OSS_BUCKET: oneflow-staging
+      https_proxy: ${{ secrets.ONEFLOW_CI_HTTP_PROXY }}
     needs: [generate-build-matrix]
     name: Staging Release
-    timeout-minutes: 180
+    timeout-minutes: 240
     runs-on: [self-hosted, linux, release]
-    if: github.repository == 'Oneflow-Inc/oneflow'
+    if: github.repository == 'Oneflow-Inc/oneflow' || inputs.is_priv
     strategy:
       fail-fast: false
-      max-parallel: 5
+      max-parallel: 6
       matrix: ${{ fromJson(needs.generate-build-matrix.outputs.matrix) }}
     steps:
       - name: Fix permissions
@@ -77,10 +117,66 @@ jobs:
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           python3 -m pip install -U setuptools wheel --user
           python3 -m pip install oss2  --user
-      - uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
+      - name: Checkout Oneflow-Inc/oneflow
+        uses: actions/checkout@v2
+        if: ${{ !inputs.is_priv }}
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      - name: Checkout private oneflow
+        uses: actions/checkout@v2
+        if: ${{ inputs.is_priv }}
+        with:
+          ref: ${{ inputs.branch }}
+          repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
+          token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
+      - name: Checkout cutlass_extension
+        uses: actions/checkout@v2
+        if: ${{ inputs.is_priv }}
+        with:
+          repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/cutlass-extension
+          token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
+          path: cutlass-extension
+      - name: Set Private env
+        if: ${{ inputs.is_priv }}
+        run: |
+          GITHUB_SHA=$(git rev-parse HEAD)
+          echo "OSS_DIR=branch/${{ inputs.upload_override_branch || inputs.branch }}/${{ matrix.entry }}/${GITHUB_SHA}" >> $GITHUB_ENV
+          echo "GITHUB_REF_NAME=${{ inputs.upload_override_branch || inputs.branch }}" >> $GITHUB_ENV
+          echo "GITHUB_SHA=${GITHUB_SHA}" >> $GITHUB_ENV
+          echo "ONEFLOW_OSS_BUCKET=${{ secrets.ONEFLOW_PRIV_OSS_BUCKET }}" >> $GITHUB_ENV
+      - name: Print env
+        if: ${{ inputs.is_priv }}
+        run: |
+          env
+      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
         name: Build ${{ matrix.entry }}
-        if: ${{ matrix.entry !='cpu' }}
+        if: ${{ matrix.entry =='cu118' || startsWith(matrix.entry, 'cu12') }}
+        with:
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/${{ inputs.cuda_cmake_cache || 'cmake/caches/ci/release/cu118.cmake' }}
+          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
+          oneflow-src: ${{ env.ONEFLOW_SRC }}
+          oneflow-build-env: manylinux
+          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
+          clear-wheelhouse-dir: true
+          self-hosted: true
+          compute-platform: ${{ matrix.entry }}
+          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
+          docker-run-use-system-http-proxy: false
+          docker-run-use-lld: false
+          retry-failed-build: true
+          clean-ccache: true
+          nightly: ${{ inputs.is_priv || github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
+          nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
+          use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
+          python-versions: |
+            3.11
+            3.10
+            3.9
+            3.8
+      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+        name: Build ${{ matrix.entry }}
+        if: ${{ startsWith(matrix.entry, 'cu') && matrix.entry !='cu118' && !startsWith(matrix.entry, 'cu12') }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cuda.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
@@ -95,15 +191,15 @@ jobs:
           docker-run-use-lld: false
           retry-failed-build: true
           clean-ccache: true
-          nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
+          nightly: ${{ inputs.is_priv || github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
-            3.7
-            3.8
-            3.9
+            3.11
             3.10
-      - uses: Oneflow-Inc/get-oneflow@add-nightly-date
+            3.9
+            3.8
+      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
         with:
@@ -120,18 +216,18 @@ jobs:
           docker-run-use-lld: false
           retry-failed-build: true
           clean-ccache: false
-          nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
+          nightly: ${{ inputs.is_priv || github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           python-versions: |
-            3.7
-            3.8
-            3.9
+            3.11
             3.10
+            3.9
+            3.8
       - name: Upload wheel
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${{ env.WHEELHOUSE_DIR }}
-          oss_dst_path: oss://oneflow-staging/${{ env.OSS_DIR }}
+          oss_dst_path: oss://${{ env.ONEFLOW_OSS_BUCKET }}/${{ env.OSS_DIR }}
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update pip index
@@ -141,32 +237,14 @@ jobs:
         run: |
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           python3 -m pip install oss2 beautifulsoup4 --user
-          python3 tools/create_pip_index.py --dir_key ${{ env.OSS_DIR }} -b oneflow-staging \
-            --index_key=branch/${{ github.ref_name }}/${{ matrix.entry }}/index.html \
-            --index_key=branch/${{ github.ref_name }}/date/${{ needs.generate-build-matrix.outputs.formatted_date }}/${{ matrix.entry }}/index.html \
+          python3 tools/create_pip_index.py --dir_key ${{ env.OSS_DIR }} -b ${{ env.ONEFLOW_OSS_BUCKET }} \
+            --index_key=branch/${{ env.GITHUB_REF_NAME }}/${{ matrix.entry }}/index.html \
+            --index_key=branch/${{ env.GITHUB_REF_NAME }}/date/${{ needs.generate-build-matrix.outputs.formatted_date }}/${{ matrix.entry }}/index.html \
             --index_key=${{ env.OSS_DIR }}/index.html \
-            --index_key=commit/${{ github.sha }}/${{ matrix.entry }}/index.html
+            --index_key=commit/${{ env.GITHUB_SHA }}/${{ matrix.entry }}/index.html
       - name: Update API docs
-        if: github.ref == 'refs/heads/master' && matrix.entry == 'cpu'
+        if: github.ref == 'refs/heads/master' && matrix.entry == 'cpu' && !inputs.is_priv
         env:
           READTHEDOCS_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
         run: |
           curl -X POST -d "branches=master" -d "token=${READTHEDOCS_TOKEN}"  https://readthedocs.org/api/v2/webhook/oneflow/135376/
-  pack_src:
-    name: Pack source code
-    if: github.ref == 'refs/heads/master' && github.repository == 'Oneflow-Inc/oneflow'
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Pack OneFlow source code
-        env:
-          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-        run: |
-          git reset --hard
-          git clean -f
-          git archive --prefix oneflow/ --format zip HEAD > oneflow-src.zip
-          curl http://gosspublic.alicdn.com/ossutil/1.6.19/ossutil64 -o $HOME/ossutil64
-          chmod 755 $HOME/ossutil64
-          $HOME/ossutil64 config -e oss-cn-beijing.aliyuncs.com -i ${OSS_ACCESS_KEY_ID} -k ${OSS_ACCESS_KEY_SECRET}  -L EN -c $HOME/.ossutilconfig
-          $HOME/ossutil64 cp --update oneflow-src.zip oss://oneflow-public/oneflow-src.zip
