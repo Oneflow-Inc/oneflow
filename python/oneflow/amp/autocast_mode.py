@@ -153,10 +153,10 @@ class autocast(object):
         cache_enabled: Optional[bool] = None,
     ):
         self.device = device_type
-        if self.device == "cuda":
-            self.fast_dtype = flow.get_autocast_gpu_dtype()
-        elif self.device == "cpu":
+        if self.device == "cpu":
             self.fast_dtype = flow.get_autocast_cpu_dtype()
+        elif self.device in ["cuda", "mlu", "npu"]:
+            self.fast_dtype = flow.get_autocast_gpu_dtype()
         else:
             raise RuntimeError(
                 "User specified autocast device_type must be 'cuda' or 'cpu'"
