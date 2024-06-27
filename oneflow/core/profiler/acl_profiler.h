@@ -40,7 +40,7 @@ struct NpuTraceConfig {
   bool op_attr;
 };
 
-#define ACL_PROF_OP_ATTR 0x4000ULL
+#define ACL_PROF_OP_ATTR 0x00004000ULL
 
 aclError AclProfilingInit(const char* profilerResultPath, size_t length);
 aclError AclProfilingStart(const aclprofConfig* profilerConfig);

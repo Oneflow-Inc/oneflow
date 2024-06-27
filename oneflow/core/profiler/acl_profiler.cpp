@@ -86,8 +86,8 @@ aclprofConfig* AclPrepareTrace() {
   NpuTraceConfig npu_config = {
       /*trace_level*/ "Level2", /*metrics*/ "ACL_AICORE_PIPE_UTILIZATION",
       /*npu_memory*/ true,      /*l2_cache*/ false,
-      /*record_op_args*/ false,
-      /*msprof_tx*/ false,      /*op_attr*/ false};
+      /*record_op_args*/ true,
+      /*msprof_tx*/ true,      /*op_attr*/ false};
   aclprofAicoreMetrics aic_metrics = ACL_AICORE_NONE;
   auto level_iter = trace_level_map_.find(npu_config.trace_level);
   uint64_t datatype_config =
@@ -99,7 +99,6 @@ aclprofConfig* AclPrepareTrace() {
     aic_metrics = npu_metrics_map_[npu_config.metrics];
   }
   if (npu_config.l2_cache) { datatype_config |= ACL_PROF_L2CACHE; }
-  if (npu_config.l2_cache) { datatype_config |= ACL_PROF_L2CACHE; }
   if (npu_config.msprof_tx) { datatype_config |= ACL_PROF_MSPROFTX; }
   if (npu_config.npu_memory) {
     datatype_config |= ACL_PROF_TASK_MEMORY;
@@ -110,6 +109,7 @@ aclprofConfig* AclPrepareTrace() {
                    << "not support to set config for sys-hardware-mem.";
     }
   }
+  // op_attr=true has bug
   if (npu_config.op_attr) { datatype_config |= ACL_PROF_OP_ATTR; }
 
   uint32_t deviceId = 0;
