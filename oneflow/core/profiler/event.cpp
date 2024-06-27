@@ -30,15 +30,36 @@ void IEvent::SetStartedAt(double t) { started_at_ = t; }
 
 void IEvent::SetFinishedAt(double t) { finished_at_ = t; }
 
-void IEvent::Start() { SetStartedAt(GetTimeNow()); }
+void IEvent::Start() {
+  SetStartedAt(GetTimeNow(
+#ifdef WITH_NPU
+      true
+#else
+      false
+#endif
+      ));
+}
 
-void IEvent::Finish() { SetFinishedAt(GetTimeNow()); }
+void IEvent::Finish() {
+  SetFinishedAt(GetTimeNow(
+#ifdef WITH_NPU
+      true
+#else
+      false
+#endif
+      ));
+}
 
 bool IEvent::IsChildOf(const IEvent* e) {
   if (!e) { return false; }
   if (this == e) { return false; }
-  return GetStartedAt<double>() >= e->GetStartedAt<double>()
-         && GetFinishedAt<double>() <= e->GetFinishedAt<double>();
+#ifdef WITH_NPU
+  const auto time_unit = EventTimeUnit::kNS;
+#else
+  const auto time_unit = EventTimeUnit::kUS;
+#endif
+  return GetStartedAt<double>(time_unit) >= e->GetStartedAt<double>(time_unit)
+         && GetFinishedAt<double>(time_unit) <= e->GetFinishedAt<double>(time_unit);
 }
 
 const std::string& IEvent::GetName() const { return name_; }
@@ -60,10 +81,12 @@ nlohmann::json KernelEvent::ToJson() {
   for (const auto& desc : description_) {
     j["description"][desc.first] = {desc.second.first, desc.second.second};
   }
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_NPU)
+#ifdef WITH_CUDA
   j["memory_size"] = memory_size_;
-  if (!children_.empty()) { j["children"] = children_; }
 #endif  // WITH_CUDA
+  if (!children_.empty()) { j["children"] = children_; }
+#endif  // WITH_CUDA || WITH_NPU
   return j;
 }
 
