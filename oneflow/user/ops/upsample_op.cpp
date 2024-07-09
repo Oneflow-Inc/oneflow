@@ -50,9 +50,8 @@ typename std::enable_if<(N <= 3), Maybe<void>>::type UpsamplingInferLogicalDesc(
     }
     CHECK_OR_RETURN(input_width > 0 && output_width > 0)
         << func_name
-        << ": Input and output sizes should be greater than 0, but got input "
-           "(W: "
-        << input_width << ") output (W: " << output_width << ")";
+        << ": Input and output sizes should be greater than 0, but got input (W: " << input_width
+        << ") output (W: " << output_width << ")";
     y_desc->set_shape(Shape({x_desc.shape().At(0), x_desc.shape().At(1), output_width}));
   } else if (N == 2) {
     CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
@@ -74,10 +73,9 @@ typename std::enable_if<(N <= 3), Maybe<void>>::type UpsamplingInferLogicalDesc(
     }
     CHECK_OR_RETURN(input_height > 0 && input_width > 0 && output_height > 0 && output_width > 0)
         << func_name
-        << ": Input and output sizes should be greater than 0, but got input "
-           "(H: "
-        << input_height << ", W: " << input_width << ") output (H: " << output_height
-        << ", W: " << output_width << ")";
+        << ": Input and output sizes should be greater than 0, but got input (H: " << input_height
+        << ", W: " << input_width << ") output (H: " << output_height << ", W: " << output_width
+        << ")";
     y_desc->set_shape(
         Shape({x_desc.shape().At(0), x_desc.shape().At(1), output_height, output_width}));
   } else if (N == 3) {
