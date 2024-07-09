@@ -2034,29 +2034,6 @@ class UpsampleNearest2DGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class UpsampleNearestLike2DGradFunctor {
- public:
-  UpsampleNearestLike2DGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("upsample_nearest_2d_grad")
-                         .Input("dy")
-                         .Input("x")
-                         .Input("like")
-                         .Output("dx")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& like,
-                           const std::string& data_format) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("data_format");
-    attrs.SetAllAttrs(data_format);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, like}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 class UpsampleBilinear2DFunctor {
  public:
   UpsampleBilinear2DFunctor() {
@@ -4161,8 +4138,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UpsampleGradFunctor>("UpsampleGrad");
   m.add_functor<impl::UpsampleNearest2DFunctor, impl::UpsampleNearestLike2DFunctor>(
       "UpsampleNearest2D");
-  m.add_functor<impl::UpsampleNearest2DGradFunctor, impl::UpsampleNearestLike2DGradFunctor>(
-      "UpsampleNearest2DGrad");
+  m.add_functor<impl::UpsampleNearest2DGradFunctor>("UpsampleNearest2DGrad");
   m.add_functor<impl::UpsampleBilinear2DFunctor>("UpsampleBilinear2D");
   m.add_functor<impl::UpsampleBilinear2DGradFunctor>("UpsampleBilinear2DGrad");
   m.add_functor<impl::UpsampleLinear1DFunctor>("UpsampleLinear1D");

@@ -56,17 +56,12 @@ static void UpsampleNearest2DForward(const int64_t elem_cnt, const T* in_dptr,
                                      NdIndexOffsetHelper<int64_t, 4> out_helper,
                                      const int64_t in_height, const int64_t in_width,
                                      const double scale_h, const double scale_w, T* out_dptr) {
-  std::cout << scale_h << " " << scale_w << std::endl;
   for (int64_t index = 0; index < elem_cnt; ++index) {
-    std::cout << "-------------------" << std::endl;
     int64_t n, c, h, w;
     out_helper.OffsetToNdIndex(index, n, c, h, w);
     const int64_t in_h = GetNearestInputIndex(h, scale_h, in_height);
     const int64_t in_w = GetNearestInputIndex(w, scale_w, in_width);
     out_dptr[index] = in_dptr[in_helper.NdIndexToOffset(n, c, in_h, in_w)];
-    std::cout << "out_index: " << index << " n: " << n << " c: " << c << " h: " << h << " w: " << w
-              << " in_h: " << in_h << " in_w: " << in_w
-              << "in_index: " << in_helper.NdIndexToOffset(n, c, in_h, in_w) << std::endl;
   }
 }
 
@@ -232,14 +227,9 @@ class UpsampleNearest2DCPUKernel final : public user_op::OpKernel {
     const int64_t out_height = y_tensor->shape_view().At(2);
     const int64_t out_width = y_tensor->shape_view().At(3);
     const int64_t elem_cnt = y_tensor->shape_view().elem_cnt();
-    std::cout << "here0: " << height_scale << " " << width_scale << std::endl;
-    std::cout << "here0: " << out_height << " " << out_width << std::endl;
-    std::cout << "here0: " << in_height << " " << in_width << std::endl;
-    std::cout << output_size.size() << std::endl;
     if (!output_size.empty() || ctx->Tensor4ArgNameAndIndex("like", 0)) {
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
       width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
-      std::cout << "here1: " << height_scale << " " << width_scale << std::endl;
     }
 
     if (in_height == out_height && in_width == out_width) {

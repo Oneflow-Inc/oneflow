@@ -1797,11 +1797,9 @@
   bind_python: True
 
 - name: "upsample_nearest_2d_grad"
-  signature: [
-      'Tensor (Tensor dy, Tensor x, Double height_scale=0.0, Double width_scale=0.0, Int64List[2] output_size=None,
-       String data_format="channels_first") => UpsampleNearest2DGrad',
-      'Tensor (Tensor dy, Tensor x, Tensor like, String data_format="channels_first") =>UpsampleNearest2DGrad'
-    ]
+  signature:
+    'Tensor (Tensor dy, Tensor x, Double height_scale=0.0, Double width_scale=0.0, Int64List[2] output_size=None,
+    String data_format="channels_first") => UpsampleNearest2DGrad'
   bind_python: False
 
 - name: "upsample_bilinear_2d"
