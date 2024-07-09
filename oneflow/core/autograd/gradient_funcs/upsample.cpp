@@ -77,10 +77,9 @@ Maybe<void> Upsample::Apply(const UpsampleCaptureState* ctx, const TensorTuple& 
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("upsample", Upsample);
-
 struct UpsampleNearest2DCaptureState : public AutoGradCaptureState {
   bool requires_grad = false;
+  bool has_like_input = false;
   double height_scale = 0.0;
   double width_scale = 0.0;
   std::vector<int64_t> output_size;
@@ -105,6 +104,8 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
     }
     ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
     ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->has_like_input = inputs.size() == 2;
+    if (ctx->has_like_input) { ctx->SaveTensorForBackward(inputs.at(1)); }
     return Maybe<void>::Ok();
   }
 
@@ -114,9 +115,15 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
     const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
-    JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleNearest2DGrad(
-        JUST(oneflow::VectorAt(out_grads, 0)), x, ctx->height_scale, ctx->width_scale,
-        ctx->output_size, ctx->data_format));
+    if (ctx->has_like_input) {
+      const std::shared_ptr<oneflow::one::Tensor>& like = ctx->SavedTensors().at(1);
+      JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleNearest2DGrad(
+          JUST(oneflow::VectorAt(out_grads, 0)), x, like, ctx->data_format));
+    } else {
+      JUST(oneflow::VectorAt(*in_grads, 0)) = JUST(functional::UpsampleNearest2DGrad(
+          JUST(oneflow::VectorAt(out_grads, 0)), x, ctx->height_scale, ctx->width_scale,
+          ctx->output_size, ctx->data_format));
+    }
 
     return Maybe<void>::Ok();
   }
@@ -124,6 +131,7 @@ class UpsampleNearest2D : public OpExprGradFunction<UpsampleNearest2DCaptureStat
  private:
   AttrMap base_attrs_;
 };
+
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("upsample_nearest_2d", UpsampleNearest2D);
 
