@@ -19,7 +19,7 @@ import pkgutil
 from collections import deque
 from importlib import import_module
 
-if sys.version_info < (3, 8):
+if sys.version_info <= (3, 8):
     try:
         from importlib_metadata import requires
     except ImportError:
