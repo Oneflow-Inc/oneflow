@@ -40,7 +40,6 @@ def _test_upsample_nearest_2d_like(test_case, shape_scale):
         output = np.zeros(out_like.shape)
         for i in range(out_height):
             for j in range(out_width):
-                # 计算边界索引
                 src_i = int(min(i / scale_h, in_height - 1))
                 src_j = int(min(j / scale_w, in_width - 1))
                 output[..., i, j] = inputs[..., src_i, src_j]
@@ -68,7 +67,7 @@ class TestUpsample2dLike(flow.unittest.TestCase):
         ]
         arg_dict["shape_scale"] = [
             ((1, 1, 2, 2), (1, 1, 3, 3)),
-            ((1, 1, 6, 4), (1, 1, 9, 6)),
+            ((5, 3, 6, 4), (5, 3, 9, 6)),
             ((2, 3, 2, 4), (2, 3, 3, 5)),
         ]
         for arg in GenArgList(arg_dict):
