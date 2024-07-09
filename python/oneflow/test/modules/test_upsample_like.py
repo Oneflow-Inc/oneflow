@@ -60,7 +60,6 @@ def _test_upsample_nearest_2d_like(test_case, shape_scale):
 
 @flow.unittest.skip_unless_1n1d()
 class TestUpsample2dLike(flow.unittest.TestCase):
-
     def test_upsample2d_like(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
