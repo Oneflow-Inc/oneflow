@@ -25,9 +25,7 @@ from oneflow.nn.modules.module import Module
 
 class InterpolateLike:
     def __init__(
-        self,
-        mode: str = "nearest",
-        align_corners: Optional[bool] = None,
+        self, mode: str = "nearest", align_corners: Optional[bool] = None,
     ):
         if mode in ("nearest", "area") and align_corners is not None:
             raise ValueError(
@@ -67,23 +65,11 @@ class InterpolateLike:
 
         dim = len(x.shape) - 2
         if len(x.shape) == 3 and self.mode == "nearest":
-            return flow._C.upsample_nearest_1d(
-                x,
-                like,
-                data_format="channels_first",
-            )
+            return flow._C.upsample_nearest_1d(x, like, data_format="channels_first",)
         if len(x.shape) == 4 and self.mode == "nearest":
-            return flow._C.upsample_nearest_2d(
-                x,
-                like,
-                data_format="channels_first",
-            )
+            return flow._C.upsample_nearest_2d(x, like, data_format="channels_first",)
         if len(x.shape) == 5 and self.mode == "nearest":
-            return flow._C.upsample_nearest_3d(
-                x,
-                like,
-                data_format="channels_first",
-            )
+            return flow._C.upsample_nearest_3d(x, like, data_format="channels_first",)
 
         raise NotImplementedError(
             "Input Error: Only 3D, 4D and 5D input Tensors supported"
@@ -93,10 +79,7 @@ class InterpolateLike:
 
 
 def interpolate_like(
-    input,
-    like,
-    mode="nearest",
-    align_corners=None,
+    input, like, mode="nearest", align_corners=None,
 ):
     """The interface is consistent with PyTorch.
 
@@ -162,10 +145,7 @@ def interpolate_like(
                dtype=oneflow.float32)
 
     """
-    return InterpolateLike(
-        mode=mode,
-        align_corners=align_corners,
-    ).forward(input, like)
+    return InterpolateLike(mode=mode, align_corners=align_corners,).forward(input, like)
 
 
 if __name__ == "__main__":
