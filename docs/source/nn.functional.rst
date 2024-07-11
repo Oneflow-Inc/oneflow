@@ -166,6 +166,7 @@ Vision functions
     deform_conv2d
     pad
     interpolate
+    interpolate_like
     upsample
     grid_sample
     affine_grid
