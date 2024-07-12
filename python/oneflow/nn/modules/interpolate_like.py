@@ -86,7 +86,7 @@ def interpolate_like(
     The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/functional.html#interpolate.
 
 
-    Down/up samples the input to :Tensor:`like` shape.
+    Down/up samples the input to the same shape as the `like` tensor.
 
     The algorithm used for interpolation is determined by :attr:`mode`.
 
