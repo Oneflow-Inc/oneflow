@@ -99,7 +99,8 @@ Maybe<void> SyncSymbolParallelDesc(uint64_t symbol_id, Symbol<ParallelDesc> para
         *Cb = [recv_buffer] {};
         return Maybe<void>::Ok();
       });
-  const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+  const auto& rank_group = JUST(RankGroup::New(parallel_desc));
+  if (!rank_group->ContainingCurrentRank()) return Maybe<void>::Ok();
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
   JUST_MSG(ctx.WaitDone(), kAsymmetricCodeErrorMsg);
