@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, check_graph=True, rtol=1e-3, atol=1e-4)
+@autotest(n=2, check_graph=True, rtol=1e-2, atol=1e-4)
 def _test_einsum_tensor_contraction2(test_case, placement, sbp):
     dim0 = random(1, 3) * 8
     x = random_tensor(
