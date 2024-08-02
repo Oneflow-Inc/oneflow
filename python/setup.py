@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 from __future__ import absolute_import
 
 import argparse
@@ -96,11 +97,16 @@ assert len(include_files) > 0, os.path.abspath("oneflow/include")
 
 
 def get_oneflow_internal_so_path():
-    import imp
+    import importlib
 
-    fp, pathname, description = imp.find_module("_oneflow_internal", ["oneflow"])
+    suffixes = importlib.machinery.EXTENSION_SUFFIXES
+    loader = importlib.machinery.ExtensionFileLoader
+    lazy_loader = importlib.util.LazyLoader.factory(loader)
+    finder = importlib.machinery.FileFinder("oneflow", (lazy_loader, suffixes))
+    spec = finder.find_spec("_oneflow_internal")
+    pathname = spec.origin
     assert os.path.isfile(pathname)
-    return os.path.relpath(pathname, "oneflow")
+    return os.path.basename(pathname)
 
 
 package_data = {"oneflow": [get_oneflow_internal_so_path()] + include_files}

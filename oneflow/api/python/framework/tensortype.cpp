@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <Python.h>
+#undef _PyGC_FINALIZED
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/api/python/framework/tensortype.h"

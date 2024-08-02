@@ -18,6 +18,7 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FRAMEWORK_TYPEINFO_H_
 
 #include <Python.h>
+#undef _PyGC_FINALIZED
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/dtype.h"
 

@@ -29,7 +29,6 @@ from typing import (
     IO,
     BinaryIO,
 )
-from typing_extensions import TypeAlias
 from pathlib import Path
 import pickle
 import json
@@ -58,10 +57,10 @@ DATA_FILENAME = "out"
 PROTOCOL_VERSION = 1
 ONEFLOW_MAGIC_KEY = "__oneflow__"
 
-MAP_LOCATION: TypeAlias = Optional[
+MAP_LOCATION = Optional[
     Union[Callable[[Tensor, str], Tensor], flow.device, str, flow.placement]
 ]
-FILE_LIKE: TypeAlias = Union[os.PathLike, BinaryIO, IO[bytes], Path]
+FILE_LIKE = Union[os.PathLike, BinaryIO, IO[bytes], Path]
 
 
 class _opener(object):

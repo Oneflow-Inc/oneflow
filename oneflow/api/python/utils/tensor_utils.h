@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_UTILS_TENSOR_UTILS_H_
 
 #include <Python.h>
+#undef _PyGC_FINALIZED
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
