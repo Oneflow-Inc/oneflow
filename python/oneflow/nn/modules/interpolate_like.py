@@ -137,12 +137,14 @@ def interpolate_like(
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 4)), dtype=flow.float32)
-        >>> like = flow.randn(1, 1, 8)
-        >>> output = flow.nn.functional.interpolate_like(input, like, mode="linear")
+        >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        >>> like = flow.randn(1, 1, 4, 4)
+        >>> output = flow.nn.functional.interpolate_like(input, like, mode="nearest")
         >>> output
-        tensor([[[1.0000, 1.2500, 1.7500, 2.2500, 2.7500, 3.2500, 3.7500, 4.0000]]],
-               dtype=oneflow.float32)
+        tensor([[[[1., 1., 2., 2.],
+                  [1., 1., 2., 2.],
+                  [3., 3., 4., 4.],
+                  [3., 3., 4., 4.]]]], dtype=oneflow.float32)
 
     """
     return InterpolateLike(mode=mode, align_corners=align_corners,).forward(input, like)
