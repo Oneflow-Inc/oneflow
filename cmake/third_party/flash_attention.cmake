@@ -1,14 +1,12 @@
 include(ExternalProject)
 
-find_package(Threads)
-
-# NOTE: A git version of 1.6.5 or later is required if this download method is used.
-find_package(Git QUIET REQUIRED)
-
 set(FLASH_ATTENTION_PROJECT flash_attention)
 
-set(FLASH_ATTENTION_URL https://github.com/Oneflow-Inc/flash-attention-v2.git)
-set(FLASH_ATTENTION_TAG eed2e82b880e06237af3e50ceac4cf6728b15645)
+set(FLASH_ATTENTION_URL
+    https://github.com/Oneflow-Inc/flash-attention-v2/archive/eed2e82b880e06237af3e50ceac4cf6728b15645.zip
+)
+use_mirror(VARIABLE FLASH_ATTENTION_URL URL ${FLASH_ATTENTION_URL})
+set(FLASH_ATTENTION_MD5 cff17aa2a95ad754c9889bb3a03d5c51)
 
 set(FLASH_ATTENTION_INSTALL_DIR ${THIRD_PARTY_DIR}/flash_attention)
 set(FLASH_ATTENTION_INCLUDE_DIR ${FLASH_ATTENTION_INSTALL_DIR}/include CACHE PATH "" FORCE)
@@ -19,8 +17,8 @@ if(THIRD_PARTY)
   ExternalProject_Add(
     ${FLASH_ATTENTION_PROJECT}
     PREFIX flash_attention
-    GIT_REPOSITORY ${FLASH_ATTENTION_URL}
-    GIT_TAG ${FLASH_ATTENTION_TAG}
+    URL ${FLASH_ATTENTION_URL}
+    URL_MD5 ${FLASH_ATTENTION_MD5}
     UPDATE_COMMAND ""
     BUILD_BYPRODUCTS ${FLASH_ATTENTION_LIBRARIES}
     CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
