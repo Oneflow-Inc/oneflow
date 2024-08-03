@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_ARG_PARSER_H_
 
 #include <Python.h>
+#undef _PyGC_FINALIZED
 
 #include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/python_arg.h"

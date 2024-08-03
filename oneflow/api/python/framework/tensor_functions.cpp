@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include <Python.h>
+#undef _PyGC_FINALIZED
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/framework/tensor_functions_util.h"
