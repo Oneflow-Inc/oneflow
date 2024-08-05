@@ -133,7 +133,7 @@ class UpsampleNearest1DCPUKernel final : public user_op::OpKernel {
     const int64_t channels = x_tensor->shape_view().At(1);
     const int64_t in_height = x_tensor->shape_view().At(2);
     const int64_t out_height = y_tensor->shape_view().At(2);
-    if (!output_size.empty()) {
+    if (!output_size.empty() || ctx->Tensor4ArgNameAndIndex("like", 0)) {
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
     }
 
@@ -173,7 +173,7 @@ class UpsampleNearestGrad1DCPUKernel final : public user_op::OpKernel {
     const int64_t channels = dx_tensor->shape_view().At(1);
     const int64_t in_height = dx_tensor->shape_view().At(2);
     const int64_t out_height = dy_tensor->shape_view().At(2);
-    if (!output_size.empty()) {
+    if (!output_size.empty() || ctx->Tensor4ArgNameAndIndex("like", 0)) {
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
     }
     if (in_height == out_height) {
@@ -227,7 +227,7 @@ class UpsampleNearest2DCPUKernel final : public user_op::OpKernel {
     const int64_t out_height = y_tensor->shape_view().At(2);
     const int64_t out_width = y_tensor->shape_view().At(3);
     const int64_t elem_cnt = y_tensor->shape_view().elem_cnt();
-    if (!output_size.empty()) {
+    if (!output_size.empty() || ctx->Tensor4ArgNameAndIndex("like", 0)) {
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
       width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
@@ -273,7 +273,7 @@ class UpsampleNearest2DGradCPUKernel final : public user_op::OpKernel {
     const int64_t out_height = dy_tensor->shape_view().At(2);
     const int64_t out_width = dy_tensor->shape_view().At(3);
     const int64_t elem_cnt = dy_tensor->shape_view().elem_cnt();
-    if (!output_size.empty()) {
+    if (!output_size.empty() || ctx->Tensor4ArgNameAndIndex("like", 0)) {
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
       width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
@@ -330,7 +330,7 @@ class UpsampleNearest3DCPUKernel final : public user_op::OpKernel {
     const int64_t out_height = y_blob->shape_view().At(3);
     const int64_t out_width = y_blob->shape_view().At(4);
     const int64_t elem_cnt = y_blob->shape_view().elem_cnt();
-    if (!output_size.empty()) {
+    if (!output_size.empty() || ctx->Tensor4ArgNameAndIndex("like", 0)) {
       depth_scale = static_cast<double>(out_depth) / static_cast<double>(in_depth);
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
       width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
@@ -373,7 +373,7 @@ class UpsampleNearestGrad3DCPUKernel final : public user_op::OpKernel {
     const int64_t out_height = dy_blob->shape_view().At(3);
     const int64_t out_width = dy_blob->shape_view().At(4);
     const int64_t elem_cnt = dy_blob->shape_view().elem_cnt();
-    if (!output_size.empty()) {
+    if (!output_size.empty() || ctx->Tensor4ArgNameAndIndex("like", 0)) {
       depth_scale = static_cast<double>(out_depth) / static_cast<double>(in_depth);
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
       width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
