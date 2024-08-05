@@ -141,6 +141,26 @@ class Linear(Module):
         )
 
 
+# ref from https://github.com/pytorch/pytorch/blob/v1.10.1/torch/nn/modules/linear.py#L111-L120
+# This class exists solely to avoid triggering an obscure error when scripting
+# an improperly quantized attention layer. See this issue for details:
+# https://github.com/pytorch/pytorch/issues/58969
+# TODO: fail fast on quantization API usage error, then remove this class
+# and replace uses of it with plain Linear
+class NonDynamicallyQuantizableLinear(Linear):
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        bias: bool = True,
+        device=None,
+        dtype=None,
+    ) -> None:
+        super().__init__(
+            in_features, out_features, bias=bias, device=device, dtype=dtype
+        )
+
+
 def linear(input, weight, bias=None):
     r"""
     Applies a linear transformation to the incoming data: :math:`y = xA^T + b`.
