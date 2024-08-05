@@ -2261,7 +2261,7 @@
 
 - name: "tensor_getitem"
   signature: "Tensor (Tensor x, TensorIndex index) => TensorGetItem"
-  bind_python: False
+  bind_python: True
 
 - name: "scatter"
   signature:

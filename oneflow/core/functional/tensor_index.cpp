@@ -266,12 +266,14 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
   for (int i = 0; i < index.size(); ++i) {
     const auto& index_item = index.at(i);
     if (index_item.IsNone()) {
+      printf("\n index item:%d IsNone", i);
       expand_dims->emplace_back(dim);
       slice_indices->emplace_back(0, 1, 1);
       target_dims->emplace_back(1);
       continue;
     }
     if (index_item.IsBoolean()) {
+      printf("\n index item:%d IsBoolean", i);
       if (!has_expand_boolean_dim) {
         int boolean_index = !has_false_index;
         expand_dims->emplace_back(dim);
@@ -282,6 +284,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       continue;
     }
     if (index_item.IsEllipsis()) {
+      printf("\n index item:%d IsEllipsis", i);
       int64_t unspecified_ndims = ndims - specified_ndims;
       unspecified_ndims = std::min(ndims - dim, unspecified_ndims);
       for (int j = 0; j < unspecified_ndims; ++j) {
@@ -294,6 +297,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
     CHECK_LT_OR_RETURN(dim, ndims)
         << Error::IndexError() << "Invalid index for tensor of dimension " << ndims;
     if (index_item.IsSlice()) {
+      printf("\n index item:%d IsSlice", i);
       const auto& slice = index_item.slice();
       CHECK_GT_OR_RETURN(slice.step(), 0)
           << Error::RuntimeError() << "Step must be greater than zero.";
@@ -310,6 +314,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       target_dims->emplace_back(length);
       dim++;
     } else if (index_item.IsInteger()) {
+      printf("\n index item:%d IsInteger", i);
       int64_t integer = index_item.integer();
       if (integer < 0) { integer += shape.At(dim); }
       if (integer < 0 || integer >= shape.At(dim)) {
@@ -320,6 +325,7 @@ Maybe<void> PrepareSliceIndices(const TensorIndex& index, const Shape& shape,
       slice_indices->emplace_back(integer, integer + 1, 1);
       dim++;
     } else if (index_item.IsTensor()) {
+      printf("\n index item:%d IsTensor", i);
       const auto& tensor = index_item.tensor();
       if (IsValidScalarTensorIndex(tensor) && !LazyMode::is_enabled()) {
         if (tensor->dtype()->is_integer() && tensor->dtype()->data_type() != DataType::kBool) {

@@ -153,6 +153,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   if (default_device->enum_type() == DeviceType::kMeta) { return Maybe<void>::Ok(); }
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    printf("\n PhysicalRun Kernel  >>>>>>>>> %s ", kernel->op_type_name().c_str());
     return builder->Call(kernel, std::move(input_eager_blob_objects),
                          std::move(output_eager_blob_objects), ctx, result->stream());
   }));

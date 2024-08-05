@@ -1453,6 +1453,78 @@ class GatherNdFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& params,
                            const std::shared_ptr<one::Tensor>& indices) const {
+    auto device = JUST(params->device());
+    printf("GatherFunctor >>>>>>>>>>>>>>>>>>>>>> device:%s",JUST(params->device())->type().c_str());
+    if(device->type() == "xpu"){
+      printf("\n GatherNdFunctor device type: xpu params shape:%s, indices shape:%s \n", params->shape()->ToString().c_str(), indices->shape()->ToString().c_str());
+      // // indices = indices.t().tolist()
+      // // gathered = params[indices]
+      // auto transposed_indices = JUST(functional::TransposeAllDimFunction(indices));
+      // auto gathered = functional::TensorGetItem(params, {functional::detail::IndexItem(transposed_indices)});
+      // return gathered;
+
+      // # 1.Get the number of dimensions in the indices and params tensors
+      // num_indices = indices.size(-1)
+      // num_params_dims = params.dim()
+      
+      // # 2.Ensure the indices tensor has the correct shape
+      // indices = indices.view(-1, num_indices)
+      
+      // # 3.Create a tuple of indices for advanced indexing
+      // idx = [indices[:, i] for i in range(num_indices)]
+      // idx.extend([slice(None)] * (num_params_dims - num_indices))
+      
+      // # 4.Gather the values using the advanced indexing tuple
+      // gathered = params[idx]
+      
+      // # 5.Reshape the gathered tensor to match the expected output shape
+      // output_shape = indices.size()[:-1] + params.size()[num_indices:]
+      // return gathered.view(output_shape)
+
+      // 1.
+      int64_t ndim = indices->shape()->NumAxes();
+      int64_t num_indices = indices->shape()->At(ndim-1);
+      int64_t num_params_dims = params->shape()->NumAxes();
+      printf("\n ========================= 1 ===========================ndim:%ld, num_indices:%ld, num_params_dims:%ld", ndim, num_indices, num_params_dims);
+      // 2.
+      int64_t reshaped_dim1 = indices->shape()->Count(0, ndim-1);
+      std::vector<int64_t> shape_vec{reshaped_dim1, num_indices};
+      Shape shape(DimVector(shape_vec.begin(), shape_vec.end()));
+      printf("\n ========================= 2 before view =========================== reshaped_dim1:%ld", reshaped_dim1);
+      auto reshaped_indice = JUST(functional::View(indices, shape));
+      printf("\n ========================= 2 finish view ===========================");
+      // 3.
+      functional::TensorIndex slice_index;
+      for(int i=0; i<num_indices; ++i){
+        auto sliced = JUST(functional::Slice(reshaped_indice, {0, i}, {reshaped_dim1, num_indices}, {1, 1}, /*enable_view_slice=*/true));
+        slice_index.emplace_back(functional::detail::IndexItem(sliced));
+      }
+      for(int i=0; i<(num_params_dims-num_indices); ++i){
+        slice_index.emplace_back(functional::detail::IndexItem(functional::detail::NoneIndex{}));
+      }
+      printf("\n ========================= 3 ===========================");
+      // 4.
+      auto gathered = JUST(functional::TensorGetItem(params, slice_index));
+      printf("\n ========================= 4 ===========================");
+      // 5.
+      printf("\n ========================= 5 =========================== before view");
+      std::vector<int64_t> vec(num_params_dims);
+      for(int i=0; i< num_params_dims; ++i){vec.emplace_back(indices->shape()->At(i));}
+      DimVector out_shape_vec(vec.cbegin(), vec.cend() - 1);
+      for(int i=num_indices; i<num_params_dims; i++){
+        out_shape_vec.emplace_back(params->shape()->At(i));
+      }
+      FOR_RANGE(int64_t, i, num_indices, num_params_dims) {
+        out_shape_vec.emplace_back(params->shape()->At(i));
+      }
+      Shape out_shape(out_shape_vec);
+      return JUST(functional::View(gathered, out_shape));
+      printf("\n ========================= 5 =========================== finish view");
+
+    }else{
+      printf("GatherNdFunctor device type: %s params shape:%s, indices shape:%s\n", device->type().c_str(), params->shape()->ToString().c_str(), indices->shape()->ToString().c_str());
+    }
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {params, indices});
   }
 
@@ -2466,8 +2538,26 @@ class TensorGetItemFunctor {
     Shape shape(DimVector(target_dims.begin(), target_dims.end()));
     if (shape != *(result->shape())) { result = JUST(Reshape(result, shape)); }
     if (!tensor_indices.empty()) {
+      printf("\n >>>>>>>>>>>>> TensorGetItemFunctor() ApplyAdvancedIndexing >>>>>> yes! index size:%ld; input shape:%s; tensor_indices size:%d", index.size(), x->shape()->ToString().c_str(), int(tensor_indices.size())); 
+      for(int i=0; i<tensor_indices.size(); ++i){
+        printf("\n >>>>>>>>>>>>> TensorGetItemFunctor() ApplyAdvancedIndexing >>>>>> yes! tensor_indices i:%d; shape:%s", i, tensor_indices[i]->shape()->ToString().c_str());
+        std::vector<int64_t> tensor_vec(tensor_indices[i]->shape()->elem_cnt());
+        const auto& callback = [&](ep::Stream* stream,
+                                  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+          SyncAutoMemcpy(stream, tensor_vec.data(), eager_blob_object->dptr(),
+                        tensor_vec.size() * sizeof(int64_t), memory::MakeHostMemCase(),
+                        eager_blob_object->mem_case());
+        };
+        SyncAccessTensorWithTimeOut(tensor_indices[i], callback, "const").GetOrThrow();
+        for (const auto x : tensor_vec) {
+          printf("%ld,", x);
+        }
+      }
+
       JUST(UnifyInputAndIndicesOnDevice(x, tensor_indices));
       result = JUST(ApplyAdvancedIndexing(result, tensor_indices));
+    }else{
+      printf("\n >>>>>>>>>>>>> TensorGetItemFunctor() ApplyAdvancedIndexing >>>>>> no! index size:%ld; input shape:%s", index.size(), x->shape()->ToString().c_str()); 
     }
     return result;
   }
