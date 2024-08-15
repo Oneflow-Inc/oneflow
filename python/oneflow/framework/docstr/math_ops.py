@@ -1354,7 +1354,7 @@ add_docstr(
     r"""Returns a new tensor with the square of the elements of :attr:`input`.
 
         .. math::
-            \text{out}_{i} = \sqrt{\text{input}_{i}}
+            \text{out}_{i} = \text{input}_{i} ^ {2}
 
         Args:
             input (Tensor): the input tensor.
