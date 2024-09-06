@@ -21,6 +21,7 @@ extern "C" {
 #endif
 
 #include <Python.h>
+#undef _PyGC_FINALIZED
 
 #if PY_VERSION_HEX >= 0x03090000
 typedef PyObject* (*PyFrameEvalFunc)(struct _ts*, struct _frame*, int);

@@ -21,6 +21,7 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_RETURN_TYPES_H_
 
 #include <Python.h>
+#undef _PyGC_FINALIZED
 #include <string>
 #include <sstream>
 #include <structmember.h>

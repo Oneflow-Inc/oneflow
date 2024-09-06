@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FRAMEWORK_TENSOR_H_
 
 #include <Python.h>
+#undef _PyGC_FINALIZED
 
 #include "oneflow/core/framework/tensor.h"
 

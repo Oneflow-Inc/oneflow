@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import os
 import re
 import argparse
@@ -52,6 +53,7 @@ header_fmt = (
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_GENERATED_TENSOR_API_H_
 
 #include <Python.h>
+#undef _PyGC_FINALIZED
 
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
@@ -95,6 +97,7 @@ pybind_header_fmt = (
     + """
 
 #include <Python.h>
+#undef _PyGC_FINALIZED
 
 namespace oneflow {{
 namespace one {{
@@ -111,6 +114,7 @@ pybind_source_fmt = (
     + """
 
 #include <Python.h>
+#undef _PyGC_FINALIZED
 
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/exception/exception.h"
