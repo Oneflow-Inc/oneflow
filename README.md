@@ -24,7 +24,7 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 
 ### General
 - Linux
-- Python 3.7, 3.8, 3.9, 3.10, 3.11
+- Python 3.7, 3.8, 3.9, 3.10, 3.11, 3.12
 
 ### CUDA
 - CUDA arch 60 or above
@@ -66,6 +66,11 @@ docker pull oneflowinc/oneflow:nightly-cuda11.8
   ```bash
   python3 -m pip install --pre oneflow -f https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cu118
   ```
+  Here, `cu118` could be changed into other supported version (e.g., `cu121`, `cu122`).
+  The highest support cuda version could be obtained by `nvidia-smi --version | grep CUDA` (in case CUDA toolkit is installed).
+  Suppose you have `CUDA Version        : 12.6`, you could use https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cu122.
+  You could try visiting https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cu126 https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cu127
+  , ... , to probe whether a new oneflow version is online.
 
   If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
   ```
