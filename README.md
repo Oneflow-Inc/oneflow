@@ -24,7 +24,7 @@ OneFlow is a deep learning framework designed to be **user-friendly, scalable an
 
 ### General
 - Linux
-- Python 3.7, 3.8, 3.9, 3.10, 3.11
+- Python 3.7, 3.8, 3.9, 3.10, 3.11, 3.12
 
 ### CUDA
 - CUDA arch 60 or above
@@ -42,6 +42,33 @@ docker pull oneflowinc/oneflow:nightly-cuda11.8
 ```
 
 ### Pip Install
+
+- (*Optional*) Dealing with [PEP 668](https://peps.python.org/pep-0668/)
+  <details>
+    <summary>PEP 668 introduce marking installations as EXTERNALLY-MANAGED, which might stop you from installing packages.</summary>
+
+  When python code
+  ```python
+  __import__('os').path.exists(__import__('sysconfig').get_path('stdlib', __import__('sysconfig').get_default_scheme())+'/EXTERNALLY-MANAGED')
+  ```
+  returns `True`, python without a virtual environment is regarded as an `EXTERNALLY-MANAGED` installation.
+  
+  In this case, `pip` cannot install any package directly since it will *break system packages*.
+  
+  To bypass that issue, either install oneflow in a virtual environment created by
+  ```bash
+  python3 -m venv /path/to/venv
+  ```
+  then use `/path/to/venv/bin/python3` instead of `python3` to execute the following steps.
+  
+  Adding a flag `--break-system-packages` after `pip install` to prove you know the consequene.
+  
+  If you are boring with adding `--break-system-packages` flag, you could directly delete the file located at 
+  ```bash
+  python -c "print(__import__('sysconfig').get_path('stdlib', __import__('sysconfig').get_default_scheme())+'/EXTERNALLY-MANAGED')"
+  ```
+  (This operation usually needs root permission). After that, the python build no longer regarded as *EXTERNALLY-MANAGED* build, and you could directly execute commands below.
+</details>
 
 - (**Highly recommended**) Upgrade pip
 
@@ -66,7 +93,24 @@ docker pull oneflowinc/oneflow:nightly-cuda11.8
   ```bash
   python3 -m pip install --pre oneflow -f https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cu118
   ```
+  <details>
+  <summary>Here, `cu118` could be changed into other supported version (e.g., `cu121`, `cu122`).</summary>
+    
+  The highest support cuda version could be obtained by
+  `nvidia-smi --version | grep CUDA`
+  (in case CUDA toolkit is installed).
 
+  Suppose you have `CUDA Version        : 12.6`, you could use https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cu122.
+
+  You could try visiting
+  ```
+  https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cu126
+  https://oneflow-staging.oss-cn-beijing.aliyuncs.com/branch/master/cu127
+  ...
+  ```
+  to probe whether a new oneflow version is online.
+</details>  
+  
   If you are in China, you could run this to have pip download packages from domestic mirror of pypi:
   ```
   python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
