@@ -60,6 +60,7 @@ class AutoCastMode {
       case kCUDA:
       case kMLU:
       case kNPU:
+      case kXPU:
         autocast::set_autocast_device_type(device_type);
         autocast::set_autocast_dtype(dtype);
         autocast::set_autocast_gpu_dtype(dtype);
