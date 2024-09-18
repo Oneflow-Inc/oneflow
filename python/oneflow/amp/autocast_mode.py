@@ -155,7 +155,7 @@ class autocast(object):
         self.device = device_type
         if self.device == "cpu":
             self.fast_dtype = flow.get_autocast_cpu_dtype()
-        elif self.device in ["cuda", "mlu", "npu"]:
+        elif self.device in ["cuda", "mlu", "npu", "xpu"]:
             self.fast_dtype = flow.get_autocast_gpu_dtype()
         else:
             raise RuntimeError(
