@@ -352,6 +352,11 @@ from oneflow.framework.dtype import (
     is_floating_point,
 )
 
+from oneflow.framework.tensor import (
+    set_default_device,
+    get_default_device,
+)
+
 import oneflow._C
 from oneflow._C import tensor, batch_gather
 from oneflow._C import from_numpy, from_dlpack
