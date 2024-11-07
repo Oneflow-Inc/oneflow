@@ -7056,14 +7056,18 @@ def OneFlow_LayerNormGradOp : OneFlow_BaseOp<"layer_norm_grad", [NoMemoryEffect,
     Optional<OneFlow_Tensor>:$_add_to_output
   );
   let output = (outs
-    OneFlow_Tensor:$dx
+    OneFlow_Tensor:$dx,
+    OneFlow_Tensor:$gamma_diff,
+    OneFlow_Tensor:$beta_diff
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$begin_norm_axis,
+    DefaultValuedAttr<SI64Attr, "0">:$begin_params_axis,
     DefaultValuedAttr<F64Attr, "0.">:$epsilon
   );
   let trait_attrs = (ins
-    DenseI32ArrayAttr:$operand_segment_sizes
+    DenseI32ArrayAttr:$operand_segment_sizes,
+    DenseI32ArrayAttr:$result_segment_sizes
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
