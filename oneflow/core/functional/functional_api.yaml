@@ -3041,7 +3041,7 @@
   bind_python: True
 
 - name: "multi_tensor_adam_update"
-  signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple m, TensorTuple v, Float learning_rate_val, Float l2, Float beta1, Float beta2, Float bias_correction1_val, Float bias_correction2_val, Bool do_bias_correction, Double scale, Float weight_decay, Float epsilon) => MultiTensorAdamUpdate"
+  signature: "Void (TensorTuple model, TensorTuple model_diff, TensorTuple m, TensorTuple v, Float learning_rate_val, Float l2, Float beta1, Float beta2, Float bias_correction1_val, Float bias_correction2_val, Int64 train_step_val, Bool do_bias_correction, Double scale, Float weight_decay, Float epsilon) => MultiTensorAdamUpdate"
   bind_python: True
 
 - name: "grad_acc_repeat"

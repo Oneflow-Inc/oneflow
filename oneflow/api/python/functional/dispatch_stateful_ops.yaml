@@ -122,7 +122,7 @@
   bind_python: True
 
 - name: "dispatch_adam_update"
-  signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Float bias_correction1=1.0, Float bias_correction2=1.0, Double scale=1.0, Float l1=0, Float l2=0, Float beta1=0.9, Float beta2=0.999, Float epsilon=1e-8, Float weight_decay=0, Bool amsgrad=False, Bool do_bias_correction=True) => DispatchAdamUpdate"
+  signature: "Void (OpExpr op, TensorTuple inputs, Float learning_rate=0, Float bias_correction1=1.0, Float bias_correction2=1.0, Int32 train_step_val=0, Double scale=1.0, Float l1=0, Float l2=0, Float beta1=0.9, Float beta2=0.999, Float epsilon=1e-8, Float weight_decay=0, Bool amsgrad=False, Bool do_bias_correction=True) => DispatchAdamUpdate"
   bind_python: True
 
 - name: "dispatch_adagrad_update"

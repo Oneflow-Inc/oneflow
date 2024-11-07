@@ -135,6 +135,7 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
       .Input("learning_rate", learning_rate_lbn)
       .Input("m", GenVariableOutputLbn(m_var))
       .Input("v", GenVariableOutputLbn(v_var))
+      .Input("train_step", train_step_lbn)
       .Attr<float>("beta1", beta1)
       .Attr<float>("beta2", beta2)
       .Attr<float>("epsilon", epsilon)

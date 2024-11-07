@@ -7343,11 +7343,13 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [NoGrad, AttrSizedOpera
     Optional<OneFlow_Tensor>:$skip_if,
     Optional<OneFlow_Tensor>:$bias_correction1,
     Optional<OneFlow_Tensor>:$bias_correction2,
+    Optional<OneFlow_Tensor>:$train_step,
     OneFlow_Tensor:$m,
     OneFlow_Tensor:$v,
     Optional<OneFlow_Tensor>:$max_v
   );
   let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "0">:$train_step_val,
     DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
     DefaultValuedAttr<F32Attr, "1.">:$learning_rate_scale,
     DefaultValuedAttr<F32Attr, "1.">:$bias_correction1_val,

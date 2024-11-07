@@ -195,6 +195,7 @@ class Adam(Optimizer):
             "epsilon": param_group["eps"],
             "do_bias_correction": param_group["do_bias_correction"],
             "amsgrad": param_group["amsgrad"],
+            "train_step_val": self.state["step"] + 1,
         }
 
         if param_group["contiguous_params"]:

@@ -332,13 +332,13 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor(
       "DispatchAdamUpdate",
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& inputs, float learning_rate,
-         float bias_correction1, float bias_correction2, double scale, float l1, float l2,
+         float bias_correction1, float bias_correction2, int32_t train_step, double scale, float l1, float l2,
          float beta1, float beta2, float epsilon, float weight_decay, bool amsgrad,
          bool do_bias_correction) -> Maybe<void> {
         auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP(
-            "learning_rate_val", "bias_correction1_val", "bias_correction2_val", "scale", "l1",
+            "learning_rate_val", "bias_correction1_val", "bias_correction2_val", "train_step_val", "scale", "l1",
             "l2", "beta1", "beta2", "epsilon", "weight_decay", "amsgrad", "do_bias_correction");
-        attrs.SetAllAttrs(learning_rate, bias_correction1, bias_correction2, scale, l1, l2, beta1,
+        attrs.SetAllAttrs(learning_rate, bias_correction1, bias_correction2, train_step, scale, l1, l2, beta1,
                           beta2, epsilon, weight_decay, amsgrad, do_bias_correction);
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op, inputs, attrs));
         return Maybe<void>::Ok();
