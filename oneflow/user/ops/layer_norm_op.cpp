@@ -183,10 +183,16 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
     broadcast_args.emplace_back(user_op::OpArg("gamma", 0));
   }
   int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
+  int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
+  CHECK_EQ(begin_norm_axis, begin_params_axis) 
+      << "begin_norm_axis and begin_params_axis must be equal, but got "
+      << begin_norm_axis << " and " << begin_params_axis;
   for (int i = 0; i < begin_norm_axis; ++i) {
     ctx->NewBuilder()
         .Split(ctx->inputs(), i)
-        .Split(ctx->outputs(), i)
+        .Split(user_op::OpArg("dx", 0), i)
+        .PartialSum(user_op::OpArg("gamma_diff", 0))
+        .PartialSum(user_op::OpArg("beta_diff", 0))
         .Broadcast(broadcast_args)
         .Build();
   }
