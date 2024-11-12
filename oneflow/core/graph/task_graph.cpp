@@ -888,7 +888,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
                       blob_desc, src_nd_sbp, dst_nd_sbp,                              // NOLINT
                       *(CHECK_JUST(src_op_node->op().GetOpTimeShape()).get()));       // NOLINT
       if (maybe_status.IsOk()) { status = CHECK_JUST(maybe_status); }
-    } else {
+    }
+    if (!status) {
       status = CHECK_JUST(hierarchical_sub_tsk_gph_builder_->Build(
           sub_tsk_gph_builder_ctx_.get(), in_nodes, &out_nodes, &sorted_ctrl_tasks,
           src_parallel_desc, dst_parallel_desc, lbi, blob_desc, src_nd_sbp, dst_nd_sbp,
