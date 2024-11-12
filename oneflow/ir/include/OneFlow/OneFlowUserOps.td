@@ -515,6 +515,22 @@ def OneFlow_NarrowGradOp : OneFlow_BaseOp<"narrow_grad", [NoMemoryEffect, Declar
   let has_input_arg_modify_fn = 1;
 }
 
+def OneFlow_Chunk3GradOp : OneFlow_BaseOp<"chunk3_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dout1,
+    OneFlow_Tensor:$dout2,
+    OneFlow_Tensor:$dout3
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
 def OneFlow_PowOp : OneFlow_BaseOp<"pow", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
@@ -10637,6 +10653,21 @@ def OneFlow_NarrowOp : OneFlow_BaseOp<"narrow", [NoMemoryEffect, DeclareOpInterf
     DefaultValuedAttr<SI64Attr, "0">:$dim,
     DefaultValuedAttr<SI64Attr, "0">:$start,
     DefaultValuedAttr<SI64Attr, "0">:$length
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_Chunk3Op : OneFlow_BaseOp<"chunk3", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$in
+  );
+  let output = (outs
+    OneFlow_Tensor:$out1,
+    OneFlow_Tensor:$out2,
+    OneFlow_Tensor:$out3
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

@@ -1717,6 +1717,14 @@
   signature: "Tensor (Tensor dy, Tensor like, Int64 dim, Int64 start, Int64 length) => NarrowGrad"
   bind_python: False
 
+- name: "chunk3"
+  signature: "TensorTuple (Tensor input) => Chunk3"
+  bind_python: False
+
+- name: "chunk3_grad"
+  signature: "Tensor (TensorTuple input) => Chunk3Grad"
+  bind_python: False
+
 - name: "slice"
   signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step, Bool enable_view_slice=None) => Slice"
   bind_python: True

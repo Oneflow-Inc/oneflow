@@ -1691,6 +1691,41 @@ class NarrowGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class Chunk3Functor {
+ public:
+  Chunk3Functor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("chunk3").Input("in").Output("out1").Output("out2").Output("out3").Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& in) const {
+    std::shared_ptr<Tensor> contiguous_in = JUST(functional::ToContiguous(in));
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {contiguous_in});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class Chunk3GradFunctor {
+ public:
+  Chunk3GradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("chunk3_grad")
+                         .Input("dout1")
+                         .Input("dout2")
+                         .Input("dout3")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const TensorTuple& inputs) const {
+    CHECK_GE_OR_RETURN(inputs.size(), 3)
+        << Error::RuntimeError() << "inputs.size() must not less than 3, but got " << inputs.size();
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {inputs[0], inputs[1], inputs[2]});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SliceFunctor {
  public:
   SliceFunctor() { op_ = CHECK_JUST(one::OpBuilder("slice").Input("x").Output("y").Build()); }
@@ -2837,6 +2872,7 @@ class ChunkFunctor {
                               << "chunk expects at least a 1-dimensional tensor.";
     CHECK_OR_RETURN(chunks > 0) << Error::RuntimeError()
                                 << "chunk expects `chunks` to be greater than 0, got: " << chunks;
+    if (chunks == 3 && dim == -1) { return functional::Chunk3(x); }
     infferd_dim = JUST(maybe_wrap_dim(infferd_dim, ndim));
 
     const auto dim_size = x->shape()->At(infferd_dim);
@@ -4109,6 +4145,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::InplaceToContiguousFunctor>("InplaceToContiguous");
   m.add_functor<impl::NarrowFunctor>("Narrow");
   m.add_functor<impl::NarrowGradFunctor>("NarrowGrad");
+  m.add_functor<impl::Chunk3Functor>("Chunk3");
+  m.add_functor<impl::Chunk3GradFunctor>("Chunk3Grad");
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
   m.add_functor<impl::SliceFunctor>("Slice");
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");
