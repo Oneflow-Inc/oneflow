@@ -163,9 +163,9 @@ class AdamW(Optimizer):
                     warnings.warn("Fused Adamw is not supported when amsgrad=True.")
                     param_group["fused"] = False
 
-                if param_group["fused"] and not param.is_cuda:
-                    warnings.warn("Fused Adamw only support cuda parameters.")
-                    param_group["fused"] = False
+                # if param_group["fused"] and not param.is_cuda:
+                #     warnings.warn("Fused Adamw only support cuda parameters.")
+                #     param_group["fused"] = False
 
         self._op_with_amsgrad = (
             flow.stateful_op("adam_update")
