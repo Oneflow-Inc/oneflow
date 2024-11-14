@@ -237,7 +237,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@refactor-versions-wheels
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -259,7 +259,7 @@ jobs:
           python-versions: |
             3.7
             3.8
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@refactor-versions-wheels
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu-sanitizers
         if: ${{ (matrix.entry == 'cpu-asan-ubsan' || matrix.entry == 'cpu-tsan') && !matrix.cache-hit && false }}
@@ -280,7 +280,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.8
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@refactor-versions-wheels
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
         if: ${{ matrix.entry =='cu116' && !matrix.cache-hit }}
@@ -300,7 +300,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.7
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@refactor-versions-wheels
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry == 'llvm15' && !matrix.cache-hit }}
         with:
