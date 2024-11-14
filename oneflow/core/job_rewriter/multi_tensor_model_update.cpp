@@ -231,10 +231,6 @@ Maybe<void> MultiTensorModelUpdatePass::Apply(const OpGraph& op_graph,
       }
       const user_op::UserOpConfWrapper model_update_user_conf(
           find_model_update_update_node->op().op_conf());
-      // Multi tensor update pass only support for CUDA currently.
-      // if (find_model_update_update_node->parallel_desc().device_type() != DeviceType::kCUDA) {
-      //   continue;
-      // }
 
       // Multi tensor update pass only support Data Parallel.
       bool if_data_parallel = true;
