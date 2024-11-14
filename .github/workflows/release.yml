@@ -70,7 +70,7 @@ jobs:
           ref: ${{ inputs.branch }}
           repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
           token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@refactor-versions-wheels
         name: Find build cache
         id: find-cache
         timeout-minutes: 5
