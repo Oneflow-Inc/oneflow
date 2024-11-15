@@ -70,7 +70,7 @@ jobs:
           ref: ${{ inputs.branch }}
           repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
           token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@refactor-versions-wheels
         name: Find build cache
         id: find-cache
         timeout-minutes: 5
@@ -149,7 +149,7 @@ jobs:
         if: ${{ inputs.is_priv }}
         run: |
           env
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@refactor-versions-wheels
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cu118' || startsWith(matrix.entry, 'cu12') }}
         with:
@@ -175,7 +175,7 @@ jobs:
             3.10
             3.9
             3.8
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@refactor-versions-wheels
         name: Build ${{ matrix.entry }}
         if: ${{ startsWith(matrix.entry, 'cu') && matrix.entry !='cu118' && !startsWith(matrix.entry, 'cu12') }}
         with:
@@ -201,7 +201,7 @@ jobs:
             3.10
             3.9
             3.8
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@refactor-versions-wheels
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
         with:
