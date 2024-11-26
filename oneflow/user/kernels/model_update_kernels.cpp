@@ -493,6 +493,7 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, float, float, float16);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCPU, double, double, float16);
 #ifdef WITH_CUDA
+REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float16, float16, float16);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float16, float16);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, float, float, float16);
 REGISTER_ADAM_UPDATE_KERNEL(DeviceType::kCUDA, double, double, float16);

@@ -21,7 +21,7 @@ def norm(self, ord=None, dim=None, keepdim=False, dtype=None):
 
 
 def vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
-    return flow._C.vector_norm(self, ord, dim, keepdim, dtype=dtype)
+    return flow._C.vector_norm(self.to(dtype=flow.float32), ord, dim, keepdim, dtype=dtype).to(dtype=flow.float16)
 
 
 def matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
