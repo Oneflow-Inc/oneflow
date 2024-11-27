@@ -480,6 +480,23 @@ void AdamUpdateKernelUtil<DeviceType::kCUDA, T, float16, float16>::Update(
       max_v);
 }
 
+template<>
+void AdamUpdateKernelUtil<DeviceType::kCUDA, float16, float16, float16>::Update(
+    ep::Stream* stream, int64_t n, float16 scale, float l1, float l2, float beta1, float beta2,
+    float epsilon, float weight_decay, bool amsgrad, bool do_bias_correction,
+    float learning_rate_val, float lr_scale, float bias_correction1_val, float bias_correction2_val,
+    const float* learning_rate, const float16* scale_by_ptr, const int64_t* skip_if,
+    const float* bias_correction1_ptr, const float* bias_correction2_ptr, const float16* model_diff,
+    float16* model, float16* model_copy, float16* m, float16* v, float16* max_v) {
+  half scale16 = static_cast<half>((static_cast<float>(scale)));
+  AdamUpdateKernelUtil<DeviceType::kCUDA, half, half, half>::Update(
+      stream, n, scale16, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
+      learning_rate_val, lr_scale, bias_correction1_val, bias_correction2_val, learning_rate,
+      reinterpret_cast<const half*>(scale_by_ptr), skip_if, bias_correction1_ptr, bias_correction2_ptr,
+      reinterpret_cast<const half*>(model_diff), reinterpret_cast<half*>(model), reinterpret_cast<half*>(model_copy), reinterpret_cast<half*>(m), reinterpret_cast<half*>(v),
+      reinterpret_cast<half*>(max_v));
+}
+
 template struct AdamUpdateKernelUtil<DeviceType::kCUDA, float, float, float16>;
 template struct AdamUpdateKernelUtil<DeviceType::kCUDA, double, double, float16>;
 template struct AdamUpdateKernelUtil<DeviceType::kCUDA, float, float16, float16>;
