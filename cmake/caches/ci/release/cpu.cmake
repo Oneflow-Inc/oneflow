@@ -13,3 +13,6 @@ set(CUDA_NVCC_THREADS_NUMBER 8 CACHE STRING "")
 set(CMAKE_C_COMPILER_LAUNCHER ccache CACHE STRING "")
 set(CMAKE_CXX_COMPILER_LAUNCHER ccache CACHE STRING "")
 set(CMAKE_CUDA_COMPILER_LAUNCHER ccache CACHE STRING "")
+set(CMAKE_CXX_FLAGS
+    "-Wno-unused-but-set-parameter -Wno-unused-variable -Wno-class-memaccess -Wno-cast-function-type -Wno-comment -Wno-reorder"
+    CACHE STRING "")
