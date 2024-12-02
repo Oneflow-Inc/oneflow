@@ -282,6 +282,8 @@ Pointwise Ops
     bitwise_and
     bitwise_or
     bitwise_xor
+    bitwise_left_shift
+    bitwise_right_shift
     bitwise_not
     mish
     mul 
