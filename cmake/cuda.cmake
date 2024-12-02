@@ -89,6 +89,16 @@ if(BUILD_CUDA)
       # GeForce RTX 30xx
       list(APPEND CMAKE_CUDA_ARCHITECTURES 86-real)
     endif()
+
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.8")
+      # GeForce RTX 40xx
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 89-real)
+    endif()
+
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "12.0")
+      # H100, H20
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 90-real)
+    endif()
   endif()
 
   foreach(CUDA_ARCH ${CMAKE_CUDA_ARCHITECTURES})
