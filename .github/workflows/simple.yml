@@ -219,7 +219,7 @@ jobs:
           fi
       - name: Upload logs
         if: always() && contains(github.event.pull_request.labels.*.name, 'need-simple-ci-upload-artifact')
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: logs-${{ matrix.test_suite }}-${{ matrix.cmake_generator }}-${{ matrix.cmake_build_type }}-shared-${{ matrix.build_shared_libs }}
           path: |
