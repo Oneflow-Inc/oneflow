@@ -940,16 +940,18 @@ class LayerNormGradFunctor {
                          .Input("mean")
                          .Input("inv_variance")
                          .Output("dx")
+                         .Output("gamma_diff")
+                         .Output("beta_diff")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& mean,
                            const std::shared_ptr<one::Tensor>& inv_variance,
-                           const int64_t& begin_norm_axis, const double& epsilon) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("begin_norm_axis", "epsilon");
-    attrs.SetAllAttrs(begin_norm_axis, epsilon);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, mean, inv_variance}, attrs);
+                           const int64_t& begin_norm_axis, const int64_t& begin_params_axis, const double& epsilon) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("begin_norm_axis", "begin_params_axis", "epsilon");
+    attrs.SetAllAttrs(begin_norm_axis, begin_params_axis, epsilon);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, mean, inv_variance}, attrs);
   }
 
  private:
@@ -966,17 +968,19 @@ class LayerNormAffineGradFunctor {
                          .Input("inv_variance")
                          .Input("gamma")
                          .Output("dx")
+                         .Output("gamma_diff")
+                         .Output("beta_diff")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& mean,
                            const std::shared_ptr<one::Tensor>& inv_variance,
                            const std::shared_ptr<one::Tensor>& gamma,
-                           const int64_t& begin_norm_axis, const double& epsilon) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("begin_norm_axis", "epsilon");
-    attrs.SetAllAttrs(begin_norm_axis, epsilon);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x, mean, inv_variance, gamma}, attrs);
+                           const int64_t& begin_norm_axis, const int64_t& begin_params_axis, const double& epsilon) const {
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("begin_norm_axis", "begin_params_axis", "epsilon");
+    attrs.SetAllAttrs(begin_norm_axis, begin_params_axis, epsilon);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, mean, inv_variance, gamma}, attrs);
   }
 
  private:
