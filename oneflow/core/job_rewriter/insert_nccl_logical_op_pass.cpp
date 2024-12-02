@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#ifdef WITH_CUDA
+// #ifdef WITH_CUDA
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -146,7 +146,8 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
     CHECK(visited.insert(seed_node).second);
     const ParallelDesc& seed_parallel_desc = seed_node->parallel_desc();
     // NOTE(chengcheng): ONLY consider GPU op and parallel num > 1.
-    if (seed_parallel_desc.device_type() != DeviceType::kCUDA) { continue; }
+    // if (seed_parallel_desc.device_type() != DeviceType::kCUDA) { continue; }
+    if (seed_parallel_desc.device_type() != DeviceType::kNPU) { continue; }
     if (seed_parallel_desc.parallel_num() <= 1) { continue; }
     // NOTE(chengcheng): using fastest time shape for merge acc into bw subgraph.
     if (!SharedPtrShapeEqual(GetOpNodeFastestTimeShape(seed_node), seed_time_shape)) { continue; }
@@ -486,7 +487,6 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
 
   int64_t scope_symbol_id = CHECK_JUST(BuildScopeWithReducedParallelDesc(
       src_node->op().op_conf().scope_symbol_id(), *src_reduced_parallel_desc));
-
   if (src_reduced_hierarchy->NumAxes() == 1 && dst_reduced_hierarchy->NumAxes() == 1) {
     return TryBuildNcclBy1DHierarchy(ret, src_reduced_nd_sbp->sbp_parallel(0),
                                      dst_reduced_nd_sbp->sbp_parallel(0), lbn, scope_symbol_id,
@@ -786,7 +786,6 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   } else {
     auto_parallel::StraightenOpGraph(op_graph, &ordered_op_nodes);
   }
-
   HashMap<const OpNode*, int64_t> op_node2global_order;
   for (int32_t global_order = 0; global_order < ordered_op_nodes.size(); global_order++) {
     op_node2global_order.emplace(ordered_op_nodes[global_order], global_order);
@@ -844,7 +843,6 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
 
   for (auto& pair : placement2subgraphs) {
     PlacementNcclSubGraghsInfo& info = pair.second;
-
     // NOTE(chengcheng): insert nccl ops for each subgraph
     int64_t stream_offset = 0;
     int64_t total_op_num = 0;
@@ -883,4 +881,4 @@ REGISTER_JOB_PASS("InsertNcclLogicalOpPass", InsertNcclLogicalOpPass);
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA
+// #endif  // WITH_CUDA
