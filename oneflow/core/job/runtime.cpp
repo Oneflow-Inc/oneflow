@@ -70,10 +70,9 @@ Runtime::Runtime(
     Singleton<RuntimeJobDescs>::Get()->AddPlan(plan);
     collective_boxing_scheduler_plan_token_ =
         Singleton<boxing::collective::Scheduler>::Get()->AddPlan(plan);
-    // #ifdef WITH_CUDA
-    //     Singleton<EagerCclCommMgr>::Get()->CreateCommFromPlan(plan);
-    // #endif  // WITH_CUDA
+#ifdef WITH_CUDA
     Singleton<EagerCclCommMgr>::Get()->CreateCommFromPlan(plan);
+#endif  // WITH_CUDA
   }
   std::vector<const TaskProto*> source_tasks;
   source_tasks.reserve(plan.task().size());
