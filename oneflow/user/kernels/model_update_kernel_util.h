@@ -37,7 +37,8 @@ struct CastScaleRegularizeGradientFunctor<half, G> {
   half operator()(G model_diff, half model16, half scale16, float l1, float l2) const {
     float model = static_cast<float>(model16);
     float scale = static_cast<float>(scale16);
-    float result = static_cast<float>(model_diff) * scale + l1 * ((model >= 0) - (model <= 0)) + l2 * model;
+    float result =
+        static_cast<float>(model_diff) * scale + l1 * ((model >= 0) - (model <= 0)) + l2 * model;
     return static_cast<half>(result);
   }
 };
@@ -147,12 +148,13 @@ struct AdamUpdateFunctor {
 template<typename G>
 struct AdamUpdateFunctor<half, G> {
   OF_DEVICE_FUNC
-  void operator()(const G* model_diff, half* model, half* m, half* v, half* max_v, half scale, float l1, float l2,
-                  float beta1, float beta2, float epsilon, float weight_decay, bool amsgrad,
-                  float bias_correction1, float bias_correction2, float learning_rate) const {
+  void operator()(const G* model_diff, half* model, half* m, half* v, half* max_v, half scale,
+                  float l1, float l2, float beta1, float beta2, float epsilon, float weight_decay,
+                  bool amsgrad, float bias_correction1, float bias_correction2,
+                  float learning_rate) const {
     const float model_val = static_cast<float>(*model);
-    float model_diff_t =
-        static_cast<float>(CastScaleRegularizeGradientFunctor<half, G>()(*model_diff, model_val, scale, l1, l2));
+    float model_diff_t = static_cast<float>(
+        CastScaleRegularizeGradientFunctor<half, G>()(*model_diff, model_val, scale, l1, l2));
 
     const float next_m = beta1 * static_cast<float>(*m) + (1 - beta1) * model_diff_t;
     *m = static_cast<half>(next_m);
@@ -171,7 +173,8 @@ struct AdamUpdateFunctor<half, G> {
       denom = (sqrt(next_v) / sqrt(bias_correction2)) + epsilon;
     }
     const float step_size = learning_rate / bias_correction1;
-    *model = static_cast<half>(model_val - step_size * (next_m / denom) - learning_rate * weight_decay * model_val);
+    *model = static_cast<half>(model_val - step_size * (next_m / denom)
+                               - learning_rate * weight_decay * model_val);
   }
 };
 #endif
@@ -214,13 +217,13 @@ struct FusedAdamUpdateFunctor {
 template<typename G, typename C>
 struct FusedAdamUpdateFunctor<half, G, C> {
   OF_DEVICE_FUNC
-  void operator()(const G* model_diff, half* model, C* model_copy, half* m, half* v, half* max_v, half scale,
-                  float l1, float l2, float beta1, float beta2, float epsilon, float weight_decay,
-                  bool amsgrad, float bias_correction1, float bias_correction2,
+  void operator()(const G* model_diff, half* model, C* model_copy, half* m, half* v, half* max_v,
+                  half scale, float l1, float l2, float beta1, float beta2, float epsilon,
+                  float weight_decay, bool amsgrad, float bias_correction1, float bias_correction2,
                   float learning_rate) const {
     const float model_val = static_cast<float>(*model);
-    float model_diff_t =
-        static_cast<float>(CastScaleRegularizeGradientFunctor<half, G>()(*model_diff, *model, scale, l1, l2));
+    float model_diff_t = static_cast<float>(
+        CastScaleRegularizeGradientFunctor<half, G>()(*model_diff, *model, scale, l1, l2));
 
     const float next_m = beta1 * static_cast<float>(*m) + (1 - beta1) * model_diff_t;
     *m = static_cast<half>(next_m);

@@ -492,9 +492,10 @@ void AdamUpdateKernelUtil<DeviceType::kCUDA, float16, float16, float16>::Update(
   AdamUpdateKernelUtil<DeviceType::kCUDA, half, half, half>::Update(
       stream, n, scale16, l1, l2, beta1, beta2, epsilon, weight_decay, amsgrad, do_bias_correction,
       learning_rate_val, lr_scale, bias_correction1_val, bias_correction2_val, learning_rate,
-      reinterpret_cast<const half*>(scale_by_ptr), skip_if, bias_correction1_ptr, bias_correction2_ptr,
-      reinterpret_cast<const half*>(model_diff), reinterpret_cast<half*>(model), reinterpret_cast<half*>(model_copy), reinterpret_cast<half*>(m), reinterpret_cast<half*>(v),
-      reinterpret_cast<half*>(max_v));
+      reinterpret_cast<const half*>(scale_by_ptr), skip_if, bias_correction1_ptr,
+      bias_correction2_ptr, reinterpret_cast<const half*>(model_diff),
+      reinterpret_cast<half*>(model), reinterpret_cast<half*>(model_copy),
+      reinterpret_cast<half*>(m), reinterpret_cast<half*>(v), reinterpret_cast<half*>(max_v));
 }
 
 template struct AdamUpdateKernelUtil<DeviceType::kCUDA, float, float, float16>;
