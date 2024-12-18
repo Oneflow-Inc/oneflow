@@ -7,7 +7,9 @@ find_package(Git QUIET REQUIRED)
 
 set(FLASH_ATTENTION_PROJECT flash_attention)
 
-set(FLASH_ATTENTION_URL https://oneflow-static.oss-cn-beijing.aliyuncs.com/third_party_mirror/flash-attention-v2-eed2e82b880e06237af3e50ceac4cf6728b15645.zip)
+set(FLASH_ATTENTION_URL
+    https://oneflow-static.oss-cn-beijing.aliyuncs.com/third_party_mirror/flash-attention-v2-eed2e82b880e06237af3e50ceac4cf6728b15645.zip
+)
 
 set(FLASH_ATTENTION_INSTALL_DIR ${THIRD_PARTY_DIR}/flash_attention)
 set(FLASH_ATTENTION_INCLUDE_DIR ${FLASH_ATTENTION_INSTALL_DIR}/include CACHE PATH "" FORCE)
