@@ -225,8 +225,10 @@ Maybe<void> TensorAutoCastProcessor::Apply() {
     for (int i = 0; i < inputs_.size(); ++i) {
       if (args_eligible[i] && JUST(IsDeviceType(inputs_[i], autocast_device_type))
           && inputs_[i]->dtype()->is_floating_point() && inputs_[i]->dtype() != autocast_dtype) {
-        autocast_inputs_[i] = JUST(autocast::cached_cast(inputs_[i], autocast_dtype,
-                                                         JUST(inputs_[i]->device())->enum_type()));
+        auto device_type = inputs_[i]->is_local()
+                               ? JUST(inputs_[i]->device())->enum_type()
+                               : JUST(inputs_[i]->parallel_desc())->device_type();
+        autocast_inputs_[i] = JUST(autocast::cached_cast(inputs_[i], autocast_dtype, device_type));
       } else {
         autocast_inputs_[i] = inputs_[i];
       }
