@@ -323,7 +323,7 @@ if(APPLE)
   set(of_libs ${ALL_ARCHIVE_BEGIN} oneflow of_op_schema ${ALL_ARCHIVE_END})
   target_link_libraries(oneflow of_protoobj of_functional_obj ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs ${ALL_ARCHIVE_BEGIN} of_op_schema ${ALL_ARCHIVE_END} -ldl -lrt)
+  set(of_libs ${ALL_ARCHIVE_BEGIN} oneflow of_op_schema ${ALL_ARCHIVE_END} -ldl -lrt)
   target_link_libraries(
     oneflow
     of_protoobj
@@ -400,6 +400,10 @@ if(BUILD_PYTHON)
   pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
   set_property(TARGET oneflow_internal APPEND PROPERTY BUILD_RPATH "\$ORIGIN/../nvidia/cublas/lib")
   set_property(TARGET oneflow_internal APPEND PROPERTY BUILD_RPATH "\$ORIGIN/../nvidia/cudnn/lib")
+  set_property(TARGET oneflow_internal APPEND PROPERTY BUILD_RPATH "\$ORIGIN/../nvidia/nccl/lib")
+  set_property(TARGET oneflow_internal APPEND PROPERTY BUILD_RPATH
+                                                       "\$ORIGIN/../nvidia/cusparse/lib")
+  set_property(TARGET oneflow_internal APPEND PROPERTY BUILD_RPATH "\$ORIGIN/../nvidia/cufft/lib")
   set_compile_options_to_oneflow_target(oneflow_internal)
   set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
   add_dependencies(oneflow_internal of_functional_obj of_functional_tensor_obj of_op_schema)
@@ -628,6 +632,11 @@ if(BUILD_CPP_API)
     checkdirandappendslash(DIR ${TRT_FLASH_ATTENTION_LIBRARY_DIR} OUTPUT
                            TRT_FLASH_ATTENTION_LIBRARY_DIR_APPENDED)
     list(APPEND LIBONEFLOW_THIRD_PARTY_DIRS ${TRT_FLASH_ATTENTION_LIBRARY_DIR_APPENDED})
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.7")
+      checkdirandappendslash(DIR ${FLASH_ATTENTION_LIBRARY_DIR} OUTPUT
+                             FLASH_ATTENTION_LIBRARY_DIR_APPENDED)
+      list(APPEND LIBONEFLOW_THIRD_PARTY_DIRS ${FLASH_ATTENTION_LIBRARY_DIR_APPENDED})
+    endif()
     if(WITH_CUTLASS)
       checkdirandappendslash(DIR ${CUTLASS_LIBRARY_DIR} OUTPUT CUTLASS_LIBRARY_DIR_APPENDED)
       list(APPEND LIBONEFLOW_THIRD_PARTY_DIRS ${CUTLASS_LIBRARY_DIR_APPENDED})

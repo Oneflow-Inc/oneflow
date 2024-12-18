@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 bool IsEnvEnabled(int32_t check_level) {
-  static const int env_check_level = ParseIntegerFromEnv("ONEFOW_CHECK_LEVEL", -1);
+  static const int env_check_level = ParseIntegerFromEnv("ONEFLOW_CHECK_LEVEL", -1);
   static const bool env_debug_mode = IsInDebugMode();
   return env_debug_mode || env_check_level >= check_level;
 }

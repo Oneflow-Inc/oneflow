@@ -26,8 +26,8 @@ namespace oneflow {
     if (in_0.shape().NumAxes() > 0 && cur_in.shape().NumAxes() > 0) {
       CHECK_EQ_OR_RETURN(in_0.shape(), cur_in.shape())
           << Error::RuntimeError()
-          << "inconsistent tensor size, expected all tensor to have the same number of elements, "
-          << "but got " << in_0.shape().elem_cnt() << " and " << cur_in.shape().elem_cnt();
+          << "inconsistent tensor size, expected all tensor to have the same shapes, "
+          << "but got " << in_0.shape().ToString() << " and " << cur_in.shape().ToString();
     }
   }
   out->set_shape(in_0.shape());

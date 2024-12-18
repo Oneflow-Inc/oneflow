@@ -19,9 +19,7 @@ from typing import List, Tuple
 
 import oneflow as flow
 
-__all__ = [
-    "vjp",
-]
+__all__ = ["vjp", "jvp", "jacobian", "hessian", "hvp", "vhp"]
 
 # Utility functions
 
@@ -91,12 +89,8 @@ def _grad_preprocess(inputs, create_graph, need_graph):
     for inp in inputs:
         if create_graph and inp.requires_grad:
             # Create at least a new Tensor object in a differentiable way
-            if not inp.is_sparse:
-                # Use .view_as() to get a shallow copy
-                res.append(inp.view_as(inp))
-            else:
-                # We cannot use view for sparse Tensors so we clone
-                res.append(inp.clone())
+            # oneflow.torch has no is_sparse attribute. https://github.com/Oneflow-Inc/oneflow/issues/10401
+            res.append(inp.view_as(inp))
         else:
             res.append(inp.detach().requires_grad_(need_graph))
     return tuple(res)
@@ -140,7 +134,7 @@ def _check_requires_grad(inputs, input_type, strict):
     if not strict:
         return
 
-    if input_type not in ["outputs", "grad_inputs"]:
+    if input_type not in ["outputs", "grad_inputs", "jacobian", "hessian"]:
         raise RuntimeError("Invalid input_type to _check_requires_grad")
     for i, inp in enumerate(inputs):
         if inp is None:
@@ -150,7 +144,22 @@ def _check_requires_grad(inputs, input_type, strict):
                 " This is not allowed in strict mode."
             )
         if not inp.requires_grad:
-            if input_type == "grad_inputs":
+            if input_type == "hessian":
+                raise RuntimeError(
+                    f"The hessian of the user-provided function with respect to input {i}"
+                    " is independent of the input. This is not allowed in strict mode."
+                    " You should ensure that your function is thrice differentiable and that"
+                    " the hessian depends on the inputs."
+                )
+            elif input_type == "jacobian":
+                raise RuntimeError(
+                    "While computing the hessian, found that the jacobian of the user-provided"
+                    f" function with respect to input {i} is independent of the input. This is not"
+                    " allowed in strict mode. You should ensure that your function is twice"
+                    " differentiable and that the jacobian depends on the inputs (this would be"
+                    " violated by a linear function for example)."
+                )
+            elif input_type == "grad_inputs":
                 raise RuntimeError(
                     f"The gradient with respect to input {i} is independent of the inputs of the"
                     " user-provided function. This is not allowed in strict mode."
@@ -200,7 +209,7 @@ def _fill_in_zeros(grads, refs, strict, create_graph, stage):
     # with Tensors full of 0s of the appropriate size based on the refs or raise an error.
     # strict and create graph allow us to detect when it is appropriate to raise an error
     # stage gives us information of which backward call we consider to give good error message
-    if stage not in ["back"]:
+    if stage not in ["back", "back_trick", "double_back", "double_back_trick"]:
         raise RuntimeError(f"Invalid stage argument '{stage}' to _fill_in_zeros")
 
     res: Tuple[flow.Tensor, ...] = tuple()
@@ -210,6 +219,17 @@ def _fill_in_zeros(grads, refs, strict, create_graph, stage):
                 if stage == "back":
                     raise RuntimeError(
                         "The output of the user-provided function is independent of "
+                        f"input {i}. This is not allowed in strict mode."
+                    )
+                elif stage == "back_trick":
+                    raise RuntimeError(
+                        f"The gradient with respect to the input is independent of entry {i}"
+                        " in the grad_outputs when using the double backward trick to compute"
+                        " forward mode gradients. This is not allowed in strict mode."
+                    )
+                elif stage == "double_back":
+                    raise RuntimeError(
+                        "The jacobian of the user-provided function is independent of "
                         f"input {i}. This is not allowed in strict mode."
                     )
                 else:
@@ -335,4 +355,793 @@ def vjp(func, inputs, v=None, create_graph=False, strict=False):
     return (
         _tuple_postprocess(outputs, is_outputs_tuple),
         _tuple_postprocess(vjp, is_inputs_tuple),
+    )
+
+
+def jvp(func, inputs, v=None, create_graph=False, strict=False):
+    r"""Compute the dot product between the Jacobian of the given function at the point given by the inputs and a vector ``v``.
+    
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.jvp.html
+
+    Args:
+        func (function): a Python function that takes Tensor inputs and returns
+            a tuple of Tensors or a Tensor.
+        inputs (tuple of Tensors or Tensor): inputs to the function ``func``.
+        v (tuple of Tensors or Tensor): The vector for which the Jacobian
+            vector product is computed. Must be the same size as the input of
+            ``func``. This argument is optional when the input to ``func``
+            contains a single element and (if it is not provided) will be set
+            as a Tensor containing a single ``1``.
+        create_graph (bool, optional): If ``True``, both the output and result
+            will be computed in a differentiable way. Note that when ``strict``
+            is ``False``, the result can not require gradients or be
+            disconnected from the inputs.  Defaults to ``False``.
+        strict (bool, optional): If ``True``, an error will be raised when we
+            detect that there exists an input such that all the outputs are
+            independent of it. If ``False``, we return a Tensor of zeros as the
+            jvp for said inputs, which is the expected mathematical value.
+            Defaults to ``False``.
+
+    Returns:
+        output (tuple): tuple with:
+            func_output (tuple of Tensors or Tensor): output of ``func(inputs)``
+
+            jvp (tuple of Tensors or Tensor): result of the dot product with
+            the same shape as the output.
+
+    Note:
+        ``autograd.functional.jvp`` computes the jvp by using the backward of
+        the backward (sometimes called the double backwards trick). This is not
+        the most performant way of computing the jvp. Please consider using
+        :func:`flow.func.jvp` instead.
+
+    Example:
+
+        >>> def exp_reducer(x):
+        ...     return x.exp().sum(dim=1)
+        >>> inputs = flow.rand(4, 4)
+        >>> v = flow.ones(4, 4)
+        >>> jvp(exp_reducer, inputs, v) # doctest: +ELLIPSIS
+        (tensor([6.3090, 4.6742, 7.9114, 8.2106]),
+         tensor([6.3090, 4.6742, 7.9114, 8.2106]))
+
+        >>> jvp(exp_reducer, inputs, v, create_graph=True) # doctest: +ELLIPSIS
+        (tensor([6.3090, 4.6742, 7.9114, 8.2106], grad_fn=<SumBackward1>),
+         tensor([6.3090, 4.6742, 7.9114, 8.2106], grad_fn=<SqueezeBackward1>))
+
+        >>> def adder(x, y):
+        ...     return 2 * x + 3 * y
+        >>> inputs = (flow.rand(2), flow.rand(2))
+        >>> v = (flow.ones(2), flow.ones(2))
+        >>> jvp(adder, inputs, v) # doctest: +ELLIPSIS
+        (tensor([2.2399, 2.5005]),
+         tensor([5., 5.]))
+
+    """
+    with flow.enable_grad():
+        is_inputs_tuple, inputs = _as_tuple(inputs, "inputs", "jvp")
+        inputs = _grad_preprocess(inputs, create_graph=create_graph, need_graph=True)
+
+        if v is not None:
+            _, v = _as_tuple(v, "v", "jvp")
+            v = _grad_preprocess(v, create_graph=create_graph, need_graph=False)
+            _validate_v(v, inputs, is_inputs_tuple)
+        else:
+            if len(inputs) != 1 or inputs[0].nelement() != 1:
+                raise RuntimeError(
+                    "The vector v can only be None if the input to "
+                    "the user-provided function is a single Tensor "
+                    "with a single element."
+                )
+
+        outputs = func(*inputs)
+        is_outputs_tuple, outputs = _as_tuple(
+            outputs, "outputs of the user-provided function", "jvp"
+        )
+        _check_requires_grad(outputs, "outputs", strict=strict)
+        # The backward is linear so the value of grad_outputs is not important as
+        # it won't appear in the double backward graph. We only need to ensure that
+        # it does not contain inf or nan.
+        grad_outputs = tuple(
+            flow.zeros_like(out, requires_grad=True) for out in outputs
+        )
+
+        grad_inputs = _autograd_grad(outputs, inputs, grad_outputs, create_graph=True)
+        _check_requires_grad(grad_inputs, "grad_inputs", strict=strict)
+
+    if create_graph:
+        with flow.enable_grad():
+            grad_res = _autograd_grad(
+                grad_inputs, grad_outputs, v, create_graph=create_graph
+            )
+            jvp = _fill_in_zeros(grad_res, outputs, strict, create_graph, "back_trick")
+    else:
+        grad_res = _autograd_grad(
+            grad_inputs, grad_outputs, v, create_graph=create_graph
+        )
+        jvp = _fill_in_zeros(grad_res, outputs, strict, create_graph, "back_trick")
+
+    # Cleanup objects and return them to the user
+    outputs = _grad_postprocess(outputs, create_graph)
+    jvp = _grad_postprocess(jvp, create_graph)
+
+    return (
+        _tuple_postprocess(outputs, is_outputs_tuple),
+        _tuple_postprocess(jvp, is_outputs_tuple),
+    )
+
+
+def _construct_standard_basis_for(tensors, tensor_numels: Tuple[int, ...]):
+    # This function:
+    # - constructs a N=sum(tensor_numels) standard basis. i.e. an NxN identity matrix.
+    # - Splits the identity matrix into chunks with each chunk size determined by `tensor_numels`.
+    # - Each chunk corresponds to one tensor. The chunk has the same dtype and
+    #   device as the tensor
+    #
+    # For example, with tensor_numels = [1, 2, 1], this function returns:
+    # ( tensor([[1],     tensor([[0, 0],      tensor([[0],
+    #           [0],             [1, 0],              [0],
+    #           [0],             [0, 1],              [0],
+    #           [0]])  ,         [0, 0]])  ,          [1]])  )
+    #
+    # Precondition: tensor_numels == tuple(tensor.numel() for tensor in tensors)
+    # Precondition: tensors always has at least one element.
+    #
+    # See NOTE: [Computing jacobian with vmap and grad for multiple tensors]
+    # for context behind this function. All the pre-conditions are guarded for
+    # in flow.autograd.functional.jacobian.
+    assert len(tensors) == len(tensor_numels)
+    assert len(tensors) > 0
+    total_numel = sum(tensor_numels)
+    chunks = tuple(
+        tensor.new_zeros(total_numel, tensor_numel)
+        for tensor, tensor_numel in zip(tensors, tensor_numels)
+    )
+    diag_start_idx = 0
+    for chunk, numel in zip(chunks, tensor_numels):
+        # fill_ does not support NonContiguous.https://github.com/Oneflow-Inc/oneflow/issues/10394
+        # chunk.diagonal(diag_start_idx).fill_(1)
+        for i in range(numel):
+            chunk[diag_start_idx + i][i] = 1
+        diag_start_idx += numel
+    return chunks
+
+
+def _jacfwd(func, inputs, strict=False, vectorize=False):
+    if strict:
+        raise RuntimeError(
+            "flow.autograd.functional.jacobian: `strict=True` "
+            'and `strategy="forward-mode"` are not supported together (yet). '
+            "Please either set `strict=False` or "
+            '`strategy="reverse-mode"`.'
+        )
+    is_inputs_tuple, inputs = _as_tuple(inputs, "inputs", "jacobian")
+    output_info = []
+
+    if vectorize:
+        # Computing Jacobian does not support vectorize. see issue 10397. https://github.com/Oneflow-Inc/oneflow/issues/10397
+        raise NotImplementedError("Computing Jacobian does not support vectorize. ")
+    else:
+        raise NotImplementedError(
+            "Computing Jacobian using forward-AD or forward-over-reverse Hessian is"
+            "only implemented for `vectorize=True`."
+        )
+
+
+def jacobian(
+    func,
+    inputs,
+    create_graph=False,
+    strict=False,
+    vectorize=False,
+    strategy="reverse-mode",
+):
+    r"""Compute the Jacobian of a given function.
+
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.jacobian.html
+
+    Args:
+        func (function): a Python function that takes Tensor inputs and returns
+            a tuple of Tensors or a Tensor.
+        inputs (tuple of Tensors or Tensor): inputs to the function ``func``.
+        create_graph (bool, optional): If ``True``, the Jacobian will be
+            computed in a differentiable manner. Note that when ``strict`` is
+            ``False``, the result can not require gradients or be disconnected
+            from the inputs.  Defaults to ``False``.
+        strict (bool, optional): If ``True``, an error will be raised when we
+            detect that there exists an input such that all the outputs are
+            independent of it. If ``False``, we return a Tensor of zeros as the
+            jacobian for said inputs, which is the expected mathematical value.
+            Defaults to ``False``.
+        vectorize (bool, optional): This feature is experimental.
+            Please consider using :func:`flow.func.jacrev` or
+            :func:`flow.func.jacfwd` instead if you are looking for something
+            less experimental and more performant.
+            When computing the jacobian, usually we invoke
+            ``autograd.grad`` once per row of the jacobian. If this flag is
+            ``True``, we perform only a single ``autograd.grad`` call with
+            ``batched_grad=True`` which uses the vmap prototype feature.
+            Though this should lead to performance improvements in many cases,
+            because this feature is still experimental, there may be performance
+            cliffs. See :func:`flow.autograd.grad`'s ``batched_grad`` parameter for
+            more information.
+        strategy (str, optional): Set to ``"forward-mode"`` or ``"reverse-mode"`` to
+            determine whether the Jacobian will be computed with forward or reverse
+            mode AD. Currently, ``"forward-mode"`` requires ``vectorized=True``.
+            Defaults to ``"reverse-mode"``. If ``func`` has more outputs than
+            inputs, ``"forward-mode"`` tends to be more performant. Otherwise,
+            prefer to use ``"reverse-mode"``.
+
+    Returns:
+        Jacobian (Tensor or nested tuple of Tensors): if there is a single
+        input and output, this will be a single Tensor containing the
+        Jacobian for the linearized inputs and output. If one of the two is
+        a tuple, then the Jacobian will be a tuple of Tensors. If both of
+        them are tuples, then the Jacobian will be a tuple of tuple of
+        Tensors where ``Jacobian[i][j]`` will contain the Jacobian of the
+        ``i``\th output and ``j``\th input and will have as size the
+        concatenation of the sizes of the corresponding output and the
+        corresponding input and will have same dtype and device as the
+        corresponding input. If strategy is ``forward-mode``, the dtype will be
+        that of the output; otherwise, the input.
+
+    Example:
+
+        >>> # xdoctest: +REQUIRES(env:TORCH_DOCTEST_AUTOGRAD)
+        >>> def exp_reducer(x):
+        ...     return x.exp().sum(dim=1)
+        >>> inputs = flow.rand(2, 2)
+        >>> # xdoctest: +IGNORE_WANT("non-deterministic")
+        >>> jacobian(exp_reducer, inputs)
+        tensor([[[1.4917, 2.4352],
+                 [0.0000, 0.0000]],
+                [[0.0000, 0.0000],
+                 [2.4369, 2.3799]]])
+
+        >>> jacobian(exp_reducer, inputs, create_graph=True)
+        tensor([[[1.4917, 2.4352],
+                 [0.0000, 0.0000]],
+                [[0.0000, 0.0000],
+                 [2.4369, 2.3799]]], grad_fn=<ViewBackward>)
+
+        >>> def exp_adder(x, y):
+        ...     return 2 * x.exp() + 3 * y
+        >>> inputs = (flow.rand(2), flow.rand(2))
+        >>> jacobian(exp_adder, inputs)
+        (tensor([[2.8052, 0.0000],
+                [0.0000, 3.3963]]),
+         tensor([[3., 0.],
+                 [0., 3.]]))
+    """
+    assert strategy in ("forward-mode", "reverse-mode"), (
+        'Expected strategy to be either "forward-mode" or "reverse-mode". Hint: If your '
+        'function has more outputs than inputs, "forward-mode" tends to be more performant. '
+        'Otherwise, prefer to use "reverse-mode".'
+    )
+    if strategy == "forward-mode":
+        if create_graph:
+            raise NotImplementedError(
+                "flow.autograd.functional.jacobian: `create_graph=True` "
+                'and `strategy="forward-mode"` are not supported together (yet). '
+                "Please either set `create_graph=False` or "
+                '`strategy="reverse-mode"`.'
+            )
+        return _jacfwd(func, inputs, strict, vectorize)
+
+    with flow.enable_grad():
+        is_inputs_tuple, inputs = _as_tuple(inputs, "inputs", "jacobian")
+        inputs = _grad_preprocess(inputs, create_graph=create_graph, need_graph=True)
+
+        outputs = func(*inputs)
+        is_outputs_tuple, outputs = _as_tuple(
+            outputs, "outputs of the user-provided function", "jacobian"
+        )
+        _check_requires_grad(outputs, "outputs", strict=strict)
+
+        if vectorize:
+            if strict:
+                raise RuntimeError(
+                    "flow.autograd.functional.jacobian: `strict=True` "
+                    "and `vectorized=True` are not supported together. "
+                    "Please either set `strict=False` or "
+                    "`vectorize=False`."
+                )
+            # NOTE: [Computing jacobian with vmap and grad for multiple outputs]
+            #
+            # Let's consider f(x) = (x**2, x.sum()) and let x = flow.randn(3).
+            # It turns out we can compute the jacobian of this function with a single
+            # call to autograd.grad by using vmap over the correct grad_outputs.
+            #
+            # Firstly, one way to compute the jacobian is to stack x**2 and x.sum()
+            # into a 4D vector. E.g., use g(x) = flow.stack([x**2, x.sum()])
+            #
+            # To get the first row of the jacobian, we call
+            # >>> autograd.grad(g(x), x, grad_outputs=flow.tensor([1, 0, 0, 0]))
+            # To get the 2nd row of the jacobian, we call
+            # >>> autograd.grad(g(x), x, grad_outputs=flow.tensor([0, 1, 0, 0]))
+            # and so on.
+            #
+            # Using vmap, we can vectorize all 4 of these computations into one by
+            # passing the standard basis for R^4 as the grad_output.
+            # vmap(partial(autograd.grad, g(x), x))(flow.eye(4)).
+            #
+            # Now, how do we compute the jacobian *without stacking the output*?
+            # We can just split the standard basis across the outputs. So to
+            # compute the jacobian of f(x), we'd use
+            # >>> autograd.grad(f(x), x, grad_outputs=_construct_standard_basis_for(...))
+            # The grad_outputs looks like the following:
+            # ( flow.tensor([[1, 0, 0],
+            #                 [0, 1, 0],
+            #                 [0, 0, 1],
+            #                 [0, 0, 0]]),
+            #   flow.tensor([[0],
+            #                 [0],
+            #                 [0],
+            #                 [1]]) )
+            #
+            # But we're not done yet!
+            # >>> vmap(partial(autograd.grad(f(x), x, grad_outputs=...)))
+            # returns a Tensor of shape [4, 3]. We have to remember to split the
+            # jacobian of shape [4, 3] into two:
+            # - one of shape [3, 3] for the first output
+            # - one of shape [   3] for the second output
+
+            # Step 1: Construct grad_outputs by splitting the standard basis
+            output_numels = tuple(output.numel() for output in outputs)
+            grad_outputs = _construct_standard_basis_for(outputs, output_numels)
+            flat_outputs = tuple(output.reshape(-1) for output in outputs)
+
+            # Step 2: Call vmap + autograd.grad
+            def vjp(grad_output):
+                vj = list(
+                    _autograd_grad(
+                        flat_outputs, inputs, grad_output, create_graph=create_graph,
+                    )
+                )
+                for el_idx, vj_el in enumerate(vj):
+                    if vj_el is not None:
+                        continue
+                    vj[el_idx] = flow.zeros_like(inputs[el_idx]).expand(
+                        (sum(output_numels),) + inputs[el_idx].shape
+                    )
+                return tuple(vj)
+
+            jacobians_of_flat_output = vjp(grad_outputs)
+
+            # Step 3: The returned jacobian is one big tensor per input. In this step,
+            # we split each Tensor by output.
+            jacobian_input_output = []
+            for jac_input_i, input_i in zip(jacobians_of_flat_output, inputs):
+                jacobian_input_i_output = []
+                for jac, output_j in zip(
+                    jac_input_i.split(output_numels, dim=0), outputs
+                ):
+                    jacobian_input_i_output_j = jac.view(output_j.shape + input_i.shape)
+                    jacobian_input_i_output.append(jacobian_input_i_output_j)
+                jacobian_input_output.append(jacobian_input_i_output)
+
+            # Step 4: Right now, `jacobian` is a List[List[Tensor]].
+            # The outer List corresponds to the number of inputs,
+            # the inner List corresponds to the number of outputs.
+            # We need to exchange the order of these and convert to tuples
+            # before returning.
+            jacobian_output_input = tuple(zip(*jacobian_input_output))
+
+            jacobian_output_input = _grad_postprocess(
+                jacobian_output_input, create_graph
+            )
+            return _tuple_postprocess(
+                jacobian_output_input, (is_outputs_tuple, is_inputs_tuple)
+            )
+
+        jacobian: Tuple[flow.Tensor, ...] = tuple()
+
+        for i, out in enumerate(outputs):
+            # mypy complains that expression and variable have different types due to the empty list
+            jac_i: Tuple[List[flow.Tensor]] = tuple([] for _ in range(len(inputs)))  # type: ignore[assignment]
+            for j in range(out.nelement()):
+                vj = _autograd_grad(
+                    (out.reshape(-1)[j],),
+                    inputs,
+                    retain_graph=True,
+                    create_graph=create_graph,
+                )
+
+                for el_idx, (jac_i_el, vj_el, inp_el) in enumerate(
+                    zip(jac_i, vj, inputs)
+                ):
+                    if vj_el is not None:
+                        if strict and create_graph and not vj_el.requires_grad:
+                            msg = (
+                                "The jacobian of the user-provided function is "
+                                f"independent of input {i}. This is not allowed in "
+                                "strict mode when create_graph=True."
+                            )
+                            raise RuntimeError(msg)
+                        jac_i_el.append(vj_el)
+                    else:
+                        if strict:
+                            msg = (
+                                f"Output {i} of the user-provided function is "
+                                f"independent of input {el_idx}. This is not allowed in "
+                                "strict mode."
+                            )
+                            raise RuntimeError(msg)
+                        jac_i_el.append(flow.zeros_like(inp_el))
+
+            jacobian += (
+                tuple(
+                    flow.stack(jac_i_el, dim=0).view(
+                        out.size() + inputs[el_idx].size()  # type: ignore[operator]
+                    )
+                    for (el_idx, jac_i_el) in enumerate(jac_i)
+                ),
+            )
+
+        jacobian = _grad_postprocess(jacobian, create_graph)
+
+        return _tuple_postprocess(jacobian, (is_outputs_tuple, is_inputs_tuple))
+
+
+def hessian(
+    func,
+    inputs,
+    create_graph=False,
+    strict=False,
+    vectorize=False,
+    outer_jacobian_strategy="reverse-mode",
+):
+    r"""Compute the Hessian of a given scalar function.
+
+        The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.hessian.html
+
+    Args:
+        func (function): a Python function that takes Tensor inputs and returns
+            a Tensor with a single element.
+        inputs (tuple of Tensors or Tensor): inputs to the function ``func``.
+        create_graph (bool, optional): If ``True``, the Hessian will be computed in
+            a differentiable manner. Note that when ``strict`` is ``False``, the result can not
+            require gradients or be disconnected from the inputs.
+            Defaults to ``False``.
+        strict (bool, optional): If ``True``, an error will be raised when we detect that there exists an input
+            such that all the outputs are independent of it. If ``False``, we return a Tensor of zeros as the
+            hessian for said inputs, which is the expected mathematical value.
+            Defaults to ``False``.
+        vectorize (bool, optional): This feature is experimental.
+            Please consider using :func:`flow.func.hessian`
+            instead if you are looking for something less experimental and more performant.
+            When computing the hessian, usually we invoke
+            ``autograd.grad`` once per row of the hessian. If this flag is
+            ``True``, we use the vmap prototype feature as the backend to
+            vectorize calls to ``autograd.grad`` so we only invoke it once
+            instead of once per row. This should lead to performance
+            improvements in many use cases, however, due to this feature
+            being incomplete, there may be performance cliffs. Please
+            use `flow._C._debug_only_display_vmap_fallback_warnings(True)`
+            to show any performance warnings and file us issues if
+            warnings exist for your use case. Defaults to ``False``.
+        outer_jacobian_strategy (str, optional): The Hessian is computed by
+            computing the Jacobian of a Jacobian. The inner Jacobian is always
+            computed in reverse-mode AD. Setting strategy to ``"forward-mode"``
+            or ``"reverse-mode"`` determines whether the outer Jacobian will be
+            computed with forward or reverse mode AD. Currently, computing the outer
+            Jacobian in ``"forward-mode"`` requires ``vectorized=True``. Defaults
+            to ``"reverse-mode"``.
+
+    Returns:
+        Hessian (Tensor or a tuple of tuple of Tensors): if there is a single input,
+        this will be a single Tensor containing the Hessian for the input.
+        If it is a tuple, then the Hessian will be a tuple of tuples where
+        ``Hessian[i][j]`` will contain the Hessian of the ``i``\th input
+        and ``j``\th input with size the sum of the size of the ``i``\th input plus
+        the size of the ``j``\th input. ``Hessian[i][j]`` will have the same
+        dtype and device as the corresponding ``i``\th input.
+
+    Example:
+
+        >>> # xdoctest: +REQUIRES(env:TORCH_DOCTEST_AUTOGRAD)
+        >>> def pow_reducer(x):
+        ...     return x.pow(3).sum()
+        >>> inputs = flow.rand(2, 2)
+        >>> # xdoctest: +IGNORE_WANT("non-deterministic")
+        >>> hessian(pow_reducer, inputs)
+        tensor([[[[5.2265, 0.0000],
+                  [0.0000, 0.0000]],
+                 [[0.0000, 4.8221],
+                  [0.0000, 0.0000]]],
+                [[[0.0000, 0.0000],
+                  [1.9456, 0.0000]],
+                 [[0.0000, 0.0000],
+                  [0.0000, 3.2550]]]])
+
+        >>> hessian(pow_reducer, inputs, create_graph=True)
+        tensor([[[[5.2265, 0.0000],
+                  [0.0000, 0.0000]],
+                 [[0.0000, 4.8221],
+                  [0.0000, 0.0000]]],
+                [[[0.0000, 0.0000],
+                  [1.9456, 0.0000]],
+                 [[0.0000, 0.0000],
+                  [0.0000, 3.2550]]]], grad_fn=<ViewBackward>)
+
+
+        >>> def pow_adder_reducer(x, y):
+        ...     return (2 * x.pow(2) + 3 * y.pow(2)).sum()
+        >>> inputs = (flow.rand(2), flow.rand(2))
+        >>> hessian(pow_adder_reducer, inputs)
+        ((tensor([[4., 0.],
+                  [0., 4.]]),
+          tensor([[0., 0.],
+                  [0., 0.]])),
+         (tensor([[0., 0.],
+                  [0., 0.]]),
+          tensor([[6., 0.],
+                  [0., 6.]])))
+    """
+    is_inputs_tuple, inputs = _as_tuple(inputs, "inputs", "hessian")
+    assert outer_jacobian_strategy in (
+        "forward-mode",
+        "reverse-mode",
+    ), 'Expected strategy to be either "forward-mode" or "reverse-mode".'
+
+    def ensure_single_output_function(*inp):
+        out = func(*inp)
+        is_out_tuple, t_out = _as_tuple(
+            out, "outputs of the user-provided function", "hessian"
+        )
+        _check_requires_grad(t_out, "outputs", strict=strict)
+
+        if is_out_tuple or not isinstance(out, flow.Tensor):
+            raise RuntimeError(
+                "The function given to hessian should return a single Tensor"
+            )
+
+        if out.nelement() != 1:
+            raise RuntimeError(
+                "The Tensor returned by the function given to hessian should contain a single element"
+            )
+
+        return out.squeeze()
+
+    def jac_func(*inp):
+        if outer_jacobian_strategy == "forward-mode":
+            # _grad_preprocess requires create_graph=True and input to require_grad
+            # or else the input will be detached
+            inp = tuple(t.requires_grad_(True) for t in inp)
+        jac = jacobian(ensure_single_output_function, inp, create_graph=True)
+        _check_requires_grad(jac, "jacobian", strict=strict)
+        return jac
+
+    res = jacobian(
+        jac_func,
+        inputs,
+        create_graph=create_graph,
+        strict=strict,
+        vectorize=vectorize,
+        strategy=outer_jacobian_strategy,
+    )
+    return _tuple_postprocess(res, (is_inputs_tuple, is_inputs_tuple))
+
+
+def vhp(func, inputs, v=None, create_graph=False, strict=False):
+    r"""Compute the dot product between vector ``v`` and Hessian of a  given scalar function at a specified point.
+
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.vhp.html
+
+    Args:
+        func (function): a Python function that takes Tensor inputs and returns
+            a Tensor with a single element.
+        inputs (tuple of Tensors or Tensor): inputs to the function ``func``.
+        v (tuple of Tensors or Tensor): The vector for which the vector Hessian
+            product is computed. Must be the same size as the input of
+            ``func``. This argument is optional when ``func``'s input contains
+            a single element and (if it is not provided) will be set as a
+            Tensor containing a single ``1``.
+        create_graph (bool, optional): If ``True``, both the output and result
+            will be computed in a differentiable way. Note that when ``strict``
+            is ``False``, the result can not require gradients or be
+            disconnected from the inputs.
+            Defaults to ``False``.
+        strict (bool, optional): If ``True``, an error will be raised when we
+            detect that there exists an input such that all the outputs are
+            independent of it. If ``False``, we return a Tensor of zeros as the
+            vhp for said inputs, which is the expected mathematical value.
+            Defaults to ``False``.
+
+    Returns:
+        output (tuple): tuple with:
+            func_output (tuple of Tensors or Tensor): output of ``func(inputs)``
+
+            vhp (tuple of Tensors or Tensor): result of the dot product with the
+            same shape as the inputs.
+
+    Example:
+
+        >>> # xdoctest: +REQUIRES(env:TORCH_DOCTEST_AUTOGRAD)
+        >>> def pow_reducer(x):
+        ...     return x.pow(3).sum()
+        >>> inputs = flow.rand(2, 2)
+        >>> v = flow.ones(2, 2)
+        >>> # xdoctest: +IGNORE_WANT("non-deterministic")
+        >>> vhp(pow_reducer, inputs, v)
+        (tensor(0.5591),
+         tensor([[1.0689, 1.2431],
+                 [3.0989, 4.4456]]))
+        >>> vhp(pow_reducer, inputs, v, create_graph=True)
+        (tensor(0.5591, grad_fn=<SumBackward0>),
+         tensor([[1.0689, 1.2431],
+                 [3.0989, 4.4456]], grad_fn=<MulBackward0>))
+        >>> def pow_adder_reducer(x, y):
+        ...     return (2 * x.pow(2) + 3 * y.pow(2)).sum()
+        >>> inputs = (flow.rand(2), flow.rand(2))
+        >>> v = (flow.zeros(2), flow.ones(2))
+        >>> vhp(pow_adder_reducer, inputs, v)
+        (tensor(4.8053),
+         (tensor([0., 0.]),
+          tensor([6., 6.])))
+    """
+    with flow.enable_grad():
+        is_inputs_tuple, inputs = _as_tuple(inputs, "inputs", "vhp")
+        inputs = _grad_preprocess(inputs, create_graph=create_graph, need_graph=True)
+
+        if v is not None:
+            _, v = _as_tuple(v, "v", "vhp")
+            v = _grad_preprocess(v, create_graph=create_graph, need_graph=False)
+            _validate_v(v, inputs, is_inputs_tuple)
+        else:
+            if len(inputs) != 1 or inputs[0].nelement() != 1:
+                raise RuntimeError(
+                    "The vector v can only be None if the input to the user-provided function "
+                    "is a single Tensor with a single element."
+                )
+        outputs = func(*inputs)
+        is_outputs_tuple, outputs = _as_tuple(
+            outputs, "outputs of the user-provided function", "vhp"
+        )
+        _check_requires_grad(outputs, "outputs", strict=strict)
+
+        if is_outputs_tuple or not isinstance(outputs[0], flow.Tensor):
+            raise RuntimeError(
+                "The function given to vhp should return a single Tensor"
+            )
+
+        if outputs[0].nelement() != 1:
+            raise RuntimeError(
+                "The Tensor returned by the function given to vhp should contain a single element"
+            )
+
+        jac = _autograd_grad(outputs, inputs, create_graph=True)
+        _check_requires_grad(jac, "jacobian", strict=strict)
+
+    enable_grad = True if create_graph else flow.is_grad_enabled()
+    with flow.set_grad_enabled(enable_grad):
+        grad_res = _autograd_grad(jac, inputs, v, create_graph=create_graph)
+        vhp = _fill_in_zeros(grad_res, inputs, strict, create_graph, "double_back")
+
+    outputs = _grad_postprocess(outputs, create_graph)
+    vhp = _grad_postprocess(vhp, create_graph)
+
+    return (
+        _tuple_postprocess(outputs, is_outputs_tuple),
+        _tuple_postprocess(vhp, is_inputs_tuple),
+    )
+
+
+def hvp(func, inputs, v=None, create_graph=False, strict=False):
+    r"""Compute the dot product between the scalar function's Hessian and a vector ``v`` at a specified point.
+
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.autograd.functional.hvp.html
+
+    Args:
+        func (function): a Python function that takes Tensor inputs and returns
+            a Tensor with a single element.
+        inputs (tuple of Tensors or Tensor): inputs to the function ``func``.
+        v (tuple of Tensors or Tensor): The vector for which the Hessian vector
+            product is computed. Must be the same size as the input of
+            ``func``. This argument is optional when ``func``'s input contains
+            a single element and (if it is not provided) will be set as a
+            Tensor containing a single ``1``.
+        create_graph (bool, optional): If ``True``, both the output and result will be
+            computed in a differentiable way. Note that when ``strict`` is
+            ``False``, the result can not require gradients or be disconnected
+            from the inputs.  Defaults to ``False``.
+        strict (bool, optional): If ``True``, an error will be raised when we
+            detect that there exists an input such that all the outputs are
+            independent of it. If ``False``, we return a Tensor of zeros as the
+            hvp for said inputs, which is the expected mathematical value.
+            Defaults to ``False``.
+    Returns:
+        output (tuple): tuple with:
+            func_output (tuple of Tensors or Tensor): output of ``func(inputs)``
+
+            hvp (tuple of Tensors or Tensor): result of the dot product with
+            the same shape as the inputs.
+
+    Example:
+
+        >>> # xdoctest: +REQUIRES(env:TORCH_DOCTEST_AUTOGRAD)
+        >>> def pow_reducer(x):
+        ...     return x.pow(3).sum()
+        >>> inputs = flow.rand(2, 2)
+        >>> v = flow.ones(2, 2)
+        >>> # xdoctest: +IGNORE_WANT("non-deterministic")
+        >>> hvp(pow_reducer, inputs, v)
+        (tensor(0.1448),
+         tensor([[2.0239, 1.6456],
+                 [2.4988, 1.4310]]))
+
+        >>> hvp(pow_reducer, inputs, v, create_graph=True)
+        (tensor(0.1448, grad_fn=<SumBackward0>),
+         tensor([[2.0239, 1.6456],
+                 [2.4988, 1.4310]], grad_fn=<MulBackward0>))
+
+
+        >>> def pow_adder_reducer(x, y):
+        ...     return (2 * x.pow(2) + 3 * y.pow(2)).sum()
+        >>> inputs = (flow.rand(2), flow.rand(2))
+        >>> v = (flow.zeros(2), flow.ones(2))
+        >>> hvp(pow_adder_reducer, inputs, v)
+        (tensor(2.3030),
+         (tensor([0., 0.]),
+          tensor([6., 6.])))
+
+    Note:
+
+        This function is significantly slower than `vhp` due to backward mode AD constraints.
+        If your functions is twice continuously differentiable, then hvp = vhp.t(). So if you
+        know that your function satisfies this condition, you should use vhp instead that is
+        much faster with the current implementation.
+
+    """
+    with flow.enable_grad():
+        is_inputs_tuple, inputs = _as_tuple(inputs, "inputs", "hvp")
+        inputs = _grad_preprocess(inputs, create_graph=create_graph, need_graph=True)
+
+        if v is not None:
+            _, v = _as_tuple(v, "v", "hvp")
+            v = _grad_preprocess(v, create_graph=create_graph, need_graph=False)
+            _validate_v(v, inputs, is_inputs_tuple)
+        else:
+            if len(inputs) != 1 or inputs[0].nelement() != 1:
+                raise RuntimeError(
+                    "The vector v can only be None if the input to the user-provided function "
+                    "is a single Tensor with a single element."
+                )
+        outputs = func(*inputs)
+        is_outputs_tuple, outputs = _as_tuple(
+            outputs, "outputs of the user-provided function", "hvp"
+        )
+        _check_requires_grad(outputs, "outputs", strict=strict)
+
+        if is_outputs_tuple or not isinstance(outputs[0], flow.Tensor):
+            raise RuntimeError(
+                "The function given to hvp should return a single Tensor"
+            )
+
+        if outputs[0].nelement() != 1:
+            raise RuntimeError(
+                "The Tensor returned by the function given to hvp should contain a single element"
+            )
+
+        jac = _autograd_grad(outputs, inputs, create_graph=True)
+        _check_requires_grad(jac, "jacobian", strict=strict)
+
+        grad_jac = tuple(flow.zeros_like(inp, requires_grad=True) for inp in inputs)
+
+        double_back = _autograd_grad(jac, inputs, grad_jac, create_graph=True)
+        _check_requires_grad(jac, "hessian", strict=strict)
+
+    enable_grad = True if create_graph else flow.is_grad_enabled()
+    with flow.set_grad_enabled(enable_grad):
+        grad_res = _autograd_grad(double_back, grad_jac, v, create_graph=create_graph)
+        hvp = _fill_in_zeros(
+            grad_res, inputs, strict, create_graph, "double_back_trick"
+        )
+
+    outputs = _grad_postprocess(outputs, create_graph)
+    hvp = _grad_postprocess(hvp, create_graph)
+
+    return (
+        _tuple_postprocess(outputs, is_outputs_tuple),
+        _tuple_postprocess(hvp, is_inputs_tuple),
     )

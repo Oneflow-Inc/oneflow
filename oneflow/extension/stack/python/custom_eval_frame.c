@@ -21,6 +21,7 @@ limitations under the License.
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#undef _PyGC_FINALIZED
 #include <frameobject.h>
 #include <pystate.h>
 // see https://bugs.python.org/issue35886
@@ -42,6 +43,6 @@ inline static void EnableCustomEvalFrame(PyThreadState* tstate, _PyFrameEvalFunc
 #endif
 }
 
-void EnableCustomEvalFrameForCurrentThread(_PyFrameEvalFunction eval_func) {
+void EnableCustomEvalFrameForCurrentThread(PyFrameEvalFunc eval_func) {
   return EnableCustomEvalFrame(PyThreadState_GET(), eval_func);
 }

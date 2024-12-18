@@ -23,6 +23,12 @@ on:
         required: false
         type: string
         default: "main"
+      upload_override_branch:
+        required: false
+        type: string
+      cuda_cmake_cache:
+        required: false
+        type: string
     secrets:
       ONEFLOW_PRIV_ORG:
         required: true
@@ -34,6 +40,8 @@ on:
         required: true
       OSS_ACCESS_KEY_SECRET:
         required: true
+      ONEFLOW_CI_HTTP_PROXY:
+        required: false
 concurrency:
   group: release-${{ github.ref }}-${{ inputs.branch }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
@@ -90,6 +98,7 @@ jobs:
       GITHUB_REF_NAME: ${{ github.ref_name }}
       GITHUB_SHA: ${{ github.sha }}
       ONEFLOW_OSS_BUCKET: oneflow-staging
+      https_proxy: ${{ secrets.ONEFLOW_CI_HTTP_PROXY }}
     needs: [generate-build-matrix]
     name: Staging Release
     timeout-minutes: 240
@@ -132,8 +141,8 @@ jobs:
         if: ${{ inputs.is_priv }}
         run: |
           GITHUB_SHA=$(git rev-parse HEAD)
-          echo "OSS_DIR=branch/${{ inputs.branch }}/${{ matrix.entry }}/${GITHUB_SHA}" >> $GITHUB_ENV
-          echo "GITHUB_REF_NAME=${{ inputs.branch }}" >> $GITHUB_ENV
+          echo "OSS_DIR=branch/${{ inputs.upload_override_branch || inputs.branch }}/${{ matrix.entry }}/${GITHUB_SHA}" >> $GITHUB_ENV
+          echo "GITHUB_REF_NAME=${{ inputs.upload_override_branch || inputs.branch }}" >> $GITHUB_ENV
           echo "GITHUB_SHA=${GITHUB_SHA}" >> $GITHUB_ENV
           echo "ONEFLOW_OSS_BUCKET=${{ secrets.ONEFLOW_PRIV_OSS_BUCKET }}" >> $GITHUB_ENV
       - name: Print env
@@ -144,7 +153,7 @@ jobs:
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cu118' || startsWith(matrix.entry, 'cu12') }}
         with:
-          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cu118.cmake
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/${{ inputs.cuda_cmake_cache || 'cmake/caches/ci/release/cu118.cmake' }}
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           oneflow-build-env: manylinux
@@ -157,10 +166,11 @@ jobs:
           docker-run-use-lld: false
           retry-failed-build: true
           clean-ccache: true
-          nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
+          nightly: ${{ inputs.is_priv || github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
+            3.12
             3.11
             3.10
             3.9
@@ -182,10 +192,11 @@ jobs:
           docker-run-use-lld: false
           retry-failed-build: true
           clean-ccache: true
-          nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
+          nightly: ${{ inputs.is_priv || github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
+            3.12
             3.11
             3.10
             3.9
@@ -207,9 +218,10 @@ jobs:
           docker-run-use-lld: false
           retry-failed-build: true
           clean-ccache: false
-          nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
+          nightly: ${{ inputs.is_priv || github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           python-versions: |
+            3.12
             3.11
             3.10
             3.9

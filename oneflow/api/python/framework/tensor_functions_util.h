@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <Python.h>
+#undef _PyGC_FINALIZED
 #include <string>
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/functional/common.h"

@@ -48,7 +48,8 @@ bool IsScalarTensor(const one::Tensor& tensor) {
 // If output is a scalar tensor, out_grad will also be a scaler or empty(will be initted to
 // `oneflow.ones([1])`).
 Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
-                                             const one::TensorTuple& out_grads) {
+                                             const one::TensorTuple& out_grads,
+                                             bool is_grads_batched) {
   size_t grad_size = out_grads.empty() ? outputs.size() : out_grads.size();
   auto gradients = std::make_shared<one::TensorTuple>(grad_size);
   CHECK_EQ_OR_RETURN(outputs.size(), gradients->size())
@@ -65,14 +66,27 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
              "https://github.com/Oneflow-Inc/oneflow/issues";
       JUST(one::AddAccumulateFunctionNode(outputs.at(i)));
     }
-    if (out_grads.empty()) {
+    if (out_grads.empty() || !out_grads.at(i)) {
       CHECK_OR_RETURN(IsScalarTensor(*outputs.at(i)))
           << "Grad can be implicitly created only for scalar outputs";
       gradients->at(i) = JUST(one::functional::OnesLike(outputs.at(i)));
     } else {
-      CHECK_OR_RETURN(*(outputs.at(i)->shape()) == *(out_grads.at(i)->shape()))
-          << "out_grad's shape must be same as output's (" << outputs.at(i)->shape()->ToString()
-          << " vs " << out_grads.at(i)->shape()->ToString() << ")";
+      if (is_grads_batched) {
+        if (*(outputs.at(i)->shape()) != *JUST(out_grads.at(i)->shape()->Slice(1))) {
+          THROW(RuntimeError) << "If `is_grads_batched=True`, we interpret the first "
+                              << "dimension of each grad_output as the batch dimension. "
+                              << "The sizes of the remaining dimensions are expected to match "
+                              << "the shape of corresponding output, but a mismatch "
+                              << "was detected: grad_output[" << i << "] has a shape of "
+                              << out_grads.at(i)->shape()->ToString() << " and output[" << i
+                              << "] has a shape of " << outputs.at(i)->shape()->ToString() << ".";
+        }
+
+      } else {
+        CHECK_EQ_OR_RETURN(*(outputs.at(i)->shape()), *(out_grads.at(i)->shape()))
+            << "out_grad's shape must be same as output's (" << outputs.at(i)->shape()->ToString()
+            << " vs " << out_grads.at(i)->shape()->ToString() << ")";
+      }
       if (JUST(oneflow::VectorAt(outputs, i))->dtype()
           != JUST(oneflow::VectorAt(out_grads, i))->dtype()) {
         JUST(oneflow::VectorAt(*gradients, i)) =
@@ -93,7 +107,8 @@ Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::Ten
   PythonFrameGuard pf;
   BackwardPassScopeGuard backward_guard;
   if (create_graph) { retain_graph = true; }
-  std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
+  std::shared_ptr<one::TensorTuple> gradients =
+      JUST(CheckAndInitOutGrads(outputs, out_grads, /*is_grads_batched=*/false));
   JUST(one::GetThreadLocalAutogradEngine()->RunBackwardAndSaveGrads4LeafTensorIf(
       outputs, *gradients, retain_graph, create_graph));
   return std::make_shared<one::TensorTuple>(0);
@@ -101,7 +116,7 @@ Maybe<one::TensorTuple> Backward(const one::TensorTuple& outputs, const one::Ten
 
 Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorTuple& inputs,
                              const one::TensorTuple& out_grads, bool retain_graph,
-                             bool create_graph, bool allow_unused) {
+                             bool create_graph, bool allow_unused, bool is_grads_batched) {
   PythonFrameGuard pf;
   BackwardPassScopeGuard backward_guard;
   if (create_graph) { retain_graph = true; }
@@ -110,7 +125,8 @@ Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorT
       inputs.begin(), inputs.end(),
       [](const std::shared_ptr<one::Tensor>& tensor) { return tensor->requires_grad(); }))
       << "All input tensors `.requires_grad` should be true";
-  std::shared_ptr<one::TensorTuple> gradients = JUST(CheckAndInitOutGrads(outputs, out_grads));
+  std::shared_ptr<one::TensorTuple> gradients =
+      JUST(CheckAndInitOutGrads(outputs, out_grads, is_grads_batched));
   return one::GetThreadLocalAutogradEngine()->RunBackwardAndReturnInputsTensorGradIf(
       outputs, inputs, *gradients, retain_graph, create_graph, allow_unused);
 }

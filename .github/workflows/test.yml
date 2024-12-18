@@ -72,7 +72,7 @@ jobs:
           then
             exit 0
           fi
-          python3 -m pip install -U pip setuptools wheel
+          python3 -m pip install -U pip "setuptools<=68.2.2" wheel
           python3 -m pip install 'cryptography<2.2' oss2
           python3 tools/package_mirror.py -i $PWD
 
@@ -139,7 +139,7 @@ jobs:
           git push
       - name: Upload patch
         if: ${{ failure() && steps.git_push.outcome == 'failure' }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: license_and_format-${{ github.sha }}.patch
           path: license_and_format.patch
@@ -209,6 +209,10 @@ jobs:
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/${{ matrix.entry }}
       WHEELHOUSE_DIR: manylinux-wheelhouse
     steps:
+      - name: Set proxy
+        if: ${{ contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          echo "https_proxy=${{ secrets.ONEFLOW_CI_HTTP_PROXY }}" >> $GITHUB_ENV
       - name: Fix permissions
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -649,6 +653,10 @@ jobs:
       TEST_MANYLINUX_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/manylinux2014_x86_64_cuda11.8:6455f9b8154333333e6285fde3747aaac4a92929
       METRICS_DIR: metrics
     steps:
+      - name: Set proxy
+        if: ${{ contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          echo "https_proxy=${{ secrets.ONEFLOW_CI_HTTP_PROXY }}" >> $GITHUB_ENV
       - name: Fix permissions
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |

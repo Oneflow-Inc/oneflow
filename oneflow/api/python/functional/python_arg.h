@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <pybind11/pybind11.h>
 #include <Python.h>
+#undef _PyGC_FINALIZED
 
 #include "oneflow/core/common/throw.h"
 #include "oneflow/api/python/functional/value_types.h"

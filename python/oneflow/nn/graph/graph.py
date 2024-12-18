@@ -277,7 +277,7 @@ class Graph(object):
             Donot override this function.
         """
         # For cache cache graphs with dynamic input shape.
-        if self._run_with_cache == True:
+        if self._run_with_cache:
             return self._dynamic_input_graph_cache(*args, **kwargs)
 
         if not self._is_compiled:
@@ -844,7 +844,7 @@ class Graph(object):
         return a_graph
 
     def _compile(self, *args, **kwargs):
-        if self._run_with_cache == True:
+        if self._run_with_cache:
             return self._dynamic_input_graph_cache._compile(*args, **kwargs)
 
         if not self._is_compiled:
@@ -909,7 +909,7 @@ class Graph(object):
         # Filter to get unique states in graph
         state_op_names = self._filter_states()
         # Generate new config.
-        if self._shared_graph._is_from_runtime_state_dict == True:
+        if self._shared_graph._is_from_runtime_state_dict:
             # To avoid same graph name with the loaded graphs.
             self._name = (
                 self._name + "_of_shared_from_loaded_" + self._shared_graph.name
@@ -1046,7 +1046,7 @@ class Graph(object):
         Dict[str, Union[Dict[str, Tensor], str]],
         Dict[str, Dict[str, Union[Dict[str, Tensor], str]]],
     ]:
-        if self._run_with_cache == True:
+        if self._run_with_cache:
             return self._dynamic_input_graph_cache.runtime_state_dict(
                 with_eager=with_eager
             )
@@ -1135,7 +1135,7 @@ class Graph(object):
             destination["states"] = states_sub_destination
 
         destination["exe_plan"] = self._c_nn_graph.plan
-        if self._enable_shared_from_this == True:
+        if self._enable_shared_from_this:
             destination["forward_graph"] = self._forward_job_proto
             destination["compile_graph"] = self._compiled_job_proto
 
@@ -1152,7 +1152,7 @@ class Graph(object):
         *,
         warmup_with_run: bool = True,
     ) -> None:
-        if self._run_with_cache == True:
+        if self._run_with_cache:
             return self._dynamic_input_graph_cache.load_runtime_state_dict(
                 state_dict, warmup_with_run=warmup_with_run
             )
@@ -1225,7 +1225,7 @@ class Graph(object):
         self._eager_outputs = _eager_outputs
 
         # The base graph need extra info to create new shared graph
-        if self._enable_shared_from_this == True:
+        if self._enable_shared_from_this:
             self._forward_job_proto = state_dict["forward_graph"]
             self._compiled_job_proto = state_dict["compile_graph"]
             self._build_eager_outputs = self._eager_outputs

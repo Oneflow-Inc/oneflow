@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FRAMEWORK_SIZE_H_
 #include <type_traits>
 #include <Python.h>
+#undef _PyGC_FINALIZED
 #include <pybind11/pybind11.h>
 #include "oneflow/core/common/shape.h"
 

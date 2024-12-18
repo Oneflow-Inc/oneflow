@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_INDEXING_H_
 
 #include <Python.h>
+#undef _PyGC_FINALIZED
 
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/core/common/maybe.h"
