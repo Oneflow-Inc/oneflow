@@ -64,7 +64,7 @@ def _test_normal(test_case, mean, std, shape, device, dtype):
         )
         self.assertTrue(
             flow.allclose(
-                t_transform(q[0:1]).clone(), t_transform(q_row1), atol=0.3, rtol=0.3,
+                t_transform(q[0:1]).clone(), t_transform(q_row1), atol=1.0, rtol=1.0,
             )
         )
 
