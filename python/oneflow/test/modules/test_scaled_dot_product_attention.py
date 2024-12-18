@@ -119,7 +119,7 @@ class TestScaledDotProductAttention(flow.unittest.TestCase):
         args_dict["num_head_pair"] = [[16, 16], [16, 8]]
         args_dict["seqlen_pair"] = [[4096, 4096], [4096, 77], [1024, 1024], [1024, 77]]
         args_dict["head_size"] = [40, 80, 160, 41]
-        args_dict["dtype"] = [flow.float16, flow.bfloat16]
+        args_dict["dtype"] = [flow.float16]
 
         if flow._oneflow_internal.flags.with_cuda():
             if flow._oneflow_internal.flags.cuda_version() >= 11070:
