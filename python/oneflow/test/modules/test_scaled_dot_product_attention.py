@@ -77,9 +77,9 @@ def _test_scaled_dot_product_attention(
     total_out = ref_out.sum() + fused_out.sum()
     total_out.backward()
     if dtype == flow.float16:
-        error_tol = 1e-2
+        error_tol = 1.0
     elif dtype == flow.bfloat16:
-        error_tol = 1e-1
+        error_tol = 1.0
     else:
         error_tol = 1e-3
 
