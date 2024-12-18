@@ -34,7 +34,7 @@ jobs:
       ONEFLOW_SRC: .
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/canary-cu112
       WHEELHOUSE_DIR: manylinux-wheelhouse
-      COMPUTE_PLATFORM: cu117
+      COMPUTE_PLATFORM: cu118
       OSS_BUCKET: oneflow-staging
       OSS_WHEEL_HOUSE_DIR: ${{ matrix.entry }}/commit/${{ github.sha }}
       OSS_GITHUB_REF_DIR: ${{ matrix.entry }}/${{ github.ref }}
