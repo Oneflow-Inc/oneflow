@@ -36,6 +36,10 @@ def empty_op(
 
     shape = _single(_handle_size_arg(size))
 
+    assert all(
+        s >= 0 for s in shape
+    ), f"Trying to create tensor with negative dimension: {shape}"
+
     if dtype is None:
         dtype = flow.get_default_dtype()
     if placement is not None:

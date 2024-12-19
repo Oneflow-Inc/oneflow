@@ -674,6 +674,10 @@ class AdaptiveAvgPool1d(Module):
         super().__init__()
         assert output_size is not None, "'output_size' cannot be NoneType"
         self.output_size = _single(output_size)
+        assert len(self.output_size) == 1, "'output_size' should contain one int"
+        assert (
+            self.output_size[0] is None or self.output_size[0] >= 0
+        ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
 
     def forward(self, x):
         assert (
@@ -741,6 +745,10 @@ class AdaptiveAvgPool2d(Module):
         super().__init__()
         assert output_size is not None, "'output_size' cannot be NoneType"
         self.output_size = _pair(output_size)
+        assert len(self.output_size) == 2, "'output_size' must be 2"
+        assert (self.output_size[0] is None or self.output_size[0] >= 0) and (
+            self.output_size[1] is None or self.output_size[1] >= 0
+        ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
         if data_format:
             if not data_format in ["channels_first", "channels_last"]:
                 raise ValueError(
@@ -824,6 +832,12 @@ class AdaptiveAvgPool3d(Module):
         super().__init__()
         assert output_size is not None, "'output_size' cannot be NoneType"
         self.output_size = _triple(output_size)
+        assert len(self.output_size) == 3, "'output_size' must be 3"
+        assert (
+            (self.output_size[0] is None or self.output_size[0] >= 0)
+            and (self.output_size[1] is None or self.output_size[1] >= 0)
+            and (self.output_size[2] is None or self.output_size[2] >= 0)
+        ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
 
     def forward(self, x):
         assert (
@@ -892,6 +906,9 @@ class AdaptiveMaxPool1d(_AdaptiveMaxPoolNd):
         assert (
             len(input.shape) == 3 and len(self.output_size) == 1
         ), "the length of 'output_size' does not match the input size, 1 expected"
+        assert (
+            self.output_size[0] is None or self.output_size[0] >= 0
+        ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
         new_output_size = _generate_output_size(input.shape, self.output_size)
         return flow.nn.functional.adaptive_max_pool1d(
             input, self.output_size, self.return_indices
@@ -964,6 +981,10 @@ class AdaptiveMaxPool2d(_AdaptiveMaxPoolNd):
         assert (
             len(input.shape) == 4
         ), f"expected 4-dimensional tensor, but got {len(input.shape)}-dimensional tensor"
+        assert len(self.output_size) == 2, "'output_size' must be 2"
+        assert (self.output_size[0] is None or self.output_size[0] >= 0) and (
+            self.output_size[1] is None or self.output_size[1] >= 0
+        ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
         new_output_size = _generate_output_size(input.shape, self.output_size)
         return flow.nn.functional.adaptive_max_pool2d(
             input, self.output_size, self.return_indices, self.channel_pos
@@ -1019,10 +1040,88 @@ class AdaptiveMaxPool3d(_AdaptiveMaxPoolNd):
         assert (
             len(input.shape) == 5
         ), f"expected 5-dimensional tensor, but got {len(input.shape)}-dimensional tensor"
+        assert len(self.output_size) == 3, "'output_size' must be 3"
+        assert (
+            (self.output_size[0] is None or self.output_size[0] >= 0)
+            and (self.output_size[1] is None or self.output_size[1] >= 0)
+            and (self.output_size[2] is None or self.output_size[2] >= 0)
+        ), f"elements of output_size must be greater than or equal to 0, but got {self.output_size}"
         new_output_size = _generate_output_size(input.shape, self.output_size)
         return flow.nn.functional.adaptive_max_pool3d(
             input, self.output_size, self.return_indices
         )
+
+
+def _unpool_input_check(module, x, indices, output_size):
+    def _unpool_output_size_check(
+        input,
+        kernel_size: List[int],
+        stride: List[int],
+        padding: List[int],
+        output_size: Optional[List[int]],
+    ) -> List[int]:
+        input_size = input.size()
+        default_size = []
+        for d in range(len(kernel_size)):
+            default_size.append(
+                (input_size[-len(kernel_size) + d] - 1) * stride[d]
+                + kernel_size[d]
+                - 2 * padding[d]
+            )
+        if output_size is None:
+            ret = default_size
+        else:
+            if len(output_size) == len(kernel_size) + 2:
+                output_size = output_size[2:]
+            if len(output_size) != len(kernel_size):
+                raise ValueError(
+                    "output_size should be a sequence containing "
+                    f"{len(kernel_size)} or {len(kernel_size) + 2} elements, but it has a length of '{len(output_size)}'"
+                )
+            for d in range(len(kernel_size)):
+                min_size = default_size[d] - stride[d]
+                max_size = default_size[d] + stride[d]
+                if not (min_size < output_size[d] < max_size):
+                    raise ValueError(
+                        f'invalid output_size "{output_size}" (dim {d} must be between {min_size} and {max_size})'
+                    )
+
+            ret = output_size
+        return ret
+
+    if isinstance(module, MaxUnpool1d):
+        functor = _single
+        expected_out_size = 1
+    elif isinstance(module, MaxUnpool2d):
+        functor = _pair
+        expected_out_size = 2
+    elif isinstance(module, MaxUnpool3d):
+        functor = _triple
+        expected_out_size = 3
+    else:
+        raise NotImplementError("Not implement")
+
+    kernel_size = functor(module.kernel_size)
+    if module.stride is not None:
+        _stride = functor(module.stride)
+    else:
+        _stride = kernel_size
+    padding = functor(module.padding)
+    check_output_size = _unpool_output_size_check(
+        x, kernel_size, _stride, padding, output_size
+    )
+    assert (
+        len(check_output_size) == expected_out_size
+    ), f"There should be exactly {expected_out_size} element in output_size, but got {len(check_output_size)}"
+    assert (
+        indices.dtype == flow.int64
+    ), f"elements in indices should be type int64 but got: {indices.dtype}"
+    assert (len(x.size()) == (expected_out_size + 1)) or (
+        len(x.size()) == expected_out_size + 2
+    ), f"Input to max_unpooling1d should be a {expected_out_size + 1}d or {expected_out_size + 2}d Tensor, but got {len(x.size())} dimensions"
+    assert (
+        x.size() == indices.size()
+    ), f"Expected shape of indices to be same as that of the input tensor"
 
 
 class MaxUnpool1d(Module):
@@ -1100,6 +1199,7 @@ class MaxUnpool1d(Module):
         self.padding = padding
 
     def forward(self, x, indices, output_size=None):
+        _unpool_input_check(self, x, indices, output_size)
         return flow._C.max_unpool1d(
             x, indices, self.kernel_size, self.stride, self.padding, output_size
         )
@@ -1188,6 +1288,7 @@ class MaxUnpool2d(Module):
         self.padding = padding
 
     def forward(self, x, indices, output_size=None):
+        _unpool_input_check(self, x, indices, output_size)
         return flow._C.max_unpool2d(
             x, indices, self.kernel_size, self.stride, self.padding, output_size
         )
@@ -1266,6 +1367,7 @@ class MaxUnpool3d(Module):
         self.padding = padding
 
     def forward(self, x, indices, output_size=None):
+        _unpool_input_check(self, x, indices, output_size)
         return flow._C.max_unpool3d(
             x, indices, self.kernel_size, self.stride, self.padding, output_size
         )
