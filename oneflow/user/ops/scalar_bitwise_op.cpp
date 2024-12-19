@@ -42,5 +42,9 @@ namespace oneflow {
 IMPLEMENT_SCALAR_BITWISE_OP_FUNCS(ScalarBitwiseAnd);
 IMPLEMENT_SCALAR_BITWISE_OP_FUNCS(ScalarBitwiseOr);
 IMPLEMENT_SCALAR_BITWISE_OP_FUNCS(ScalarBitwiseXor);
+IMPLEMENT_SCALAR_BITWISE_OP_FUNCS(ScalarBitwiseLeftShift);
+IMPLEMENT_SCALAR_BITWISE_OP_FUNCS(ScalarBitwiseRightShift);
+IMPLEMENT_SCALAR_BITWISE_OP_FUNCS(ScalarReverseBitwiseLeftShift);
+IMPLEMENT_SCALAR_BITWISE_OP_FUNCS(ScalarReverseBitwiseRightShift);
 
 }  // namespace oneflow
