@@ -7,8 +7,9 @@ find_package(Git QUIET REQUIRED)
 
 set(FLASH_ATTENTION_PROJECT flash_attention)
 
-set(FLASH_ATTENTION_URL https://github.com/Oneflow-Inc/flash-attention-v2.git)
-set(FLASH_ATTENTION_TAG eed2e82b880e06237af3e50ceac4cf6728b15645)
+set(FLASH_ATTENTION_URL
+    https://oneflow-static.oss-cn-beijing.aliyuncs.com/third_party_mirror/flash-attention-v2-eed2e82b880e06237af3e50ceac4cf6728b15645.zip
+)
 
 set(FLASH_ATTENTION_INSTALL_DIR ${THIRD_PARTY_DIR}/flash_attention)
 set(FLASH_ATTENTION_INCLUDE_DIR ${FLASH_ATTENTION_INSTALL_DIR}/include CACHE PATH "" FORCE)
@@ -19,8 +20,8 @@ if(THIRD_PARTY)
   ExternalProject_Add(
     ${FLASH_ATTENTION_PROJECT}
     PREFIX flash_attention
-    GIT_REPOSITORY ${FLASH_ATTENTION_URL}
-    GIT_TAG ${FLASH_ATTENTION_TAG}
+    URL ${FLASH_ATTENTION_URL}
+    URL_HASH MD5=63192a05973f614aff594a8bd11813ce
     UPDATE_COMMAND ""
     BUILD_BYPRODUCTS ${FLASH_ATTENTION_LIBRARIES}
     CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
