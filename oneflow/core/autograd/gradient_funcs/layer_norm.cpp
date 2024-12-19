@@ -107,22 +107,13 @@ Maybe<void> LayerNorm::Apply(const LayerNormCaptureState* ctx, const TensorTuple
   std::shared_ptr<Tensor> mean = saved_tensors.at(ctx->mean_index);
   std::shared_ptr<Tensor> inv_variance = saved_tensors.at(ctx->inv_variance_index);
 
-  if (ctx->has_affine) {
-    // Use LayerNormParamGrad(Tensor dy, Tensor x, Tensor mean, Tensor inv_variance,
-    // Int64 begin_params_axis)
-    const auto& results =
-        JUST(functional::LayerNormParamGrad(dy, x, mean, inv_variance, begin_params_axis));
-    in_grads->at(1) = results->at(0);  // For gamma.
-    in_grads->at(2) = results->at(1);  // For beta.
-  }
+  CHECK(ctx->has_affine) << "LayerNorm::Apply must has_affine for NPU GPT2 test";
   if (ctx->x_requires_grad) {
     if (ctx->scale) {
       std::shared_ptr<Tensor> gamma = saved_tensors.at(ctx->gamma_index);
-      in_grads->at(0) = JUST(functional::LayerNormAffineGrad(dy, x, mean, inv_variance, gamma,
-                                                             begin_norm_axis, ctx->epsilon));
+      *in_grads = *JUST(functional::LayerNormAffineGrad(dy, x, mean, inv_variance, gamma, begin_norm_axis, begin_params_axis, ctx->epsilon));
     } else {
-      in_grads->at(0) =
-          JUST(functional::LayerNormGrad(dy, x, mean, inv_variance, begin_norm_axis, ctx->epsilon));
+      *in_grads = *JUST(functional::LayerNormGrad(dy, x, mean, inv_variance, begin_norm_axis, begin_params_axis, ctx->epsilon));
     }
   }
   return Maybe<void>::Ok();
