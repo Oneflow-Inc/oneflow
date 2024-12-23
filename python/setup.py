@@ -65,7 +65,7 @@ REQUIRED_PACKAGES = [
 
 ONEFLOW_VERSION = get_version()
 if "cu11" in ONEFLOW_VERSION and "cu112" not in ONEFLOW_VERSION:
-    REQUIRED_PACKAGES.append("nvidia-cudnn-cu11<8.9")
+    REQUIRED_PACKAGES.append("nvidia-cudnn-cu11==8.5.0.96")
     REQUIRED_PACKAGES.append("nvidia-cublas-cu11")
     REQUIRED_PACKAGES.append("nvidia-nccl-cu11")
     REQUIRED_PACKAGES.append("nvidia-cusparse-cu11")
