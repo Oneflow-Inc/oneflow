@@ -19,12 +19,12 @@ limitations under the License.
 
 namespace oneflow {
 
-DEFINE_ENV_BOOL(ONEFLOW_GROUP_NORM_RETURN_DATATYPE_DIRECTLY, false);
+DEFINE_ENV_BOOL(ONEFLOW_GROUP_NORM_USE_FP16_DIRECTLY, false);
 
 namespace {
 
 oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
-  if (EnvBool<ONEFLOW_GROUP_NORM_RETURN_DATATYPE_DIRECTLY>()) {
+  if (EnvBool<ONEFLOW_GROUP_NORM_USE_FP16_DIRECTLY>()) {
     return x_data_type;
   }
   return (x_data_type == DataType::kFloat16 || x_data_type == DataType::kBFloat16)

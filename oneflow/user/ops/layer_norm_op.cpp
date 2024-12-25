@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-DEFINE_ENV_BOOL(ONEFLOW_LAYER_NORM_RETURN_SHAPE_PAD_ONE, false);
+DEFINE_ENV_BOOL(ONEFLOW_LAYER_NORM_PARAM_KEEP_DIM, false);
 
 namespace {
 
@@ -33,7 +33,7 @@ Shape InferBnParamShape(const Shape& x_shape, const int64_t begin_norm_axis) {
   DimVector bn_param_shape_dim_vec;
   bn_param_shape_dim_vec.insert(bn_param_shape_dim_vec.end(), x_shape.dim_vec().cbegin(),
                                 x_shape.dim_vec().cbegin() + begin_norm_axis);
-  if (EnvBool<ONEFLOW_LAYER_NORM_RETURN_SHAPE_PAD_ONE>()) {
+  if (EnvBool<ONEFLOW_LAYER_NORM_PARAM_KEEP_DIM>()) {
     while (bn_param_shape_dim_vec.size() < x_shape.dim_vec().size()) {
       bn_param_shape_dim_vec.push_back(1);
     }
