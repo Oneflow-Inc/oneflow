@@ -18,6 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
+DEFINE_ENV_BOOL(ONEFLOW_LAYER_NORM_PARAM_KEEP_DIM, false);
+
 namespace {
 
 int64_t ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
@@ -31,6 +33,11 @@ Shape InferBnParamShape(const Shape& x_shape, const int64_t begin_norm_axis) {
   DimVector bn_param_shape_dim_vec;
   bn_param_shape_dim_vec.insert(bn_param_shape_dim_vec.end(), x_shape.dim_vec().cbegin(),
                                 x_shape.dim_vec().cbegin() + begin_norm_axis);
+  if (EnvBool<ONEFLOW_LAYER_NORM_PARAM_KEEP_DIM>()) {
+    while (bn_param_shape_dim_vec.size() < x_shape.dim_vec().size()) {
+      bn_param_shape_dim_vec.push_back(1);
+    }
+  }
   const Shape bn_param_shape(bn_param_shape_dim_vec);
   return bn_param_shape;
 }
