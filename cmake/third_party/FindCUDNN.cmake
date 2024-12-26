@@ -66,7 +66,14 @@ if(CUDNN_FOUND)
 
   set(CUDNN_INCLUDE_DIRS ${CUDNN_INCLUDE_DIR})
 
-  if(NOT CUDNN_STATIC AND CUDNN_VERSION_MAJOR GREATER_EQUAL 8)
+  if(NOT CUDNN_STATIC AND CUDNN_VERSION_MAJOR GREATER_EQUAL 9)
+    # skipping: libcudnn_adv_infer.so libcudnn_adv_train.so
+    set(CUDNN_DYNAMIC_NAMES libcudnn_cnn.so libcudnn_ops.so)
+    get_filename_component(CUDNN_LIBRARY_DIRECTORY ${CUDNN_LIBRARY} DIRECTORY)
+    foreach(CUDNN_DYNAMIC_NAME ${CUDNN_DYNAMIC_NAMES})
+      list(APPEND CUDNN_LIBRARIES ${CUDNN_LIBRARY_DIRECTORY}/${CUDNN_DYNAMIC_NAME})
+    endforeach()
+  elseif(NOT CUDNN_STATIC AND CUDNN_VERSION_MAJOR GREATER_EQUAL 8)
     # skipping: libcudnn_adv_infer.so libcudnn_adv_train.so
     set(CUDNN_DYNAMIC_NAMES libcudnn_cnn_infer.so libcudnn_cnn_train.so libcudnn_ops_infer.so
                             libcudnn_ops_train.so)

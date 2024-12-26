@@ -34,7 +34,7 @@ jobs:
       ONEFLOW_SRC: .
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/canary-cu112
       WHEELHOUSE_DIR: manylinux-wheelhouse
-      COMPUTE_PLATFORM: cu117
+      COMPUTE_PLATFORM: cu118
       OSS_BUCKET: oneflow-staging
       OSS_WHEEL_HOUSE_DIR: ${{ matrix.entry }}/commit/${{ github.sha }}
       OSS_GITHUB_REF_DIR: ${{ matrix.entry }}/${{ github.ref }}
@@ -54,7 +54,7 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         if: ${{ github.event.inputs.oneflow-ref == '' }}
         uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@refactor-versions-wheels
+      - uses: Oneflow-Inc/get-oneflow@ci-test-with-cu118
         name: Build manylinux
         id: build-cuda
         with:
