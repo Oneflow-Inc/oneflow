@@ -123,10 +123,20 @@ Maybe<void> GlobalTensorMetaInferArgs::MakeNdSbpInferHints(
 
 Maybe<GlobalTensorMetaInferArgs> GlobalTensorMetaInferArgs::New(const AttrMap& attrs,
                                                                 const TensorTuple& input_tensors) {
+  static HashMap<std::pair<AttrMap, std::vector<Symbol<GlobalTensorMeta>>>,
+                 std::shared_ptr<GlobalTensorMetaInferArgs>>
+      infer_args_cache;
+  std::vector<Symbol<GlobalTensorMeta>> input_metas(input_tensors.size());
+  for (int i = 0; i < input_tensors.size(); ++i) {
+    input_metas[i] = JUST(input_tensors.at(i)->global_tensor_meta());
+  }
+  const auto& it = infer_args_cache.find(std::make_pair(attrs, input_metas));
+  if (it != infer_args_cache.end()) { return it->second; }
   std::shared_ptr<GlobalTensorMetaInferArgs> infer_args(new GlobalTensorMetaInferArgs());
   infer_args->attrs_ = attrs;
   infer_args->input_global_tensor_metas_.resize(input_tensors.size());
   JUST(infer_args->InitInputGlobalTensorMetas(input_tensors));
+  infer_args_cache.emplace(std::make_pair(attrs, input_metas), infer_args);
   return infer_args;
 }
 
@@ -143,9 +153,8 @@ Maybe<void> GlobalTensorMetaInferArgs::InitInputGlobalTensorMetas(
     const TensorTuple& input_tensors) {
   for (int i = 0; i < input_tensors.size(); ++i) {
     const auto& tensor = *input_tensors.at(i);
-    const auto& tensor_meta = JUST(tensor.global_tensor_meta());
-    const auto& constraint = JUST(tensor.consumer_nd_sbp_constraint());
-    input_global_tensor_metas_[i].assign(tensor_meta, constraint);
+    input_global_tensor_metas_.at(i).assign(JUST(tensor.global_tensor_meta()),
+                                            JUST(tensor.consumer_nd_sbp_constraint()));
   }
   return Maybe<void>::Ok();
 }
