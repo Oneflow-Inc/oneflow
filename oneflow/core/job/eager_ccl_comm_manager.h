@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
+#include "oneflow/user/kernels/collective_communication/include/collective_communication.h"
 
 namespace oneflow {
 

@@ -52,19 +52,6 @@ class CommBase {
   virtual void* getComm() = 0;
 };
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
-#include <nccl.h>
-class NcclCommAdapter : public CommBase {
- public:
-  NcclCommAdapter(ncclComm_t* comm) : comm_(comm) {}
-
-  void* getComm() override { return static_cast<void*>(comm_); }
-
- private:
-  ncclComm_t* comm_;
-};
-#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
-
 class CclComm {
  public:
   explicit CclComm(std::shared_ptr<CommBase> comm) : comm_(std::move(comm)) {}

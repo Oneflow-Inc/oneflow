@@ -25,6 +25,17 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
+namespace ccl {
+class NcclCommAdapter : public CommBase {
+ public:
+  NcclCommAdapter(ncclComm_t* comm) : comm_(comm) {}
+
+  void* getComm() override { return static_cast<void*>(comm_); }
+
+ private:
+  ncclComm_t* comm_;
+};
+}  // namespace ccl
 
 class EagerNcclCommMgr final : public EagerCclCommMgr {
  public:
