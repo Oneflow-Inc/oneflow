@@ -39,7 +39,7 @@ dtype_list = [
 
 @flow.unittest.skip_unless_1n1d()
 class TestBinaryMathOpsDtype(flow.unittest.TestCase):
-    @autotest(n=2, auto_backward=False, check_graph=False)
+    @autotest(n=2, auto_backward=False, check_graph=True)
     def test_binary_math_ops_dtype(test_case):
         device = random_device()
 

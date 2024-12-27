@@ -131,7 +131,7 @@ def _test_global_item(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_global_tolist(test_case, placement, sbp):
     x = random_tensor(ndim=4, dim0=8, dim1=16, dim2=24, dim3=32, dtype=int).to_global(
         placement, sbp
