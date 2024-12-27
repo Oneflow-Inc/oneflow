@@ -148,6 +148,35 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
     const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output.shape(), dx->shape());
   }
+
+  auto has_tensor = [ctx](const std::string& bn) -> bool {
+    bool ret = false;
+    for (const auto& t : ctx->inputs()) {
+      if (bn == t.first) { return true; }
+    }
+    for (const auto& t : ctx->outputs()) {
+      if (bn == t.first) { return true; }
+    }
+    return ret;
+  };
+  const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
+  const bool has_beta_diff = has_tensor("beta_diff");
+  const bool has_gamma_diff = has_tensor("gamma_diff");
+  CHECK_GE_OR_RETURN(begin_params_axis, 1);
+  CHECK_LT_OR_RETURN(begin_params_axis, dy.shape().NumAxes());
+  DimVector param_shape_dim_vec;
+  param_shape_dim_vec.insert(param_shape_dim_vec.end(),
+                             dy.shape().dim_vec().cbegin() + begin_params_axis,
+                             dy.shape().dim_vec().cend());
+  const Shape param_shape(param_shape_dim_vec);
+  if (has_beta_diff) {
+    user_op::TensorDesc* beta_diff = ctx->MutOutputTensorDesc("beta_diff", 0);
+    beta_diff->set_shape(param_shape);
+  }
+  if (has_gamma_diff) {
+    user_op::TensorDesc* gamma_diff = ctx->MutOutputTensorDesc("gamma_diff", 0);
+    gamma_diff->set_shape(param_shape);
+  }
   return Maybe<void>::Ok();
 }
 
@@ -161,10 +190,16 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
     broadcast_args.emplace_back(user_op::OpArg("gamma", 0));
   }
   int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
+  int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
+  CHECK_EQ(begin_norm_axis, begin_params_axis) 
+      << "begin_norm_axis and begin_params_axis must be equal, but got "
+      << begin_norm_axis << " and " << begin_params_axis;
   for (int i = 0; i < begin_norm_axis; ++i) {
     ctx->NewBuilder()
         .Split(ctx->inputs(), i)
-        .Split(ctx->outputs(), i)
+        .Split(user_op::OpArg("dx", 0), i)
+        .PartialSum(user_op::OpArg("gamma_diff", 0))
+        .PartialSum(user_op::OpArg("beta_diff", 0))
         .Broadcast(broadcast_args)
         .Build();
   }
@@ -193,6 +228,27 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
     CHECK_EQ_OR_RETURN(add_to_output.data_type(), dx->data_type())
         << "InferDataType Failed. Expected " << DataType_Name(dx->data_type()) << ", but got "
         << DataType_Name(add_to_output.data_type());
+  }
+
+  auto has_tensor = [ctx](const std::string& bn) -> bool {
+    bool ret = false;
+    for (auto& t : ctx->inputs()) {
+      if (bn == t.first) { return true; }
+    }
+    for (auto& t : ctx->outputs()) {
+      if (bn == t.first) { return true; }
+    }
+    return ret;
+  };
+  const bool has_beta_diff = has_tensor("beta_diff");
+  const bool has_gamma_diff = has_tensor("gamma_diff");
+  if (has_beta_diff) {
+    user_op::TensorDesc* beta_diff = ctx->MutOutputTensorDesc("beta_diff", 0);
+    beta_diff->set_data_type(dy.data_type());
+  }
+  if (has_gamma_diff) {
+    user_op::TensorDesc* gamma_diff = ctx->MutOutputTensorDesc("gamma_diff", 0);
+    gamma_diff->set_data_type(dy.data_type());
   }
   return Maybe<void>::Ok();
 }
