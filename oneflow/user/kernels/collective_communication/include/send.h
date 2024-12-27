@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_SEND_H_
 #define ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_SEND_H_
 
+#include "collective_communication.h"
 #include "oneflow/user/kernels/collective_communication/include/collective_communication.h"
 
 namespace oneflow {
@@ -31,6 +32,9 @@ class Send : public CollectiveCommunication {
   virtual void Init(DataType dtype) = 0;
 
   virtual void Launch(ep::Stream* stream, const void* in, size_t elem_cnt, int64_t dst) const = 0;
+
+  virtual void Launch(ep::Stream* stream, const void* in, size_t elem_cnt, int64_t dst,
+                      CclComm ccl_comm) const = 0;
 };
 
 inline bool IsSendRegistered(DeviceType device_type) {

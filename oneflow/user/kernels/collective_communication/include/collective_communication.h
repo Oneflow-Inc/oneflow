@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COLLECTIVE_COMMUNICATION_H_
 #define ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COLLECTIVE_COMMUNICATION_H_
 
+#include <memory>
+#include <utility>
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/user/kernels/collective_communication/include/communication_context.h"
@@ -40,6 +42,38 @@ enum ReduceType {
 #define REDUCE_TYPE_CTRV_SEQ      \
   MAKE_TYPED_CTRV_SEQ(ReduceType, \
                       OF_PP_FOR_EACH_TUPLE(OF_PP_I_MAKE_REPLICATE_TUPLE_SEQ, REDUCE_TYPE_SEQ))
+
+// abstruct base class for comm
+class CommBase {
+ public:
+  virtual ~CommBase() = default;
+
+  // return impl of comm
+  virtual void* getComm() = 0;
+};
+
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#include <nccl.h>
+class NcclCommAdapter : public CommBase {
+ public:
+  NcclCommAdapter(ncclComm_t* comm) : comm_(comm) {}
+
+  void* getComm() override { return static_cast<void*>(comm_); }
+
+ private:
+  ncclComm_t* comm_;
+};
+#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
+
+class CclComm {
+ public:
+  explicit CclComm(std::shared_ptr<CommBase> comm) : comm_(std::move(comm)) {}
+
+  void* getComm() { return comm_->getComm(); }
+
+ private:
+  std::shared_ptr<CommBase> comm_{};
+};
 
 class CollectiveCommunication {
  public:

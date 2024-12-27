@@ -20,8 +20,10 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/core/ep/include/primitive/add.h"
 #include "oneflow/core/operator/nccl_send_recv_boxing_op_util.h"
+#include "oneflow/user/kernels/collective_communication/include/send.h"
+#include "oneflow/user/kernels/collective_communication/include/recv.h"
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+// #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
 namespace oneflow {
 
@@ -84,6 +86,7 @@ class NcclSendRecvBoxingKernel final : public Kernel {
 };
 
 void NcclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
+  printf("\n NcclSendRecvBoxingKernel::ForwardDataContent()");
   Blob* buf = ctx->BnInOp2Blob("buf");
   ncclComm_t comm = this->comm();
   cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
@@ -122,12 +125,27 @@ void NcclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
   OF_NCCL_CHECK(ncclGroupStart());
   for (int64_t i = 0; i < parallel_num; ++i) {
     if (this->has_input() && send_elem_cnts.at(i) != 0) {
-      OF_NCCL_CHECK(ncclSend(send_in_ptr.at(i), send_elem_cnts.at(i), GetNcclDataType(data_type), i,
-                             comm, cuda_stream));
+      // OF_NCCL_CHECK(ncclSend(send_in_ptr.at(i), send_elem_cnts.at(i), GetNcclDataType(data_type),
+      // i,
+      //                        comm, cuda_stream));
+      std::unique_ptr<ccl::Send> send =
+          ccl::NewCollectiveCommunication<ccl::Send>(ctx->stream()->device_type(), data_type);
+
+      std::shared_ptr<ccl::CommBase> ncclCommAdapter =
+          std::make_shared<ccl::NcclCommAdapter>(&comm);
+      ccl::CclComm ccl_comm(ncclCommAdapter);
+      send->Launch(ctx->stream(), send_in_ptr.at(i), send_elem_cnts.at(i), i, ccl_comm);
     }
     if (this->has_output() && recv_elem_cnts.at(i) != 0) {
-      OF_NCCL_CHECK(ncclRecv(recv_out_ptr.at(i), recv_elem_cnts.at(i), GetNcclDataType(data_type),
-                             i, comm, cuda_stream));
+      // OF_NCCL_CHECK(ncclRecv(recv_out_ptr.at(i), recv_elem_cnts.at(i),
+      // GetNcclDataType(data_type),
+      //                        i, comm, cuda_stream));
+      std::unique_ptr<ccl::Recv> recv =
+          ccl::NewCollectiveCommunication<ccl::Recv>(ctx->stream()->device_type(), data_type);
+      std::shared_ptr<ccl::CommBase> ncclCommAdapter =
+          std::make_shared<ccl::NcclCommAdapter>(&comm);
+      ccl::CclComm ccl_comm(ncclCommAdapter);
+      recv->Launch(ctx->stream(), recv_out_ptr.at(i), recv_elem_cnts.at(i), i, ccl_comm);
     }
   }
   OF_NCCL_CHECK(ncclGroupEnd());
@@ -254,4 +272,4 @@ REGISTER_SYSTEM_OP_KERNEL_UNIFIED_NCCL_COMM_INIT(OperatorConf::kNcclSendRecvBoxi
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
+// #endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
