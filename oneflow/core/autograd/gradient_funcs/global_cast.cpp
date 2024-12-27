@@ -60,9 +60,10 @@ class LocalToGlobal : public OpExprGradFunction<CastGlobalCaptureState> {
     {
       Symbol<NdSbp> nd_sbp_constraint = ctx->nd_sbp;
       Symbol<ParallelDesc> parallel_desc_constraint = ctx->parallel_desc;
-      out_grad = JUST(functional::ToGlobal(out_grad, parallel_desc_constraint,
-                                           *JUST(GetSbpList(nd_sbp_constraint)), GetNoneSbpList(),
-                                           /* check_meta */ false, /*copy=*/false));
+      out_grad =
+          JUST(functional::ToGlobal(out_grad, parallel_desc_constraint,
+                                    *JUST(GetSbpList(nd_sbp_constraint)), GetNoneSbpList(),
+                                    /* check_meta */ false, /* sync_data */ true, /*copy=*/false));
     }
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grad}));
     return Maybe<void>::Ok();
