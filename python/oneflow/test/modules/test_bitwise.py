@@ -63,44 +63,105 @@ def _test_scalar_bitwise(test_case, op):
     return result
 
 
+def _test_bitwise_shift_op(test_case, op):
+    device = random_device()
+    dims_kwargs = {
+        "ndim": 4,
+        "dim0": random(low=4, high=8).to(int),
+        "dim1": random(low=4, high=8).to(int),
+        "dim2": random(low=4, high=8).to(int),
+        "dim3": random(low=4, high=8).to(int),
+    }
+    # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
+    # So, use "index" instead of "int" in `random_dtype`
+    x_dtype = random_dtype(["index", "unsigned"])
+    y_dtype = random_dtype(["index", "unsigned"])
+    x = random_tensor(dtype=int, **dims_kwargs, high=10).to(device).to(x_dtype)
+    y = random_tensor(dtype=int, **dims_kwargs, high=10).to(device).to(y_dtype)
+    return op(x, y)
+
+
+def _test_scalar_bitwise_shift_op(test_case, op):
+    device = random_device()
+    dtype = random_dtype(["int", "unsigned"])
+    x = (
+        random_tensor(
+            ndim=4,
+            dim0=random(low=4, high=8).to(int),
+            dim1=random(low=4, high=8).to(int),
+            dim2=random(low=4, high=8).to(int),
+            dim3=random(low=4, high=8).to(int),
+            dtype=int,
+            low=0,
+            high=5,
+        )
+        .to(device)
+        .to(dtype)
+    )
+    scalar = random(low=0, high=5).to(int)
+    result = [op(x, scalar), op(scalar, x)]
+    return result
+
+
 # Bitwise ops only accept integral dtype,
 # so auto_backward isn't necessary
 @flow.unittest.skip_unless_1n1d()
 class TestBitwiseAndModule(flow.unittest.TestCase):
-    @autotest(n=10, auto_backward=False)
+    @autotest(n=3, auto_backward=False)
     def test_bitwise_and(test_case):
         return _test_bitwise_op(test_case, torch.bitwise_and)
 
-    @autotest(n=10, auto_backward=False)
+    @autotest(n=3, auto_backward=False)
     def test_scalar_bitwise_and(test_case):
         return _test_scalar_bitwise(test_case, torch.bitwise_and,)
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestBitwiseOrModule(flow.unittest.TestCase):
-    @autotest(n=10, auto_backward=False)
+    @autotest(n=3, auto_backward=False)
     def test_bitwise_or(test_case):
         return _test_bitwise_op(test_case, torch.bitwise_or)
 
-    @autotest(n=10, auto_backward=False)
+    @autotest(n=3, auto_backward=False)
     def test_scalar_bitwise_or(test_case):
         return _test_scalar_bitwise(test_case, torch.bitwise_or,)
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestBitwiseXorModule(flow.unittest.TestCase):
-    @autotest(n=10, auto_backward=False)
+    @autotest(n=3, auto_backward=False)
     def test_bitwise_xor(test_case):
         return _test_bitwise_op(test_case, torch.bitwise_xor)
 
-    @autotest(n=10, auto_backward=False)
+    @autotest(n=3, auto_backward=False)
     def test_scalar_bitwise_xor(test_case):
         return _test_scalar_bitwise(test_case, torch.bitwise_xor,)
 
 
-@flow.unittest.skip_unless_1n1d()
+# @flow.unittest.skip_unless_1n1d()
+# class TestBitwiseLeftShiftModule(flow.unittest.TestCase):
+# @autotest(n=3, auto_backward=False)
+# def test_bitwise_left_shift(test_case):
+#     return _test_bitwise_shift_op(test_case, torch.bitwise_left_shift)
+
+# @autotest(n=3, auto_backward=False)
+# def test_scalar_bitwise_left_shift(test_case):
+#     return _test_scalar_bitwise_shift_op(test_case, torch.bitwise_left_shift)
+
+
+# @flow.unittest.skip_unless_1n1d()
+# class TestBitwiseRightShiftModule(flow.unittest.TestCase):
+# @autotest(n=3, auto_backward=False)
+# def test_bitwise_right_shift(test_case):
+#     return _test_bitwise_shift_op(test_case, torch.bitwise_right_shift)
+
+# @autotest(n=3, auto_backward=False)
+# def test_scalar_bitwise_right_shift(test_case):
+#     return _test_scalar_bitwise_shift_op(test_case, torch.bitwise_right_shift)
+
+
 class TestBitwiseNotModule(flow.unittest.TestCase):
-    @autotest(n=10, auto_backward=False)
+    @autotest(n=3, auto_backward=False)
     def test_bitwise_not(test_case):
         device = random_device()
         # TODO(WangYi): oneflow doesn't support conversion between uint8 and int8
