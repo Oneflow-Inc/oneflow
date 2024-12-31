@@ -70,7 +70,7 @@ jobs:
           ref: ${{ inputs.branch }}
           repository: ${{ secrets.ONEFLOW_PRIV_ORG }}/oneflow
           token: ${{ secrets.ONEFLOW_PRIV_GH_TOKEN }}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@ci-test-with-cu118
         name: Find build cache
         id: find-cache
         timeout-minutes: 5
@@ -149,7 +149,7 @@ jobs:
         if: ${{ inputs.is_priv }}
         run: |
           env
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@ci-test-with-cu118
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cu118' || startsWith(matrix.entry, 'cu12') }}
         with:
@@ -170,11 +170,12 @@ jobs:
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
+            3.12
             3.11
             3.10
             3.9
             3.8
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@ci-test-with-cu118
         name: Build ${{ matrix.entry }}
         if: ${{ startsWith(matrix.entry, 'cu') && matrix.entry !='cu118' && !startsWith(matrix.entry, 'cu12') }}
         with:
@@ -195,11 +196,12 @@ jobs:
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           use-nvidia-wheels: ${{ matrix.entry !='cu112' }}
           python-versions: |
+            3.12
             3.11
             3.10
             3.9
             3.8
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@ci-test-with-cu118
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
         with:
@@ -219,6 +221,7 @@ jobs:
           nightly: ${{ inputs.is_priv || github.event_name == 'schedule' || github.ref == 'refs/heads/release/add_nightly_date_index'}}
           nightly-date: ${{ needs.generate-build-matrix.outputs.formatted_date }}
           python-versions: |
+            3.12
             3.11
             3.10
             3.9

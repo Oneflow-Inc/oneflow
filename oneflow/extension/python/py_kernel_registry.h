@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <string>
 #include <Python.h>
+#undef _PyGC_FINALIZED
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {

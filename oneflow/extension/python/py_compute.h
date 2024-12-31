@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_EXTENSION_PYTHON_PY_COMPUTE_H_
 #define ONEFLOW_EXTENSION_PYTHON_PY_COMPUTE_H_
 #include <Python.h>
+#undef _PyGC_FINALIZED
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {

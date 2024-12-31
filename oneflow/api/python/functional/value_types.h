@@ -20,6 +20,7 @@ limitations under the License.
 #include <complex>
 #include <memory>
 #include <Python.h>
+#undef _PyGC_FINALIZED
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"

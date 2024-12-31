@@ -21,6 +21,7 @@ limitations under the License.
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#undef _PyGC_FINALIZED
 #include <frameobject.h>
 #include <pystate.h>
 // see https://bugs.python.org/issue35886
