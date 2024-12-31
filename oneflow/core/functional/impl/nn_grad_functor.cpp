@@ -997,10 +997,11 @@ class FuseLayerNormGradFunctor {
                          .Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& mean,
-                           const std::shared_ptr<one::Tensor>& inv_variance,
-                           const int64_t& begin_norm_axis, const int64_t& begin_params_axis, const double& epsilon) const {
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& mean,
+                                const std::shared_ptr<one::Tensor>& inv_variance,
+                                const int64_t& begin_norm_axis, const int64_t& begin_params_axis,
+                                const double& epsilon) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("begin_norm_axis", "begin_params_axis", "epsilon");
     attrs.SetAllAttrs(begin_norm_axis, begin_params_axis, epsilon);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, mean, inv_variance}, attrs);
@@ -1025,11 +1026,12 @@ class FuseLayerNormAffineGradFunctor {
                          .Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& mean,
-                           const std::shared_ptr<one::Tensor>& inv_variance,
-                           const std::shared_ptr<one::Tensor>& gamma,
-                           const int64_t& begin_norm_axis, const int64_t& begin_params_axis, const double& epsilon) const {
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& mean,
+                                const std::shared_ptr<one::Tensor>& inv_variance,
+                                const std::shared_ptr<one::Tensor>& gamma,
+                                const int64_t& begin_norm_axis, const int64_t& begin_params_axis,
+                                const double& epsilon) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("begin_norm_axis", "begin_params_axis", "epsilon");
     attrs.SetAllAttrs(begin_norm_axis, begin_params_axis, epsilon);
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, x, mean, inv_variance, gamma}, attrs);

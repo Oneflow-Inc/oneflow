@@ -329,9 +329,9 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   }
   int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
   int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
-  CHECK_EQ(begin_norm_axis, begin_params_axis) 
-      << "begin_norm_axis and begin_params_axis must be equal, but got "
-      << begin_norm_axis << " and " << begin_params_axis;
+  CHECK_EQ(begin_norm_axis, begin_params_axis)
+      << "begin_norm_axis and begin_params_axis must be equal, but got " << begin_norm_axis
+      << " and " << begin_params_axis;
   for (int i = 0; i < begin_norm_axis; ++i) {
     ctx->NewBuilder()
         .Split(ctx->inputs(), i)
