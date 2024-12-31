@@ -7,7 +7,7 @@ on:
   schedule:
     # beijing: 12 pm.
     # utc: 4 am.
-    - cron: "0 4 * * *"
+    - cron: "0 4 * * sun"
   workflow_dispatch:
     inputs:
       priv_branch:
