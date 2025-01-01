@@ -122,29 +122,25 @@ void NcclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
       }
     }
   }
+  std::unique_ptr<ccl::Send> send =
+          ccl::NewCollectiveCommunication<ccl::Send>(ctx->stream()->device_type(), data_type);
+  std::unique_ptr<ccl::Recv> recv =
+          ccl::NewCollectiveCommunication<ccl::Recv>(ctx->stream()->device_type(), data_type);
+  std::shared_ptr<ccl::CommBase> ncclCommAdapter =
+          std::make_shared<ccl::NcclCommAdapter>(&comm);
+      ccl::CclComm ccl_comm(ncclCommAdapter);
   OF_NCCL_CHECK(ncclGroupStart());
   for (int64_t i = 0; i < parallel_num; ++i) {
     if (this->has_input() && send_elem_cnts.at(i) != 0) {
       // OF_NCCL_CHECK(ncclSend(send_in_ptr.at(i), send_elem_cnts.at(i), GetNcclDataType(data_type),
       // i,
       //                        comm, cuda_stream));
-      std::unique_ptr<ccl::Send> send =
-          ccl::NewCollectiveCommunication<ccl::Send>(ctx->stream()->device_type(), data_type);
-
-      std::shared_ptr<ccl::CommBase> ncclCommAdapter =
-          std::make_shared<ccl::NcclCommAdapter>(&comm);
-      ccl::CclComm ccl_comm(ncclCommAdapter);
       send->Launch(ctx->stream(), send_in_ptr.at(i), send_elem_cnts.at(i), i, ccl_comm);
     }
     if (this->has_output() && recv_elem_cnts.at(i) != 0) {
       // OF_NCCL_CHECK(ncclRecv(recv_out_ptr.at(i), recv_elem_cnts.at(i),
       // GetNcclDataType(data_type),
       //                        i, comm, cuda_stream));
-      std::unique_ptr<ccl::Recv> recv =
-          ccl::NewCollectiveCommunication<ccl::Recv>(ctx->stream()->device_type(), data_type);
-      std::shared_ptr<ccl::CommBase> ncclCommAdapter =
-          std::make_shared<ccl::NcclCommAdapter>(&comm);
-      ccl::CclComm ccl_comm(ncclCommAdapter);
       recv->Launch(ctx->stream(), recv_out_ptr.at(i), recv_elem_cnts.at(i), i, ccl_comm);
     }
   }
