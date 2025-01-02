@@ -156,6 +156,14 @@ ncclComm_t EagerNcclCommMgr::GetCommForDeviceAndStreamName(
   return comm;
 }
 
+ccl::CclComm EagerNcclCommMgr::GetCclCommForDevice(
+    const std::set<std::pair<int64_t, int64_t>>& device_set) {
+  ncclComm_t comm = GetCommForDevice(device_set);
+  std::shared_ptr<ccl::CommBase> ncclCommAdapter = std::make_shared<ccl::NcclCommAdapter>(comm);
+  ccl::CclComm ccl_comm(ncclCommAdapter);
+  return ccl_comm;
+}
+
 ccl::CclComm EagerNcclCommMgr::GetCclCommForDeviceAndStreamName(
     const std::set<std::pair<int64_t, int64_t>>& device_set, const std::string& stream_name) {
   ncclComm_t comm = GetCommForDeviceAndStreamName(device_set, stream_name);

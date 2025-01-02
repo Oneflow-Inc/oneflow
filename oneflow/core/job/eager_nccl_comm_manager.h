@@ -49,6 +49,7 @@ class EagerNcclCommMgr final : public EagerCclCommMgr {
   ncclComm_t GetCommForDevice(const std::set<std::pair<int64_t, int64_t>>& device_set);
   ncclComm_t GetCommForDeviceAndStreamName(const std::set<std::pair<int64_t, int64_t>>& device_set,
                                            const std::string& stream_name);
+  ccl::CclComm GetCclCommForDevice(const std::set<std::pair<int64_t, int64_t>>& device_set);
   ccl::CclComm GetCclCommForDeviceAndStreamName(
       const std::set<std::pair<int64_t, int64_t>>& device_set, const std::string& stream_name);
 
