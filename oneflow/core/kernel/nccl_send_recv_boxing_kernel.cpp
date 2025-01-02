@@ -119,9 +119,9 @@ void NcclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
   }
   // init ccl Send/Recv primitive
   std::unique_ptr<ccl::Send> send =
-          ccl::NewCollectiveCommunication<ccl::Send>(ctx->stream()->device_type(), data_type);
+      ccl::NewCollectiveCommunication<ccl::Send>(ctx->stream()->device_type(), data_type);
   std::unique_ptr<ccl::Recv> recv =
-          ccl::NewCollectiveCommunication<ccl::Recv>(ctx->stream()->device_type(), data_type);
+      ccl::NewCollectiveCommunication<ccl::Recv>(ctx->stream()->device_type(), data_type);
   // launch ccl::Send/Recv
   OF_NCCL_CHECK(ncclGroupStart());
   for (int64_t i = 0; i < parallel_num; ++i) {
