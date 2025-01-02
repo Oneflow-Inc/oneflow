@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_SEND_H_
 #define ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_SEND_H_
 
-#include "collective_communication.h"
 #include "oneflow/user/kernels/collective_communication/include/collective_communication.h"
 
 namespace oneflow {

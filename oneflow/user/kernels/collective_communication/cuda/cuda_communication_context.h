@@ -28,16 +28,6 @@ namespace oneflow {
 
 namespace ccl {
 
-// class NcclCommAdapter : public CommBase {
-//  public:
-//   NcclCommAdapter(ncclComm_t* comm) : comm_(comm) {}
-
-//   void* getComm() override { return static_cast<void*>(comm_); }
-
-//  private:
-//   ncclComm_t* comm_;
-// };
-
 class CudaCommunicationContext : public CommunicationContext {
  public:
   explicit CudaCommunicationContext() = default;

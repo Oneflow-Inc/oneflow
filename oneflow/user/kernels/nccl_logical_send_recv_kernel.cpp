@@ -198,14 +198,12 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
   for (int64_t i = 0; i < parallel_num; ++i) {
     if (send_elem_cnts.at(i) != 0) {
       LOG(INFO) << parallel_id << " send " << send_elem_cnts.at(i) << " to " << i;
-      printf("\n NcclLogicalSendRecv::Compute() >>> ccl::Send");
       std::unique_ptr<ccl::Send> send =
           ccl::NewCollectiveCommunication<ccl::Send>(ctx->stream()->device_type(), data_type);
       send->Launch(ctx->stream(), send_in_ptr.at(i), send_elem_cnts.at(i), i);
     }
     if (recv_elem_cnts.at(i) != 0) {
       LOG(INFO) << parallel_id << " recv " << recv_elem_cnts.at(i) << " from " << i;
-      printf("\n NcclLogicalSendRecv::Compute() >>> ccl::Recv");
       std::unique_ptr<ccl::Recv> recv =
           ccl::NewCollectiveCommunication<ccl::Recv>(ctx->stream()->device_type(), data_type);
       recv->Launch(ctx->stream(), recv_out_ptr.at(i), recv_elem_cnts.at(i), i);

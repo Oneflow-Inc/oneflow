@@ -23,8 +23,6 @@ limitations under the License.
 #include "oneflow/user/kernels/collective_communication/include/send.h"
 #include "oneflow/user/kernels/collective_communication/include/recv.h"
 
-// #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
-
 namespace oneflow {
 
 class NcclSendRecvBoxingKernel final : public Kernel {
@@ -257,5 +255,3 @@ REGISTER_KERNEL(OperatorConf::kNcclSendRecvBoxingConf, NcclSendRecvBoxingKernel)
 REGISTER_SYSTEM_OP_KERNEL_UNIFIED_NCCL_COMM_INIT(OperatorConf::kNcclSendRecvBoxingConf);
 
 }  // namespace oneflow
-
-// #endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
