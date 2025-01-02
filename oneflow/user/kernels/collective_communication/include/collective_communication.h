@@ -54,6 +54,7 @@ class CommBase {
 
 class CclComm {
  public:
+  CclComm() {}
   explicit CclComm(std::shared_ptr<CommBase> comm) : comm_(std::move(comm)) {}
 
   void* getComm() { return comm_->getComm(); }

@@ -160,13 +160,11 @@ class NcclLogicalSendRecv final : public user_op::OpKernel {
 
 void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                                   const user_op::OpKernelCache*) const {
-  printf("\n NcclLogicalSendRecv::Compute()");
   auto* kernel_state = dynamic_cast<NcclLogicalSendRecvState*>(state);
   CHECK_NOTNULL(kernel_state);
   const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-  ncclComm_t comm = kernel_state->comm();
   cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
   const std::vector<int64_t>& send_elem_cnts = kernel_state->send_elem_cnts();
   const std::vector<int64_t>& recv_elem_cnts = kernel_state->recv_elem_cnts();
@@ -200,9 +198,6 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
   for (int64_t i = 0; i < parallel_num; ++i) {
     if (send_elem_cnts.at(i) != 0) {
       LOG(INFO) << parallel_id << " send " << send_elem_cnts.at(i) << " to " << i;
-      // OF_NCCL_CHECK(ncclSend(send_in_ptr.at(i), send_elem_cnts.at(i), GetNcclDataType(data_type),
-      // i,
-      //                        comm, cuda_stream));
       printf("\n NcclLogicalSendRecv::Compute() >>> ccl::Send");
       std::unique_ptr<ccl::Send> send =
           ccl::NewCollectiveCommunication<ccl::Send>(ctx->stream()->device_type(), data_type);
@@ -210,9 +205,6 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
     }
     if (recv_elem_cnts.at(i) != 0) {
       LOG(INFO) << parallel_id << " recv " << recv_elem_cnts.at(i) << " from " << i;
-      // OF_NCCL_CHECK(ncclRecv(recv_out_ptr.at(i), recv_elem_cnts.at(i),
-      // GetNcclDataType(data_type),
-      //                        i, comm, cuda_stream));
       printf("\n NcclLogicalSendRecv::Compute() >>> ccl::Recv");
       std::unique_ptr<ccl::Recv> recv =
           ccl::NewCollectiveCommunication<ccl::Recv>(ctx->stream()->device_type(), data_type);

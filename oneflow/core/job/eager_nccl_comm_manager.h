@@ -26,15 +26,17 @@ limitations under the License.
 
 namespace oneflow {
 namespace ccl {
+
 class NcclCommAdapter : public CommBase {
  public:
-  NcclCommAdapter(ncclComm_t* comm) : comm_(comm) {}
+  NcclCommAdapter(ncclComm_t comm) : comm_(comm) {}
 
-  void* getComm() override { return static_cast<void*>(comm_); }
+  void* getComm() override { return static_cast<void*>(&comm_); }
 
  private:
-  ncclComm_t* comm_;
+  ncclComm_t comm_;
 };
+
 }  // namespace ccl
 
 class EagerNcclCommMgr final : public EagerCclCommMgr {
@@ -47,6 +49,8 @@ class EagerNcclCommMgr final : public EagerCclCommMgr {
   ncclComm_t GetCommForDevice(const std::set<std::pair<int64_t, int64_t>>& device_set);
   ncclComm_t GetCommForDeviceAndStreamName(const std::set<std::pair<int64_t, int64_t>>& device_set,
                                            const std::string& stream_name);
+  ccl::CclComm GetCclCommForDeviceAndStreamName(
+      const std::set<std::pair<int64_t, int64_t>>& device_set, const std::string& stream_name);
 
   void CreateCommFromPlan(const Plan& plan) override;
   bool IsAsyncLaunchCclLogicalKernel() const override { return async_launch_nccl_logical_kernel_; }
