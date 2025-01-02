@@ -31,7 +31,7 @@ limitations under the License.
 #include "oneflow/user/kernels/collective_communication/include/send.h"
 #include "oneflow/user/kernels/collective_communication/include/recv.h"
 
-// #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
 namespace oneflow {
 
@@ -47,24 +47,15 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
   bool src_nd_sbp_has_no_partial_parallel() const { return src_nd_sbp_no_partial_parallel_; }
   const std::vector<int64_t>& send_elem_cnts() const { return send_elem_cnts_; }
   const std::vector<int64_t>& recv_elem_cnts() const { return recv_elem_cnts_; }
-  // ncclComm_t comm() const { return GetOrCreateComm().comm; }
   ccl::CclComm ccl_comm() const { return GetOrCreateComm().ccl_comm; }
 
  private:
-  // struct Comm {
-  //   explicit Comm(ncclComm_t comm) : comm(comm) {}
-  //   ncclComm_t comm;
-  // };
   struct Comm {
     Comm(ccl::CclComm comm) : ccl_comm(comm) {}
     ccl::CclComm ccl_comm;
   };
 
   void InitComm() const;
-  // const Comm& GetOrCreateComm() const {
-  //   if (!comm_) { InitComm(); }
-  //   return *comm_;
-  // }
   const Comm& GetOrCreateComm() const {
     if (!ccl_comm_) { InitComm(); }
     return *ccl_comm_;
@@ -72,7 +63,6 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
 
   std::string stream_name_;
   std::unique_ptr<ParallelDesc> parallel_desc_;
-  // mutable std::unique_ptr<Comm> comm_;
   mutable std::unique_ptr<Comm> ccl_comm_;
   bool src_nd_sbp_no_partial_parallel_;
   std::vector<std::shared_ptr<TensorSliceCopier>> in_tensor_slice_copier_vec_;
@@ -144,9 +134,6 @@ void NcclLogicalSendRecvState::InitComm() const {
     device_set.emplace(std::make_pair(machine_id, device_id));
   }
   EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-  // ncclComm_t comm = nullptr;
-  // comm = comm_mgr->As<EagerNcclCommMgr>()->GetCommForDeviceAndStreamName(device_set,
-  // stream_name_); comm_.reset(new Comm(comm));
   ccl::CclComm ccl_comm = comm_mgr->GetCclCommForDeviceAndStreamName(device_set, stream_name_);
   ccl_comm_.reset(new Comm(ccl_comm));
 }
@@ -179,9 +166,7 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
   const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-  // ncclComm_t comm = kernel_state->comm();
   ccl::CclComm ccl_comm = kernel_state->ccl_comm();
-  // cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
   const std::vector<int64_t>& send_elem_cnts = kernel_state->send_elem_cnts();
   const std::vector<int64_t>& recv_elem_cnts = kernel_state->recv_elem_cnts();
   const int64_t parallel_num = send_elem_cnts.size();
@@ -316,4 +301,4 @@ REGISTER_USER_KERNEL("_nccl_logical_send_recv")
 
 }  // namespace oneflow
 
-// #endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
+#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
