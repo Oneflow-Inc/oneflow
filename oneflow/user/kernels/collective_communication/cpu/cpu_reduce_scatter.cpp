@@ -120,6 +120,11 @@ class CpuReduceScatter final : public ReduceScatter {
                                        cpu_communication_ctx->parallel_desc()));
   }
 
+  void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
+              ccl::CclComm ccl_comm) const override {
+    UNIMPLEMENTED();
+  }
+
  private:
   DataType datatype_;
   ReduceType reduce_type_;

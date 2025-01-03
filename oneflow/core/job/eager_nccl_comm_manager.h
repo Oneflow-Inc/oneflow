@@ -25,6 +25,19 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
+namespace ccl {
+
+class NcclCommAdapter : public CommBase {
+ public:
+  NcclCommAdapter(ncclComm_t comm) : comm_(comm) {}
+
+  void* getComm() override { return static_cast<void*>(&comm_); }
+
+ private:
+  ncclComm_t comm_;
+};
+
+}  // namespace ccl
 
 class EagerNcclCommMgr final : public EagerCclCommMgr {
  public:
@@ -36,6 +49,9 @@ class EagerNcclCommMgr final : public EagerCclCommMgr {
   ncclComm_t GetCommForDevice(const std::set<std::pair<int64_t, int64_t>>& device_set);
   ncclComm_t GetCommForDeviceAndStreamName(const std::set<std::pair<int64_t, int64_t>>& device_set,
                                            const std::string& stream_name);
+  ccl::CclComm GetCclCommForDevice(const std::set<std::pair<int64_t, int64_t>>& device_set);
+  ccl::CclComm GetCclCommForDeviceAndStreamName(
+      const std::set<std::pair<int64_t, int64_t>>& device_set, const std::string& stream_name);
 
   void CreateCommFromPlan(const Plan& plan) override;
   bool IsAsyncLaunchCclLogicalKernel() const override { return async_launch_nccl_logical_kernel_; }

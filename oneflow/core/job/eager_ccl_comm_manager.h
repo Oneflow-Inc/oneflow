@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/plan.pb.h"
+#include "oneflow/user/kernels/collective_communication/include/collective_communication.h"
 
 namespace oneflow {
 
@@ -29,6 +30,16 @@ class EagerCclCommMgr {
   virtual void CreateCommFromPlan(const Plan& plan) = 0;
   virtual bool IsAsyncLaunchCclLogicalKernel() const = 0;
   virtual void SetAsyncLaunchCclLogicalKernel(bool val) = 0;
+  virtual ccl::CclComm GetCclCommForDevice(
+      const std::set<std::pair<int64_t, int64_t>>& device_set) {
+    ccl::CclComm ccl_comm{};
+    return ccl_comm;
+  }
+  virtual ccl::CclComm GetCclCommForDeviceAndStreamName(
+      const std::set<std::pair<int64_t, int64_t>>& device_set, const std::string& stream_name) {
+    ccl::CclComm ccl_comm{};
+    return ccl_comm;
+  }
 
   template<typename T>
   T* As() {

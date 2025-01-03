@@ -40,6 +40,13 @@ class CudaAllGather final : public AllGather {
                                 stream->As<ep::CudaStream>()->cuda_stream()));
   }
 
+  virtual void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
+                      ccl::CclComm ccl_comm) const override {
+    ncclComm_t* nccl_comm = reinterpret_cast<ncclComm_t*>(ccl_comm.getComm());
+    OF_NCCL_CHECK(ncclAllGather(in, out, elem_cnt, nccl_datatype_, *nccl_comm,
+                                stream->As<ep::CudaStream>()->cuda_stream()));
+  }
+
  private:
   ncclDataType_t nccl_datatype_;
 };
