@@ -13,11 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#include "collective_communication/include/all_gather.h"
-#include "collective_communication/include/all_reduce.h"
-#include "collective_communication/include/collective_communication.h"
-#include "collective_communication/include/reduce_scatter.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/nccl_util.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
@@ -25,8 +20,12 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/user/ops/nccl_logical_util.h"
-#include "oneflow/user/kernels/collective_communication/include/send.h"
-#include "oneflow/user/kernels/collective_communication/include/recv.h"
+#include "collective_communication/include/send.h"
+#include "collective_communication/include/recv.h"
+#include "collective_communication/include/all_gather.h"
+#include "collective_communication/include/all_reduce.h"
+#include "collective_communication/include/collective_communication.h"
+#include "collective_communication/include/reduce_scatter.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 

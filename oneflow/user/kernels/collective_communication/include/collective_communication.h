@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COLLECTIVE_COMMUNICATION_H_
 #define ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COLLECTIVE_COMMUNICATION_H_
 
-#include <memory>
-#include <utility>
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/user/kernels/collective_communication/include/communication_context.h"
