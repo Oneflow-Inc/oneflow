@@ -68,8 +68,8 @@ class FuseLayerNormGradCpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override { TODO(); };
 };
 
-#define REGISTER_FUSE_LAYER_NORM_GRAD_CPU_KERNEL(dtype)                    \
-  REGISTER_USER_KERNEL("fuse_layer_norm_grad")                             \
+#define REGISTER_FUSE_LAYER_NORM_GRAD_CPU_KERNEL(dtype)               \
+  REGISTER_USER_KERNEL("fuse_layer_norm_grad")                        \
       .SetCreateFn<LayerNormGradCpuKernel<dtype>>()                   \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU) \
                        && (user_op::HobDataType("dy", 0) == GetDataType<dtype>::value));
