@@ -116,11 +116,10 @@ Maybe<void> LayerNorm::Apply(const LayerNormCaptureState* ctx, const TensorTuple
     if (ctx->x_requires_grad) {
       if (ctx->scale) {
         std::shared_ptr<Tensor> gamma = saved_tensors.at(ctx->gamma_index);
-        *in_grads = *JUST(functional::FuseLayerNormAffineGrad(
+        *in_grads = *JUST(functional::FuseLayerNormGrad(
             dy, x, mean, inv_variance, gamma, begin_norm_axis, begin_params_axis, ctx->epsilon));
       } else {
-        *in_grads = *JUST(functional::FuseLayerNormGrad(dy, x, mean, inv_variance, begin_norm_axis,
-                                                        begin_params_axis, ctx->epsilon));
+	UNIMPLEMENTED();
       }
     }
   } else {
