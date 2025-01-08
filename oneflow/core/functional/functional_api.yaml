@@ -1551,11 +1551,11 @@
   bind_python: True
 
 - name: "layer_norm_grad"
-  signature: "Tensor (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_norm_axis, Double epsilon) => LayerNormGrad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_norm_axis, Int64 begin_params_axis, Double epsilon) => LayerNormGrad"
   bind_python: False
 
 - name: "layer_norm_affine_grad"
-  signature: "Tensor (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Tensor gamma, Int64 begin_norm_axis, Double epsilon) => LayerNormAffineGrad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Tensor gamma, Int64 begin_norm_axis, Int64 begin_params_axis, Double epsilon) => LayerNormAffineGrad"
   bind_python: False
 
 - name: "layer_norm_param_grad"
