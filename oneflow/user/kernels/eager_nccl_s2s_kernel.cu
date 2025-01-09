@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
@@ -34,7 +35,7 @@ class EagerNcclOpKernelCache final : public user_op::OpKernelCache {
   ~EagerNcclOpKernelCache() override = default;
 
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
-  ncclComm_t comm() const { return comm_; }
+  ccl::CclComm ccl_comm() const { return ccl_comm_; }
 
  private:
   void Init(user_op::KernelCacheContext* ctx) {
@@ -48,13 +49,12 @@ class EagerNcclOpKernelCache final : public user_op::OpKernelCache {
       int64_t device_id = CHECK_JUST(parallel_desc_->DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
-    comm_ = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get())
-                ->As<EagerNcclCommMgr>()
-                ->GetCommForDevice(device_set);
+    EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
+    ccl_comm_ = comm_mgr->GetCclCommForDevice(device_set);
   }
 
   Symbol<ParallelDesc> parallel_desc_;
-  ncclComm_t comm_{};
+  ccl::CclComm ccl_comm_{};
 };
 
 size_t InferEagerNcclS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -148,21 +148,12 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
 
     {
       // NOTE: Do S2S
-      OF_NCCL_CHECK(ncclGroupStart());
       const int64_t elem_per_chunk = elem_cnt / num_ranks;
-      const int64_t chunk_size = elem_per_chunk * dtype_size;
-      for (int64_t j = 0; j < num_ranks; ++j) {
-        OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
-                                   reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
-                               elem_per_chunk, GetNcclDataType(in->data_type()), j,
-                               kernel_cache->comm(),
-                               ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-        OF_NCCL_CHECK(ncclRecv(
-            reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
-            elem_per_chunk, GetNcclDataType(in->data_type()), j, kernel_cache->comm(),
-            ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-      }
-      OF_NCCL_CHECK(ncclGroupEnd());
+      std::unique_ptr<ccl::AllToAll> all_to_all = ccl::NewCollectiveCommunication<ccl::AllToAll>(
+          ctx->stream()->device_type(), in->data_type(), in->data_type(), num_ranks);
+      ccl::CclComm ccl_comm = kernel_cache->ccl_comm();
+      all_to_all->Launch(ctx->stream(), pack_to_ptr, elem_per_chunk, unpack_from_ptr,
+                         elem_per_chunk, ccl_comm);
     }
 
     if (in_split_axis != 0) {
