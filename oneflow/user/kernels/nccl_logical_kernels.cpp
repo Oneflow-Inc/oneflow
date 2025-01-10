@@ -63,7 +63,7 @@ class NcclLogicalKernelCommState : public user_op::OpKernelState {
   bool is_init_;
   std::string stream_name_;
   ParallelDesc parallel_desc_;
-  ccl::CclComm ccl_comm{};
+  ccl::CclComm ccl_comm_{};
 };
 
 class NcclLogicalAllGatherNoncontinuousKernelState : public NcclLogicalKernelCommState {
@@ -462,9 +462,9 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
       const int64_t elem_per_chunk = elem_cnt / num_ranks;
       std::unique_ptr<ccl::AllToAll> all_to_all = ccl::NewCollectiveCommunication<ccl::AllToAll>(
           ctx->stream()->device_type(), in->data_type(), in->data_type(), num_ranks);
-      ccl::CclComm ccl_comm = kernel_cache->ccl_comm();
-      all_to_all->Launch(ctx->stream(), pack_to_ptr, elem_per_chunk, unpack_from_ptr,
-                         elem_per_chunk, ccl_comm);
+      ccl::CclComm ccl_comm = kernel_state->ccl_comm();
+      all_to_all->Launch(ctx->stream(), const_cast<char*>(pack_to_ptr), elem_per_chunk,
+                         unpack_from_ptr, elem_per_chunk, ccl_comm);
     }
 
     if (in_split_axis != 0) {

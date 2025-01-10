@@ -359,8 +359,8 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
       std::unique_ptr<ccl::AllToAll> all_to_all = ccl::NewCollectiveCommunication<ccl::AllToAll>(
           ctx->stream()->device_type(), in->data_type(), in->data_type(), num_ranks);
       ccl::CclComm ccl_comm = kernel_state->ccl_comm();
-      all_to_all->Launch(ctx->stream(), pack_to_ptr, elem_per_chunk, unpack_from_ptr,
-                         elem_per_chunk, ccl_comm);
+      all_to_all->Launch(ctx->stream(), const_cast<char*>(pack_to_ptr), elem_per_chunk,
+                         unpack_from_ptr, elem_per_chunk, ccl_comm);
     }
 
     if (in_split_axis != 0) {
