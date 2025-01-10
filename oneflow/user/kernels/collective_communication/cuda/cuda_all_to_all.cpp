@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifdef WITH_CUDA
-#include "oneflow/user/kernels/collective_communication/include/send.h"
-#include "oneflow/user/kernels/collective_communication/include/recv.h"
 #include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
 #include "oneflow/user/kernels/collective_communication/cuda/cuda_communication_context.h"
 #include "oneflow/core/device/nccl_util.h"
