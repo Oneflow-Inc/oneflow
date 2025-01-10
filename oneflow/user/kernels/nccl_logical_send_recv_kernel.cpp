@@ -28,8 +28,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/core/ep/include/primitive/add.h"
 #include "oneflow/core/operator/nccl_send_recv_boxing_op_util.h"
-#include "oneflow/user/kernels/collective_communication/include/send.h"
-#include "oneflow/user/kernels/collective_communication/include/recv.h"
+#include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
@@ -174,16 +173,21 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
 
   std::vector<void*> send_in_ptr;
   std::vector<void*> recv_out_ptr;
+  std::vector<int64_t> send_offsets;
+  std::vector<int64_t> recv_offsets;
   char* buf_ptr = tmp_buffer->mut_dptr<char>();
-  int64_t offset = 0;
+  uint64_t offset = 0;
   for (int64_t i = 0; i < parallel_num; ++i) {
     void* send_ptr = reinterpret_cast<void*>(buf_ptr + offset);
     send_in_ptr.push_back(send_ptr);
+    send_offsets.push_back(offset);
     offset += send_elem_cnts.at(i) * GetSizeOfDataType(data_type);
   }
+  const uint64_t recv_offset = offset;
   for (int64_t i = 0; i < parallel_num; ++i) {
     void* recv_ptr = reinterpret_cast<void*>(buf_ptr + offset);
     recv_out_ptr.push_back(recv_ptr);
+    recv_offsets.push_back(offset - recv_offset);
     offset += recv_elem_cnts.at(i) * GetSizeOfDataType(data_type);
   }
 
@@ -196,22 +200,13 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
   }
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
 
-  std::unique_ptr<ccl::Send> send =
-      ccl::NewCollectiveCommunication<ccl::Send>(ctx->stream()->device_type(), data_type);
-  std::unique_ptr<ccl::Recv> recv =
-      ccl::NewCollectiveCommunication<ccl::Recv>(ctx->stream()->device_type(), data_type);
-  OF_NCCL_CHECK(ncclGroupStart());
-  for (int64_t i = 0; i < parallel_num; ++i) {
-    if (send_elem_cnts.at(i) != 0) {
-      LOG(INFO) << parallel_id << " send " << send_elem_cnts.at(i) << " to " << i;
-      send->Launch(ctx->stream(), send_in_ptr.at(i), send_elem_cnts.at(i), i, ccl_comm);
-    }
-    if (recv_elem_cnts.at(i) != 0) {
-      LOG(INFO) << parallel_id << " recv " << recv_elem_cnts.at(i) << " from " << i;
-      recv->Launch(ctx->stream(), recv_out_ptr.at(i), recv_elem_cnts.at(i), i, ccl_comm);
-    }
-  }
-  OF_NCCL_CHECK(ncclGroupEnd());
+  std::unique_ptr<ccl::AllToAll> all_to_all = ccl::NewCollectiveCommunication<ccl::AllToAll>(
+      ctx->stream()->device_type(), data_type, data_type, parallel_num);
+  void* send_buf = reinterpret_cast<void*>(buf_ptr);
+  void* recv_buf = reinterpret_cast<void*>(buf_ptr + recv_offset);
+  all_to_all->Launch(ctx->stream(), send_buf, send_elem_cnts.data(), send_offsets.data(), recv_buf,
+                     recv_elem_cnts.data(), recv_offsets.data(), ccl_comm);
+
   const std::vector<std::shared_ptr<TensorSliceCopier>>& out_tensor_slice_copier_vec =
       kernel_state->out_tensor_slice_copier_vec();
 

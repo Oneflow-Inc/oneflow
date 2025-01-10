@@ -20,11 +20,12 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/user/ops/nccl_logical_util.h"
+#include "collective_communication/include/collective_communication.h"
 #include "collective_communication/include/send.h"
 #include "collective_communication/include/recv.h"
 #include "collective_communication/include/all_gather.h"
 #include "collective_communication/include/all_reduce.h"
-#include "collective_communication/include/collective_communication.h"
+#include "collective_communication/include/all_to_all.h"
 #include "collective_communication/include/reduce_scatter.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
@@ -491,19 +492,12 @@ void DoNcclComputeByNcclTypeInGroup(const void* pack_to_ptr, void* unpack_from_p
                                out->shape_view().elem_cnt(), ccl_comm);
   } else if (nccl_type == "_nccl_logical_s2s") {
     const int64_t elem_cnt = in->shape_view().elem_cnt();
-    const int64_t dtype_size = GetSizeOfDataType(in->data_type());
     const int64_t elem_per_chunk = elem_cnt / num_ranks;
-    const int64_t chunk_size = elem_per_chunk * dtype_size;
-    for (int64_t j = 0; j < num_ranks; ++j) {
-      ccl_send->Launch(ctx->stream(),
-                       reinterpret_cast<const void*>(reinterpret_cast<const char*>(pack_to_ptr)
-                                                     + j * chunk_size),
-                       elem_per_chunk, j, ccl_comm);
-      ccl_recv->Launch(
-          ctx->stream(),
-          reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
-          elem_per_chunk, j, ccl_comm);
-    }
+    std::unique_ptr<ccl::AllToAll> all_to_all = ccl::NewCollectiveCommunication<ccl::AllToAll>(
+        ctx->stream()->device_type(), in->data_type(), in->data_type(), num_ranks);
+    all_to_all->Launch(ctx->stream(), const_cast<void*>(pack_to_ptr), elem_per_chunk,
+                       unpack_from_ptr, elem_per_chunk, ccl_comm);
+
   } else if (nccl_type == "_nccl_logical_2D_same_dim0_all_reduce") {
     CHECK(in->dptr() == pack_to_ptr);
     CHECK(out->mut_dptr() == unpack_from_ptr);
@@ -534,19 +528,11 @@ void DoNcclComputeByNcclTypeInGroup(const void* pack_to_ptr, void* unpack_from_p
                            ccl_comm);
   } else if (nccl_type == "_nccl_logical_2D_same_dim0_all2all") {
     const int64_t elem_cnt = in->shape_view().elem_cnt();
-    const int64_t dtype_size = GetSizeOfDataType(in->data_type());
     const int64_t elem_per_chunk = elem_cnt / num_ranks;
-    const int64_t chunk_size = elem_per_chunk * dtype_size;
-    for (int64_t j = 0; j < num_ranks; ++j) {
-      ccl_send->Launch(ctx->stream(),
-                       reinterpret_cast<const void*>(reinterpret_cast<const char*>(pack_to_ptr)
-                                                     + j * chunk_size),
-                       elem_per_chunk, j, ccl_comm);
-      ccl_recv->Launch(
-          ctx->stream(),
-          reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
-          elem_per_chunk, j, ccl_comm);
-    }
+    std::unique_ptr<ccl::AllToAll> all_to_all = ccl::NewCollectiveCommunication<ccl::AllToAll>(
+        ctx->stream()->device_type(), in->data_type(), in->data_type(), num_ranks);
+    all_to_all->Launch(ctx->stream(), const_cast<void*>(pack_to_ptr), elem_per_chunk,
+                       unpack_from_ptr, elem_per_chunk, ccl_comm);
   } else if (nccl_type == "_nccl_logical_2D_same_dim1_all_reduce") {
     CHECK(in->dptr() == pack_to_ptr);
     CHECK(out->mut_dptr() == unpack_from_ptr);
