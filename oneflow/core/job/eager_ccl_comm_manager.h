@@ -31,15 +31,9 @@ class EagerCclCommMgr {
   virtual bool IsAsyncLaunchCclLogicalKernel() const = 0;
   virtual void SetAsyncLaunchCclLogicalKernel(bool val) = 0;
   virtual ccl::CclComm GetCclCommForDevice(
-      const std::set<std::pair<int64_t, int64_t>>& device_set) {
-    ccl::CclComm ccl_comm{};
-    return ccl_comm;
-  }
+      const std::set<std::pair<int64_t, int64_t>>& device_set) = 0;
   virtual ccl::CclComm GetCclCommForDeviceAndStreamName(
-      const std::set<std::pair<int64_t, int64_t>>& device_set, const std::string& stream_name) {
-    ccl::CclComm ccl_comm{};
-    return ccl_comm;
-  }
+      const std::set<std::pair<int64_t, int64_t>>& device_set, const std::string& stream_name) = 0;
 
   template<typename T>
   T* As() {
