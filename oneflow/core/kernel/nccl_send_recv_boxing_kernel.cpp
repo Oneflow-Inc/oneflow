@@ -22,15 +22,15 @@ limitations under the License.
 #include "oneflow/core/operator/nccl_send_recv_boxing_op_util.h"
 #include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+// #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
 namespace oneflow {
 
-class NcclSendRecvBoxingKernel final : public Kernel {
+class CclSendRecvBoxingKernel final : public Kernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NcclSendRecvBoxingKernel);
-  NcclSendRecvBoxingKernel() = default;
-  ~NcclSendRecvBoxingKernel() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CclSendRecvBoxingKernel);
+  CclSendRecvBoxingKernel() = default;
+  ~CclSendRecvBoxingKernel() override = default;
 
   const std::vector<std::shared_ptr<TensorSliceCopier>>& in_tensor_slice_copier_vec() const {
     return in_tensor_slice_copier_vec_;
@@ -38,15 +38,15 @@ class NcclSendRecvBoxingKernel final : public Kernel {
   const std::vector<std::shared_ptr<TensorSliceCopier>>& out_tensor_slice_copier_vec() const {
     return out_tensor_slice_copier_vec_;
   }
-  const std::vector<int64_t>& send_elem_cnts() const { return send_elem_cnts_; }
-  const std::vector<int64_t>& recv_elem_cnts() const { return recv_elem_cnts_; }
+  const std::vector<uint64_t>& send_elem_cnts() const { return send_elem_cnts_; }
+  const std::vector<uint64_t>& recv_elem_cnts() const { return recv_elem_cnts_; }
   const bool has_input() const { return has_input_; }
   const bool has_output() const { return has_output_; }
   ccl::CclComm ccl_comm() const { return GetOrCreate().ccl_comm; }
 
  private:
   struct Comm {
-    Comm(ccl::CclComm comm) : ccl_comm(comm) {}
+    explicit Comm(ccl::CclComm comm) : ccl_comm(comm) {}
     ccl::CclComm ccl_comm;
   };
 
@@ -77,31 +77,32 @@ class NcclSendRecvBoxingKernel final : public Kernel {
   bool src_nd_sbp_no_partial_parallel_;
   std::vector<std::shared_ptr<TensorSliceCopier>> in_tensor_slice_copier_vec_;
   std::vector<std::shared_ptr<TensorSliceCopier>> out_tensor_slice_copier_vec_;
-  std::vector<int64_t> send_elem_cnts_;
-  std::vector<int64_t> recv_elem_cnts_;
+  std::vector<uint64_t> send_elem_cnts_;
+  std::vector<uint64_t> recv_elem_cnts_;
   bool has_input_;
   bool has_output_;
 };
 
-void NcclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
+void CclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
   Blob* buf = ctx->BnInOp2Blob("buf");
   ccl::CclComm ccl_comm = this->ccl_comm();
-  const std::vector<int64_t>& send_elem_cnts = this->send_elem_cnts();
-  const std::vector<int64_t>& recv_elem_cnts = this->recv_elem_cnts();
+  const std::vector<uint64_t>& send_elem_cnts = this->send_elem_cnts();
+  const std::vector<uint64_t>& recv_elem_cnts = this->recv_elem_cnts();
   const int64_t parallel_num = this->kernel_conf().parallel_ctx().parallel_num();
   const DataType data_type = buf->data_type();
+  const size_t dtype_size = GetSizeOfDataType(data_type);
   std::vector<void*> send_in_ptr;
   std::vector<void*> recv_out_ptr;
-  std::vector<int64_t> send_offsets;
-  std::vector<int64_t> recv_offsets;
+  std::vector<uint64_t> send_offsets;
+  std::vector<uint64_t> recv_offsets;
   char* buf_ptr = buf->mut_dptr<char>();
   uint64_t offset = 0;
   if (this->has_input()) {
     for (int64_t i = 0; i < parallel_num; ++i) {
       void* send_ptr = reinterpret_cast<void*>(buf_ptr + offset);
       send_in_ptr.push_back(send_ptr);
-      send_offsets.push_back(offset);
-      offset += send_elem_cnts.at(i) * GetSizeOfDataType(data_type);
+      send_offsets.push_back(offset / dtype_size);
+      offset += send_elem_cnts.at(i) * dtype_size;
     }
   }
   const uint64_t recv_offset = offset;
@@ -109,8 +110,8 @@ void NcclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
     for (int64_t i = 0; i < parallel_num; ++i) {
       void* recv_ptr = reinterpret_cast<void*>(buf_ptr + offset);
       recv_out_ptr.push_back(recv_ptr);
-      recv_offsets.push_back(offset - recv_offset);
-      offset += recv_elem_cnts.at(i) * GetSizeOfDataType(data_type);
+      recv_offsets.push_back((offset - recv_offset) / dtype_size);
+      offset += recv_elem_cnts.at(i) * dtype_size;
     }
   }
   if (this->has_input()) {
@@ -160,7 +161,7 @@ void NcclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
           if (recv_elem_cnts.at(i) != out->shape().elem_cnt()) {
             // if not same shape, memset out
             memset_primitive->Launch(ctx->stream(), out->mut_dptr(), 0,
-                                     out->shape().elem_cnt() * GetSizeOfDataType(data_type));
+                                     out->shape().elem_cnt() * dtype_size);
           }
           out_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), out->mut_dptr(),
                                                   recv_out_ptr.at(i));
@@ -171,7 +172,7 @@ void NcclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
           } else {
             void* out_buf = reinterpret_cast<void*>(buf_ptr + offset);
             memset_primitive->Launch(ctx->stream(), out_buf, 0,
-                                     out->shape().elem_cnt() * GetSizeOfDataType(data_type));
+                                     out->shape().elem_cnt() * dtype_size);
             out_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), out_buf, recv_out_ptr.at(i));
             primitive->Launch(ctx->stream(), out->dptr(), out_buf, out->mut_dptr(),
                               out->shape().elem_cnt());
@@ -182,12 +183,12 @@ void NcclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
   }
 }
 
-void NcclSendRecvBoxingKernel::VirtualKernelInit(KernelContext* ctx) {
+void CclSendRecvBoxingKernel::VirtualKernelInit(KernelContext* ctx) {
   const NcclSendRecvBoxingOpConf& conf = this->op_conf().nccl_send_recv_boxing_conf();
   if (this->op_conf().has_stream_name_hint()) {
     stream_name_ = this->op_conf().stream_name_hint();
   } else {
-    stream_name_ = EagerNcclCommMgr::kDefaultStreamName;
+    stream_name_ = EagerCclCommMgr::kDefaultCclStreamName;
   }
   parallel_conf_ = conf.parallel_conf();
   const int64_t parallel_id = this->kernel_conf().parallel_ctx().parallel_id();
@@ -249,11 +250,11 @@ void NcclSendRecvBoxingKernel::VirtualKernelInit(KernelContext* ctx) {
     CHECK_EQ(dst_recv_intersections.size(), 0);
   }
 }
+// TODO:(zhaoluyang) replace all kNcclxxxConf with kCclxxxConf
+REGISTER_KERNEL(OperatorConf::kNcclSendRecvBoxingConf, CclSendRecvBoxingKernel);
 
-REGISTER_KERNEL(OperatorConf::kNcclSendRecvBoxingConf, NcclSendRecvBoxingKernel);
-
-REGISTER_SYSTEM_OP_KERNEL_UNIFIED_NCCL_COMM_INIT(OperatorConf::kNcclSendRecvBoxingConf);
+REGISTER_SYSTEM_OP_KERNEL_UNIFIED_CCL_COMM_INIT(OperatorConf::kNcclSendRecvBoxingConf);
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
+// #endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700

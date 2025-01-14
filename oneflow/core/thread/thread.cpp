@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/thread/thread.h"
+#include "oneflow/core/job/eager_ccl_comm_manager.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/lazy/actor/actor.h"

@@ -24,6 +24,7 @@ namespace oneflow {
 
 class EagerCclCommMgr {
  public:
+  static const std::string kDefaultCclStreamName;
   OF_DISALLOW_COPY_AND_MOVE(EagerCclCommMgr);
   virtual ~EagerCclCommMgr() = default;
 
@@ -84,6 +85,48 @@ class EagerCclCommMgrBuilder {
 
 #define REGISTER_CCL_COMM_MGR(device, Derived) \
   COMMAND(EagerCclCommMgrBuilder::Get().RegisterEagerCclCommMgrType<Derived>(device))
+
+class UserKernelUnifiedCclCommInitRegistry final {
+ public:
+  struct Trigger {
+    explicit Trigger(const std::string& key) {
+      UserKernelUnifiedCclCommInitRegistry::Instance().Register(key);
+    }
+  };
+
+  static UserKernelUnifiedCclCommInitRegistry& Instance() {
+    static UserKernelUnifiedCclCommInitRegistry reg;
+    return reg;
+  }
+
+  OF_DISALLOW_COPY_AND_MOVE(UserKernelUnifiedCclCommInitRegistry);
+  ~UserKernelUnifiedCclCommInitRegistry() = default;
+
+  void Register(const std::string& key) {
+    bool insert_success = reg_set_.insert(key).second;
+    if (!insert_success) {
+      std::cerr << key << " was already registered in CclCommRegistry" << std::endl;
+      abort();
+    }
+  }
+
+  bool IsRegistered(const std::string& key) const { return reg_set_.find(key) != reg_set_.end(); }
+
+ private:
+  UserKernelUnifiedCclCommInitRegistry() = default;
+  std::set<std::string> reg_set_;
+};
+
+static const std::string kSystemCclOpPrefix = "sys_op_";
+
+#define REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT(op_type_name) \
+  static auto OF_PP_CAT(g_nccl_comm_reg_, __COUNTER__) =         \
+      ::oneflow::UserKernelUnifiedCclCommInitRegistry::Trigger(op_type_name)
+
+#define REGISTER_SYSTEM_OP_KERNEL_UNIFIED_CCL_COMM_INIT(op_type_case)                        \
+  static auto OF_PP_CAT(g_nccl_comm_reg_, __COUNTER__) =                                     \
+      ::oneflow::UserKernelUnifiedCclCommInitRegistry::Trigger(::oneflow::kSystemCclOpPrefix \
+                                                               + std::to_string(op_type_case))
 
 }  // namespace oneflow
 

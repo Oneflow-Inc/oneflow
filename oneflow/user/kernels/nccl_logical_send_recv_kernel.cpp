@@ -30,7 +30,7 @@ limitations under the License.
 #include "oneflow/core/operator/nccl_send_recv_boxing_op_util.h"
 #include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+// #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
 namespace oneflow {
 
@@ -71,7 +71,7 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
 };
 
 NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* ctx)
-    : stream_name_(EagerNcclCommMgr::kDefaultStreamName) {
+    : stream_name_(EagerCclCommMgr::kDefaultCclStreamName) {
   if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   parallel_desc_ = std::make_unique<ParallelDesc>(ctx->parallel_desc());
@@ -198,7 +198,6 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
       in_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), send_in_ptr.at(i), in->dptr());
     }
   }
-  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
 
   std::unique_ptr<ccl::AllToAll> all_to_all = ccl::NewCollectiveCommunication<ccl::AllToAll>(
       ctx->stream()->device_type(), data_type, data_type, parallel_num);
@@ -289,11 +288,18 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   return buf_count * GetSizeOfDataType(data_type);
 }
 
+// REGISTER_USER_KERNEL("_nccl_logical_send_recv")
+//     .SetCreateFn<NcclLogicalSendRecv>()
+//     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)
+//     .SetInferTmpSizeFn(InferTmpBufferSize);
+
+// TODO:(zhaoluyang) SetIsMatchedHob support multi devices(not including cpu)
 REGISTER_USER_KERNEL("_nccl_logical_send_recv")
     .SetCreateFn<NcclLogicalSendRecv>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     || (user_op::HobDeviceType() == DeviceType::kNPU))
     .SetInferTmpSizeFn(InferTmpBufferSize);
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
+// #endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700

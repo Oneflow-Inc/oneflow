@@ -99,10 +99,11 @@ class NDNcclSendRecvBoxingSubTskGphBuilder final : public HierarchicalSubTskGphB
                                       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
                                       const NdSbp& in_nd_sbp, const NdSbp& out_nd_sbp,
                                       const Shape& time_shape) const override {
-    if (in_parallel_desc.device_type() == DeviceType::kCUDA
-        && out_parallel_desc.device_type() == DeviceType::kCUDA
+    if (in_parallel_desc.device_type() != DeviceType::kCPU
+        && out_parallel_desc.device_type() != DeviceType::kCPU
         && !NdSbpHasPartialParallel(out_nd_sbp)) {
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+      // TODO: (zhaoluyang) WITH_DEVICE(e.g. cuda/npu/xpu....)
+      // #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
       ParallelConf merged_parallel_conf;
       MergeParallelConf(in_parallel_desc.parallel_conf(), out_parallel_desc.parallel_conf(),
                         &merged_parallel_conf);
@@ -136,9 +137,9 @@ class NDNcclSendRecvBoxingSubTskGphBuilder final : public HierarchicalSubTskGphB
         if (has_output) { sorted_out_tasks->push_back(node); }
       }
       return BuildSubTskGphBuilderStatus("NDNcclSendRecvBoxingSubTskGphBuilder", "");
-#else
-      return Error::BoxingNotSupportedError() << "No CUDA or low NCCL version";
-#endif
+      // #else
+      //       return Error::BoxingNotSupportedError() << "No CUDA or low NCCL version";
+      // #endif
     } else {
       return Error::BoxingNotSupportedError()
              << "Partial SBP in the consumer or not running on CUDA";

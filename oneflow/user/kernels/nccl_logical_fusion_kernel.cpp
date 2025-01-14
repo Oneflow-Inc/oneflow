@@ -28,7 +28,7 @@ limitations under the License.
 #include "collective_communication/include/all_to_all.h"
 #include "collective_communication/include/reduce_scatter.h"
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+// #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
 namespace oneflow {
 
@@ -78,7 +78,7 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
  public:
   explicit NcclLogicalFusionKernelState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
+        stream_name_(EagerCclCommMgr::kDefaultCclStreamName),
         parallel_desc_(ctx->parallel_desc()),
         this_parallel_id_(ctx->parallel_ctx().parallel_id()),
         num_ranks_(-1),
@@ -173,7 +173,12 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
     } else {
       UNIMPLEMENTED();
     }
-
+    if (!Singleton<EagerCclCommMgr>::Get()) {
+      printf("\n InitComm() >>> Singleton<EagerCclCommMgr>::Get() >>> failed!");
+    } else {
+      printf("\n InitComm() >>> Singleton<EagerCclCommMgr>::Get() >>> success!");
+    }
+    fflush(stdout);
     EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
     ccl_comm_ = comm_mgr->GetCclCommForDeviceAndStreamName(device_set, stream_name_);
     is_init_ = true;
@@ -301,8 +306,9 @@ class NcclLogicalFusionKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override;
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
-    EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    return comm_mgr->IsAsyncLaunchCclLogicalKernel();
+    // EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
+    // return comm_mgr->IsAsyncLaunchCclLogicalKernel();
+    return true;
   }
 };
 
@@ -355,6 +361,7 @@ void* UpdateUnpackFromPtrByNcclType(void* unpack_from_ptr, const std::string& nc
 void DoPackBeforeNcclGroup(void* pack_to_ptr, const std::string& nccl_type,
                            const user_op::Tensor* in, user_op::KernelComputeContext* ctx,
                            NcclLogicalFusionKernelState* kernel_state, const int32_t i) {
+  printf("\n DoPackBeforeNcclGroup >>> nccl_type >>> %s", nccl_type.c_str());
   if (nccl_type == "_nccl_logical_reduce_scatter_noncontinuous") {
     // Do pack before reduce scatter
     const int64_t num_ranks = kernel_state->num_ranks();
@@ -641,6 +648,7 @@ void DoUnpackAfterNcclGroup(void* unpack_from_ptr, const std::string& nccl_type,
 void NcclLogicalFusionKernel::Compute(user_op::KernelComputeContext* ctx,
                                       user_op::OpKernelState* state,
                                       const user_op::OpKernelCache*) const {
+  printf("\n NcclLogicalFusionKernel::Compute() >>> ");
   auto* kernel_state = dynamic_cast<NcclLogicalFusionKernelState*>(state);
   CHECK_NOTNULL(kernel_state);
   const int32_t nccl_num = kernel_state->nccl_num();
@@ -682,14 +690,15 @@ void NcclLogicalFusionKernel::Compute(user_op::KernelComputeContext* ctx,
   ccl::CclComm ccl_comm = kernel_state->ccl_comm();
 
   // do nccl compute in group
-  OF_NCCL_CHECK(ncclGroupStart());
+  // TODO:(zhaoluyang) replacre ncclGroupStart/ncclGroupEnd with ccl CclGroupStart/CclGroupEnd
+  // OF_NCCL_CHECK(ncclGroupStart());
   for (int32_t i = 0; i < nccl_num; ++i) {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", i);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", i);
     DoNcclComputeByNcclTypeInGroup(pack_to_ptr_list.at(i), unpack_from_ptr_list.at(i),
                                    nccl_type_list.at(i), in, out, ctx, kernel_state, i, ccl_comm);
   }
-  OF_NCCL_CHECK(ncclGroupEnd());
+  // OF_NCCL_CHECK(ncclGroupEnd());
 
   // try to do unpack after all nccl
   for (int32_t i = 0; i < nccl_num; ++i) {
@@ -727,10 +736,13 @@ size_t InferNcclLogicalFusionKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 REGISTER_USER_KERNEL("_nccl_logical_fusion")
     .SetCreateFn<NcclLogicalFusionKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     || (user_op::HobDeviceType() == DeviceType::kNPU))
     .SetInferTmpSizeFn(InferNcclLogicalFusionKernelTmpBufferSize);
+
+// .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)
 }  // namespace
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
+// #endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700

@@ -36,7 +36,7 @@ class NcclLogicalKernelCommState : public user_op::OpKernelState {
  public:
   explicit NcclLogicalKernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
+        stream_name_(EagerCclCommMgr::kDefaultCclStreamName),
         parallel_desc_(ctx->parallel_desc()) {
     if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   }
@@ -513,22 +513,30 @@ size_t InferS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
+// TODO:(zhaoluyang) SetIsMatchedHob support multi devices(not including cpu)
 REGISTER_USER_KERNEL("_nccl_logical_all_reduce")
     .SetCreateFn<NcclLogicalAllReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     || (user_op::HobDeviceType() == DeviceType::kNPU));
+// .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
 
 REGISTER_USER_KERNEL("_nccl_logical_reduce_scatter")
     .SetCreateFn<NcclLogicalReduceScatterKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     || (user_op::HobDeviceType() == DeviceType::kNPU));
+// .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
 
 REGISTER_USER_KERNEL("_nccl_logical_all_gather")
     .SetCreateFn<NcclLogicalAllGatherKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     || (user_op::HobDeviceType() == DeviceType::kNPU));
+// .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
 
 #define REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                                   \
   REGISTER_USER_KERNEL("_nccl_logical_all_gather_noncontinuous")                         \
       .SetCreateFn<NcclLogicalAllGatherNoncontinuous<dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
+      .SetIsMatchedHob(((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                        || (user_op::HobDeviceType() == DeviceType::kNPU))               \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferAllGatherNoncontinuousKernelTmpBufferSize);
@@ -547,7 +555,8 @@ REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(nv_bfloat16)
 #define REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(dtype)                              \
   REGISTER_USER_KERNEL("_nccl_logical_reduce_scatter_noncontinuous")                     \
       .SetCreateFn<NcclLogicalReduceScatterNoncontinuous<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
+      .SetIsMatchedHob(((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                        || (user_op::HobDeviceType() == DeviceType::kNPU))               \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferReduceScatterNoncontinuousKernelTmpBufferSize);
@@ -566,7 +575,8 @@ REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(nv_bfloat16)
 #define REGISTER_S2S_KERNEL(dtype)                                                       \
   REGISTER_USER_KERNEL("_nccl_logical_s2s")                                              \
       .SetCreateFn<NcclLogicalS2SKernel<dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
+      .SetIsMatchedHob(((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                        || (user_op::HobDeviceType() == DeviceType::kNPU))               \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferS2SKernelTmpBufferSize);
