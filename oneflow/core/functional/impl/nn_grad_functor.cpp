@@ -1765,6 +1765,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LayerNormGradFunctor>("LayerNormGrad");
   m.add_functor<impl::LayerNormAffineGradFunctor>("LayerNormAffineGrad");
   m.add_functor<impl::LayerNormParamGradFunctor>("LayerNormParamGrad");
+  m.add_functor<impl::FuseLayerNormGradFunctor>("FuseLayerNormGrad");
+  m.add_functor<impl::FuseLayerNormAffineGradFunctor>("FuseLayerNormAffineGrad");
   m.add_functor<impl::GroupNormGradFunctor>("GroupNormGrad");
   m.add_functor<impl::GroupNormParamGradFunctor>("GroupNormParamGrad");
   m.add_functor<impl::BroadcastMatmulGradBFunctor>("BroadcastMatmulGradB");
