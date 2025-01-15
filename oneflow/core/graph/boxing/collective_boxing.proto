@@ -15,11 +15,6 @@ enum OpType {
     kOpTypeAll2All = 6;
 }
 
-enum CclCommType{
-    kCommTypeCudaNccl = 0;
-    kCommTypeAscendHccl = 1;
-}
-
 enum ReduceMethod {
     kReduceMethodInvalid = 0;
     kReduceMethodSum = 1;
