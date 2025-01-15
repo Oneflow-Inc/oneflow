@@ -65,6 +65,8 @@ void Kernel::Forward(KernelContext* ctx) const {
     return;
   }
   ctx->WillForwardDataContent(ctx, this);
+  // printf("\n Kernel::Launch() >>> Forward() >>> op_type_case:%d;",
+  // this->op_conf().op_type_case());
   ForwardDataContent(ctx);
   ctx->DidForwardDataContent(ctx, this);
 }

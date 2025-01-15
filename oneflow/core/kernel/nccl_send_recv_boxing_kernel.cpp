@@ -101,7 +101,8 @@ void CclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
     for (int64_t i = 0; i < parallel_num; ++i) {
       void* send_ptr = reinterpret_cast<void*>(buf_ptr + offset);
       send_in_ptr.push_back(send_ptr);
-      send_offsets.push_back(offset / dtype_size);
+      // send_offsets.push_back(offset);               // cuda case
+      send_offsets.push_back(offset / dtype_size);  // npu case
       offset += send_elem_cnts.at(i) * dtype_size;
     }
   }
@@ -110,7 +111,8 @@ void CclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
     for (int64_t i = 0; i < parallel_num; ++i) {
       void* recv_ptr = reinterpret_cast<void*>(buf_ptr + offset);
       recv_out_ptr.push_back(recv_ptr);
-      recv_offsets.push_back((offset - recv_offset) / dtype_size);
+      // recv_offsets.push_back(offset - recv_offset);                 // cuda case
+      recv_offsets.push_back((offset - recv_offset) / dtype_size);  // npu case
       offset += recv_elem_cnts.at(i) * dtype_size;
     }
   }
@@ -146,14 +148,16 @@ void CclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
       }
     }
   } else {
-    std::unique_ptr<ep::primitive::Add> primitive =
+    std::unique_ptr<ep::primitive::Add> add_primitive =
         ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->stream()->device_type(),
                                                                out->data_type());
-    CHECK(primitive);
+    CHECK(add_primitive);
     std::unique_ptr<ep::primitive::Memset> memset_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->stream()->device_type());
     CHECK(memset_primitive);
+
     bool is_first_slice = true;
+
     for (int64_t i = 0; i < parallel_num; ++i) {
       if (out_tensor_slice_copier_vec.at(i)) {
         if (is_first_slice) {
@@ -167,15 +171,15 @@ void CclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
                                                   recv_out_ptr.at(i));
         } else {
           if (recv_elem_cnts.at(i) == out->shape().elem_cnt()) {
-            primitive->Launch(ctx->stream(), out->dptr(), recv_out_ptr.at(i), out->mut_dptr(),
-                              out->shape().elem_cnt());
+            add_primitive->Launch(ctx->stream(), out->dptr(), recv_out_ptr.at(i), out->mut_dptr(),
+                                  out->shape().elem_cnt());
           } else {
             void* out_buf = reinterpret_cast<void*>(buf_ptr + offset);
             memset_primitive->Launch(ctx->stream(), out_buf, 0,
                                      out->shape().elem_cnt() * dtype_size);
             out_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), out_buf, recv_out_ptr.at(i));
-            primitive->Launch(ctx->stream(), out->dptr(), out_buf, out->mut_dptr(),
-                              out->shape().elem_cnt());
+            add_primitive->Launch(ctx->stream(), out->dptr(), out_buf, out->mut_dptr(),
+                                  out->shape().elem_cnt());
           }
         }
       }

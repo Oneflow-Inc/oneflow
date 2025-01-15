@@ -147,7 +147,7 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
     const ParallelDesc& seed_parallel_desc = seed_node->parallel_desc();
     // NOTE(chengcheng): ONLY consider GPU op and parallel num > 1.
     // if (seed_parallel_desc.device_type() != DeviceType::kCUDA) { continue; }
-    if (seed_parallel_desc.device_type() == DeviceType::kCPU) { continue; }
+    if (seed_parallel_desc.device_type() != DeviceType::kNPU) { continue; }
     if (seed_parallel_desc.parallel_num() <= 1) { continue; }
     // NOTE(chengcheng): using fastest time shape for merge acc into bw subgraph.
     if (!SharedPtrShapeEqual(GetOpNodeFastestTimeShape(seed_node), seed_time_shape)) { continue; }
