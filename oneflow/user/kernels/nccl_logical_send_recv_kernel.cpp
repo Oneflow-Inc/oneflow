@@ -34,9 +34,9 @@ limitations under the License.
 
 namespace oneflow {
 
-class NcclLogicalSendRecvState final : public user_op::OpKernelState {
+class CclLogicalSendRecvState final : public user_op::OpKernelState {
  public:
-  explicit NcclLogicalSendRecvState(user_op::KernelInitContext* ctx);
+  explicit CclLogicalSendRecvState(user_op::KernelInitContext* ctx);
   const std::vector<std::shared_ptr<TensorSliceCopier>>& in_tensor_slice_copier_vec() const {
     return in_tensor_slice_copier_vec_;
   }
@@ -70,7 +70,7 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
   std::vector<int64_t> recv_elem_cnts_;
 };
 
-NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* ctx)
+CclLogicalSendRecvState::CclLogicalSendRecvState(user_op::KernelInitContext* ctx)
     : stream_name_(EagerCclCommMgr::kDefaultCclStreamName) {
   if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
@@ -125,7 +125,7 @@ NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* c
   }
 }
 
-void NcclLogicalSendRecvState::InitComm() const {
+void CclLogicalSendRecvState::InitComm() const {
   std::set<std::pair<int64_t, int64_t>> device_set;
   for (int64_t parallel_id = 0; parallel_id < parallel_desc_->parallel_num(); ++parallel_id) {
     int64_t machine_id = CHECK_JUST(parallel_desc_->MachineId4ParallelId(parallel_id));
@@ -137,15 +137,15 @@ void NcclLogicalSendRecvState::InitComm() const {
   ccl_comm_.reset(new Comm(ccl_comm));
 }
 
-class NcclLogicalSendRecv final : public user_op::OpKernel {
+class CclLogicalSendRecv final : public user_op::OpKernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NcclLogicalSendRecv);
-  NcclLogicalSendRecv() = default;
-  ~NcclLogicalSendRecv() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CclLogicalSendRecv);
+  CclLogicalSendRecv() = default;
+  ~CclLogicalSendRecv() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<NcclLogicalSendRecvState>(ctx);
+    return std::make_shared<CclLogicalSendRecvState>(ctx);
   }
 
  private:
@@ -158,9 +158,9 @@ class NcclLogicalSendRecv final : public user_op::OpKernel {
   }
 };
 
-void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-                                  const user_op::OpKernelCache*) const {
-  auto* kernel_state = dynamic_cast<NcclLogicalSendRecvState*>(state);
+void CclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+                                 const user_op::OpKernelCache*) const {
+  auto* kernel_state = dynamic_cast<CclLogicalSendRecvState*>(state);
   CHECK_NOTNULL(kernel_state);
   const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -288,14 +288,9 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   return buf_count * GetSizeOfDataType(data_type);
 }
 
-// REGISTER_USER_KERNEL("_nccl_logical_send_recv")
-//     .SetCreateFn<NcclLogicalSendRecv>()
-//     .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)
-//     .SetInferTmpSizeFn(InferTmpBufferSize);
-
 // TODO:(zhaoluyang) SetIsMatchedHob support multi devices(not including cpu)
 REGISTER_USER_KERNEL("_nccl_logical_send_recv")
-    .SetCreateFn<NcclLogicalSendRecv>()
+    .SetCreateFn<CclLogicalSendRecv>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
                      || (user_op::HobDeviceType() == DeviceType::kNPU))
     .SetInferTmpSizeFn(InferTmpBufferSize);

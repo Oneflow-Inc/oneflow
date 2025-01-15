@@ -74,9 +74,9 @@ size_t GetTensorByteSize(const user_op::Tensor& tensor) {
   return GetCudaAlignedSize(tensor.shape_view().elem_cnt() * GetSizeOfDataType(tensor.data_type()));
 }
 
-class NcclLogicalFusionKernelState : public user_op::OpKernelState {
+class CclLogicalFusionKernelState : public user_op::OpKernelState {
  public:
-  explicit NcclLogicalFusionKernelState(user_op::KernelInitContext* ctx)
+  explicit CclLogicalFusionKernelState(user_op::KernelInitContext* ctx)
       : is_init_(false),
         stream_name_(EagerCclCommMgr::kDefaultCclStreamName),
         parallel_desc_(ctx->parallel_desc()),
@@ -87,7 +87,7 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
     if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
     InitSplitAxisAndTmpBufferOffset(ctx);
   }
-  ~NcclLogicalFusionKernelState() override = default;
+  ~CclLogicalFusionKernelState() override = default;
 
   ccl::CclComm ccl_comm() {
     if (!is_init_) { InitComm(); }
@@ -290,15 +290,15 @@ class NcclLogicalFusionKernelState : public user_op::OpKernelState {
   ccl::CclComm ccl_comm_{};
 };
 
-class NcclLogicalFusionKernel final : public user_op::OpKernel {
+class CclLogicalFusionKernel final : public user_op::OpKernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NcclLogicalFusionKernel);
-  NcclLogicalFusionKernel() = default;
-  ~NcclLogicalFusionKernel() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CclLogicalFusionKernel);
+  CclLogicalFusionKernel() = default;
+  ~CclLogicalFusionKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<NcclLogicalFusionKernelState>(ctx);
+    return std::make_shared<CclLogicalFusionKernelState>(ctx);
   }
 
  private:
@@ -314,7 +314,7 @@ class NcclLogicalFusionKernel final : public user_op::OpKernel {
 
 const void* UpdatePackToPtrByNcclType(const void* pack_to_ptr, const std::string& nccl_type,
                                       user_op::Tensor* tmp_buffer,
-                                      NcclLogicalFusionKernelState* kernel_state, const int32_t i) {
+                                      CclLogicalFusionKernelState* kernel_state, const int32_t i) {
   CHECK_NOTNULL(tmp_buffer);
   const void* tmp_dptr =
       static_cast<const void*>(tmp_buffer->dptr<char>() + kernel_state->tmp_buffer_offset(i));
@@ -334,7 +334,7 @@ const void* UpdatePackToPtrByNcclType(const void* pack_to_ptr, const std::string
 
 void* UpdateUnpackFromPtrByNcclType(void* unpack_from_ptr, const std::string& nccl_type,
                                     user_op::Tensor* tmp_buffer, const user_op::Tensor* in,
-                                    NcclLogicalFusionKernelState* kernel_state, const int32_t i) {
+                                    CclLogicalFusionKernelState* kernel_state, const int32_t i) {
   CHECK_NOTNULL(tmp_buffer);
   void* tmp_dptr =
       static_cast<void*>(tmp_buffer->mut_dptr<char>() + kernel_state->tmp_buffer_offset(i));
@@ -360,7 +360,7 @@ void* UpdateUnpackFromPtrByNcclType(void* unpack_from_ptr, const std::string& nc
 
 void DoPackBeforeNcclGroup(void* pack_to_ptr, const std::string& nccl_type,
                            const user_op::Tensor* in, user_op::KernelComputeContext* ctx,
-                           NcclLogicalFusionKernelState* kernel_state, const int32_t i) {
+                           CclLogicalFusionKernelState* kernel_state, const int32_t i) {
   printf("\n DoPackBeforeNcclGroup >>> nccl_type >>> %s", nccl_type.c_str());
   if (nccl_type == "_nccl_logical_reduce_scatter_noncontinuous") {
     // Do pack before reduce scatter
@@ -436,7 +436,7 @@ void DoPackBeforeNcclGroup(void* pack_to_ptr, const std::string& nccl_type,
 void DoNcclComputeByNcclTypeInGroup(const void* pack_to_ptr, void* unpack_from_ptr,
                                     const std::string& nccl_type, const user_op::Tensor* in,
                                     user_op::Tensor* out, user_op::KernelComputeContext* ctx,
-                                    NcclLogicalFusionKernelState* kernel_state, const int32_t i,
+                                    CclLogicalFusionKernelState* kernel_state, const int32_t i,
                                     ccl::CclComm ccl_comm) {
   std::unique_ptr<ccl::Send> ccl_send =
       ccl::NewCollectiveCommunication<ccl::Send>(ctx->stream()->device_type(), in->data_type());
@@ -561,7 +561,7 @@ void DoNcclComputeByNcclTypeInGroup(const void* pack_to_ptr, void* unpack_from_p
 void DoUnpackAfterNcclGroup(void* unpack_from_ptr, const std::string& nccl_type,
                             const user_op::Tensor* in, user_op::Tensor* out,
                             user_op::KernelComputeContext* ctx,
-                            NcclLogicalFusionKernelState* kernel_state, const int32_t i) {
+                            CclLogicalFusionKernelState* kernel_state, const int32_t i) {
   const int64_t num_ranks = kernel_state->num_ranks();
   const int64_t in_split_axis = kernel_state->src_split_axis(i);
   const int64_t out_split_axis = kernel_state->dst_split_axis(i);
@@ -645,11 +645,11 @@ void DoUnpackAfterNcclGroup(void* unpack_from_ptr, const std::string& nccl_type,
   }
 }
 
-void NcclLogicalFusionKernel::Compute(user_op::KernelComputeContext* ctx,
-                                      user_op::OpKernelState* state,
-                                      const user_op::OpKernelCache*) const {
-  printf("\n NcclLogicalFusionKernel::Compute() >>> ");
-  auto* kernel_state = dynamic_cast<NcclLogicalFusionKernelState*>(state);
+void CclLogicalFusionKernel::Compute(user_op::KernelComputeContext* ctx,
+                                     user_op::OpKernelState* state,
+                                     const user_op::OpKernelCache*) const {
+  printf("\n CclLogicalFusionKernel::Compute() >>> ");
+  auto* kernel_state = dynamic_cast<CclLogicalFusionKernelState*>(state);
   CHECK_NOTNULL(kernel_state);
   const int32_t nccl_num = kernel_state->nccl_num();
   const std::vector<std::string>& nccl_type_list =
@@ -735,7 +735,7 @@ size_t InferNcclLogicalFusionKernelTmpBufferSize(user_op::InferContext* ctx) {
 }
 
 REGISTER_USER_KERNEL("_nccl_logical_fusion")
-    .SetCreateFn<NcclLogicalFusionKernel>()
+    .SetCreateFn<CclLogicalFusionKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
                      || (user_op::HobDeviceType() == DeviceType::kNPU))
     .SetInferTmpSizeFn(InferNcclLogicalFusionKernelTmpBufferSize);
