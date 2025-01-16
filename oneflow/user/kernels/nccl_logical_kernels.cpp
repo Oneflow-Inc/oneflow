@@ -638,11 +638,6 @@ REGISTER_S2S_KERNEL(float16)
 REGISTER_S2S_KERNEL(nv_bfloat16)
 #endif
 
-// REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_all_reduce");
-// REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_reduce_scatter");
-// REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_all_gather");
-// REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_all_gather_noncontinuous");
-// REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_s2s");
 REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_all_reduce");
 REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_reduce_scatter");
 REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_all_gather");
