@@ -31,11 +31,38 @@ namespace oneflow {
 
 namespace {
 
+auto AllReduceCollectiveCommunicationExists() {
+  return hob::make_custom("AllReduceCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsAllReduceRegistered(device_type);
+                          });
+}
+
+auto AllGatherCollectiveCommunicationExists() {
+  return hob::make_custom("AllGatherCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsAllGatherRegistered(device_type);
+                          });
+}
+
+auto AllToAllCollectiveCommunicationExists() {
+  return hob::make_custom("AllToAllCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsAllToAllRegistered(device_type);
+                          });
+}
+
 class CclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
  public:
   explicit CclLogical2DSameDim0KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
+        stream_name_(EagerCclCommMgr::kDefaultCclStreamName),
         parallel_desc_(ctx->parallel_desc()),
         this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
     if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
@@ -411,7 +438,7 @@ class CclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState 
  public:
   explicit CclLogical2DSameDim1KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
+        stream_name_(EagerCclCommMgr::kDefaultCclStreamName),
         parallel_desc_(ctx->parallel_desc()),
         this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
     if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
@@ -494,16 +521,16 @@ class CclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_reduce")
     .SetCreateFn<CclLogical2DSameDim0AllReduce>()
-    .SetIsMatchedHob(user_op::HobDeviceType() != DeviceType::kCPU);
+    .SetIsMatchedHob(AllReduceCollectiveCommunicationExists());
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather")
     .SetCreateFn<CclLogical2DSameDim0AllGather>()
-    .SetIsMatchedHob(user_op::HobDeviceType() != DeviceType::kCPU);
+    .SetIsMatchedHob(AllGatherCollectiveCommunicationExists());
 
 #define REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                      \
   REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")            \
       .SetCreateFn<CclLogical2DSameDim0AllGatherNoncontinuous<dtype>>()                  \
-      .SetIsMatchedHob((user_op::HobDeviceType() != DeviceType::kCPU)                    \
+      .SetIsMatchedHob(AllGatherCollectiveCommunicationExists()                          \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize);
@@ -522,7 +549,7 @@ REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(nv_bfloat16)
 #define REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(dtype)                                      \
   REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all2all")                             \
       .SetCreateFn<CclLogical2DSameDim0All2All<dtype>>()                                 \
-      .SetIsMatchedHob((user_op::HobDeviceType() != DeviceType::kCPU)                    \
+      .SetIsMatchedHob(AllToAllCollectiveCommunicationExists()                           \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(Infer2DSameDim0All2AllKernelTmpBufferSize);
@@ -540,7 +567,7 @@ REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(nv_bfloat16)
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim1_all_reduce")
     .SetCreateFn<CclLogical2DSameDim1AllReduce>()
-    .SetIsMatchedHob(user_op::HobDeviceType() != DeviceType::kCPU);
+    .SetIsMatchedHob(AllReduceCollectiveCommunicationExists());
 
 REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_reduce");
 REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_gather");
