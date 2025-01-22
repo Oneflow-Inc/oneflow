@@ -324,9 +324,7 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
 
 /* static */ Maybe<void> FuseLayerNormGradOp::GetSbp(user_op::SbpContext* ctx) {
   std::vector<user_op::OpArg> broadcast_args;
-  if (ctx->user_op_conf().has_input("gamma", 0)) {
-    broadcast_args.emplace_back(user_op::OpArg("gamma", 0));
-  }
+  if (ctx->user_op_conf().has_input("gamma", 0)) { broadcast_args.emplace_back("gamma", 0); }
   int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
   int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
   CHECK_EQ(begin_norm_axis, begin_params_axis)
