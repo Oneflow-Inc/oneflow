@@ -488,6 +488,8 @@ LogicalResult ConvertUserOpInputs(llvm::StringRef op_type_name, ValueRange opera
     return ::oneflow::DeviceType::kMLU;
   } else if (device_tag.str() == "npu") {
     return ::oneflow::DeviceType::kNPU;
+  } else if (device_tag.str() == "xpu") {
+    return ::oneflow::DeviceType::kXPU;
   } else {
     LOG(FATAL) << "unsupported device tag: " << device_tag.str();
     return ::oneflow::DeviceType::kInvalidDevice;
