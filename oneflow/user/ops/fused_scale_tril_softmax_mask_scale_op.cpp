@@ -41,13 +41,15 @@ namespace oneflow {
     const user_op::GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper&)
     -> Maybe<void> {
   user_op::InputArgModifier* mask_modifier = GetInputArgModifierFn("mask", 0);
-  CHECK_OR_RETURN(mask_modifier != nullptr);
+  CHECK_OR_RETURN(mask_modifier != nullptr); // NOLINT(maybe-need-error-msg)
   mask_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedTrilScaleSoftmaxMaskScaleOp::GetSbp(user_op::SbpContext* ctx) -> Maybe<void> {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  CHECK_GE_OR_RETURN(x_tensor.shape().NumAxes(), 2);
+  CHECK_GE_OR_RETURN(x_tensor.shape().NumAxes(), 2)
+  <<Error::RuntimeError()
+  <<"The number of input tensor axes should be greater than or equal to 2";
   FOR_RANGE(int64_t, axis, 0, x_tensor.shape().NumAxes() - 2) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), axis)
@@ -64,7 +66,12 @@ namespace oneflow {
   const user_op::TensorDesc& softmax_y_desc = ctx->InputTensorDesc("softmax_y", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
-  CHECK_OR_RETURN(dy_desc.shape() == softmax_y_desc.shape());
+  CHECK_OR_RETURN(dy_desc.shape() == softmax_y_desc.shape())
+  << Error::RuntimeError()
+  << "inconsistent tensor size, expected tensor to have the same number of elements, but got "
+  << dy_desc.shape() << "and" << softmax_y_desc.shape()
+  << "elements respectively";
+
   dx_desc->set_shape(dy_desc.shape());
   dx_desc->set_is_dynamic(dy_desc.is_dynamic());
   return Maybe<void>::Ok();
@@ -78,14 +85,19 @@ namespace oneflow {
   const user_op::TensorDesc& softmax_y_desc = ctx->InputTensorDesc("softmax_y", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   user_op::TensorDesc* dx_desc = ctx->MutOutputTensorDesc("dx", 0);
-  CHECK_OR_RETURN(dy_desc.data_type() == softmax_y_desc.data_type());
+  CHECK_OR_RETURN(dy_desc.data_type() == softmax_y_desc.data_type())
+  << Error::RuntimeError() 
+  << "expected both vectors to have same dtype, but found "
+  << DataType_Name(dy_desc.data_type()) << " and " << DataType_Name(softmax_y_desc.data_type());
   dx_desc->set_data_type(dy_desc.data_type());
   return Maybe<void>::Ok();
 }
 /*static*/ auto FusedTrilScaleSoftmaxMaskScaleGradOp::GetSbp(user_op::SbpContext* ctx)
     -> Maybe<void> {
   const user_op::TensorDesc& dy_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("dy", 0);
-  CHECK_GE_OR_RETURN(dy_tensor.shape().NumAxes(), 2);
+  CHECK_GE_OR_RETURN(dy_tensor.shape().NumAxes(), 2)
+  <<Error::RuntimeError()
+  <<"The number of dy_tensor axes should be greater than or equal to 2";;
   FOR_RANGE(int64_t, axis, 0, dy_tensor.shape().NumAxes() - 2) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("softmax_y", 0), axis)
