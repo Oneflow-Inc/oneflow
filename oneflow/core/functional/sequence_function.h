@@ -30,30 +30,33 @@ class SequenceFunction;
 template<typename R, typename... Args>
 class SequenceFunction<R(Args...)> {
  public:
-  using first_f_type = std::function<R(Args...)>;
-  using f_type = std::function<R(
-      const decltype(std::declval<R>().Data_YouAreNotAllowedToCallThisFuncOutsideThisFile())&)>;
+  using f_type = std::function<R(Args...)>;
 
-  explicit SequenceFunction(first_f_type&& f) : fn_(std::forward<first_f_type>(f)) {}
+  explicit SequenceFunction(f_type&& f) : fn_(std::forward<f_type>(f)) {}
 
-  explicit SequenceFunction(const first_f_type& f) : fn_(f) {}
+  explicit SequenceFunction(const f_type& f) : fn_(f) {}
 
-  SequenceFunction<R(Args...)>& then(f_type&& f) {
+  template<typename F>
+  SequenceFunction<R(Args...)>& then(F&& f) {
     auto fn_ = std::move(this->fn_);
     this->fn_ = [fn_, f](Args&&... args) -> R { return f(JUST(fn_(std::forward<Args>(args)...))); };
     return *this;
   }
 
-  SequenceFunction<R(Args...)>& then_if(bool condition, f_type&& f) {
-    return condition ? then(std::forward<f_type>(f)) : *this;
+  template<typename F>
+  SequenceFunction<R(Args...)>& then_if(bool condition, F&& f) {
+    return condition ? then(std::forward<F>(f)) : *this;
   }
 
-  SequenceFunction<R(Args...)>& operator<<(f_type&& f) { return then(std::forward<f_type>(f)); }
+  template<typename F>
+  SequenceFunction<R(Args...)>& operator|(F&& f) {
+    return then(std::forward<F>(f));
+  }
 
   R call(Args&&... args) const { return fn_(std::forward<Args>(args)...); }
 
  private:
-  std::function<R(Args...)> fn_;
+  f_type fn_;
 };
 
 #define sequence_function(f) SequenceFunction<decltype(f)>(f)
