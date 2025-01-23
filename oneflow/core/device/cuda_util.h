@@ -199,6 +199,66 @@ void InitCudaContextOnce(int device_id);
 
 cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active);
 
+namespace CUDACachingAllocator {
+
+struct Stat {
+  int64_t current = 0;
+  int64_t peak = 0;
+  int64_t allocated = 0;
+  int64_t freed = 0;
+};
+
+enum struct StatType : uint64_t {
+  AGGREGATE = 0,
+  SMALL_POOL = 1,
+  LARGE_POOL = 2,
+  NUM_TYPES = 3  // remember to update this whenever a new stat type is added
+};
+
+typedef std::array<Stat, static_cast<size_t>(StatType::NUM_TYPES)> StatArray;
+
+// Struct containing memory allocator summary statistics for a device.
+struct DeviceStats {
+  // COUNT: allocations requested by client code
+  StatArray allocation;
+  // COUNT: number of allocated segments from cudaMalloc().
+  StatArray segment;
+  // COUNT: number of active memory blocks (allocated or used by stream)
+  StatArray active;
+  // COUNT: number of inactive, split memory blocks (unallocated but can't be
+  // released via cudaFree)
+  StatArray inactive_split;
+
+  // SUM: bytes requested by client code
+  StatArray allocated_bytes;
+  // SUM: bytes reserved by this memory allocator (both free and used)
+  StatArray reserved_bytes;
+  // SUM: bytes within active memory blocks
+  StatArray active_bytes;
+  // SUM: bytes within inactive, split memory blocks
+  StatArray inactive_split_bytes;
+
+  // COUNT: total number of failed calls to CUDA malloc necessitating cache
+  // flushes.
+  int64_t num_alloc_retries = 0;
+
+  // COUNT: total number of OOMs (i.e. failed calls to CUDA after cache flush)
+  int64_t num_ooms = 0;
+
+  // COUNT: total number of oversize blocks allocated from pool
+  Stat oversize_allocations;
+
+  // COUNT: total number of oversize blocks requiring malloc
+  Stat oversize_segments;
+
+  // SIZE: maximum block size that is allowed to be split.
+  int64_t max_split_size = 0;
+};
+
+DeviceStats GetCUDADeviceStatus(int device);
+
+}  // namespace CUDACachingAllocator
+
 }  // namespace oneflow
 
 #endif  // WITH_CUDA
