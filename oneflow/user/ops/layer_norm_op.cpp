@@ -274,28 +274,17 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
   const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
   user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
-  CHECK_EQ_OR_RETURN(dy.shape(), x.shape(),
-                   "Shape mismatch: dy.shape() = " + std::to_string(dy.shape()) +
-                   ", x.shape() = " + std::to_string(x.shape()));
+  CHECK_EQ_OR_RETURN(dy.shape(), x.shape());
   const int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
-  CHECK_GT_OR_RETURN(begin_norm_axis, 0,
-                   "Invalid begin_norm_axis: " + std::to_string(begin_norm_axis) +
-                   ". The value must be greater than 0.");
+  CHECK_GT_OR_RETURN(begin_norm_axis, 0);
   const Shape& bn_param_shape = InferBnParamShape(x.shape(), begin_norm_axis);
-  CHECK_EQ_OR_RETURN(mean.shape(), bn_param_shape,
-                   "Shape mismatch: mean.shape() = " + std::to_string(mean.shape()) +
-                   ", expected bn_param_shape = " + std::to_string(bn_param_shape));
-
-  CHECK_EQ_OR_RETURN(inv_variance.shape(), bn_param_shape,
-                   "Shape mismatch: inv_variance.shape() = " + std::to_string(inv_variance.shape()) +
-                   ", expected bn_param_shape = " + std::to_string(bn_param_shape));
+  CHECK_EQ_OR_RETURN(mean.shape(), bn_param_shape);
+  CHECK_EQ_OR_RETURN(inv_variance.shape(), bn_param_shape);
   dx->set_shape(dy.shape());
   dx->set_is_dynamic(dy.is_dynamic());
   if (ctx->has_input("_add_to_output", 0)) {
     const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
-    CHECK_EQ_OR_RETURN(add_to_output.shape(), dx->shape(), 
-                   "Shape mismatch: add_to_output.shape() = " + std::to_string(add_to_output.shape()) + 
-                   ", dx->shape() = " + std::to_string(dx->shape()));
+    CHECK_EQ_OR_RETURN(add_to_output.shape(), dx->shape());
   }
 
   auto has_tensor = [ctx](const std::string& bn) -> bool {
@@ -311,14 +300,8 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
   const bool has_beta_diff = has_tensor("beta_diff");
   const bool has_gamma_diff = has_tensor("gamma_diff");
-  CHECK_GE_OR_RETURN(begin_params_axis, 1,
-                   "Invalid begin_params_axis: " + std::to_string(begin_params_axis) +
-                   ". It must be greater than or equal to 1.");
-
-  CHECK_LT_OR_RETURN(begin_params_axis, dy.shape().NumAxes(),
-                   "Invalid begin_params_axis: " + std::to_string(begin_params_axis) +
-                   ". It must be less than the number of axes in dy.shape() (" +
-                   std::to_string(dy.shape().NumAxes()) + ").");
+  CHECK_GE_OR_RETURN(begin_params_axis, 1);
+  CHECK_LT_OR_RETURN(begin_params_axis, dy.shape().NumAxes());
   DimVector param_shape_dim_vec;
   param_shape_dim_vec.insert(param_shape_dim_vec.end(),
                              dy.shape().dim_vec().cbegin() + begin_params_axis,
