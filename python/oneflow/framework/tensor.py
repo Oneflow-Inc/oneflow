@@ -24,6 +24,11 @@ from typing import Union
 Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple
 
+from oneflow._oneflow_internal import (
+    set_default_device,
+    get_default_device,
+)
+
 
 def _ndim(self):
     return len(self.shape)
