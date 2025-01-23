@@ -268,4 +268,129 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<void> FuseLayerNormGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
+  const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
+  user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
+  CHECK_EQ_OR_RETURN(dy.shape(), x.shape()) << "dy and x shapes should be equal.";
+  const int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
+  CHECK_GT_OR_RETURN(begin_norm_axis, 0) << "begin_norm_axis must be greater than 0.";
+  const Shape& bn_param_shape = InferBnParamShape(x.shape(), begin_norm_axis);
+  CHECK_EQ_OR_RETURN(mean.shape(), bn_param_shape) << "mean shape must match bn_param_shape.";
+  CHECK_EQ_OR_RETURN(inv_variance.shape(), bn_param_shape)
+      << "inv_variance shape must match bn_param_shape.";
+  dx->set_shape(dy.shape());
+  dx->set_is_dynamic(dy.is_dynamic());
+  if (ctx->has_input("_add_to_output", 0)) {
+    const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
+    CHECK_EQ_OR_RETURN(add_to_output.shape(), dx->shape())
+        << "add_to_output shape must match dx shape.";
+  }
+
+  auto has_tensor = [ctx](const std::string& bn) -> bool {
+    bool ret = false;
+    for (const auto& t : ctx->inputs()) {
+      if (bn == t.first) { return true; }
+    }
+    for (const auto& t : ctx->outputs()) {
+      if (bn == t.first) { return true; }
+    }
+    return ret;
+  };
+  const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
+  const bool has_beta_diff = has_tensor("beta_diff");
+  const bool has_gamma_diff = has_tensor("gamma_diff");
+  CHECK_GE_OR_RETURN(begin_params_axis, 1)
+      << "begin_params_axis must be greater than or equal to 1.";
+  CHECK_LT_OR_RETURN(begin_params_axis, dy.shape().NumAxes())
+      << "begin_params_axis must be less than the number of axes in dy shape.";
+  DimVector param_shape_dim_vec;
+  param_shape_dim_vec.insert(param_shape_dim_vec.end(),
+                             dy.shape().dim_vec().cbegin() + begin_params_axis,
+                             dy.shape().dim_vec().cend());
+  const Shape param_shape(param_shape_dim_vec);
+  if (has_beta_diff) {
+    user_op::TensorDesc* beta_diff = ctx->MutOutputTensorDesc("beta_diff", 0);
+    beta_diff->set_shape(param_shape);
+  }
+  if (has_gamma_diff) {
+    user_op::TensorDesc* gamma_diff = ctx->MutOutputTensorDesc("gamma_diff", 0);
+    gamma_diff->set_shape(param_shape);
+  }
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> FuseLayerNormGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> FuseLayerNormGradOp::GetSbp(user_op::SbpContext* ctx) {
+  std::vector<user_op::OpArg> broadcast_args;
+  if (ctx->user_op_conf().has_input("gamma", 0)) { broadcast_args.emplace_back("gamma", 0); }
+  int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
+  int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
+  CHECK_EQ(begin_norm_axis, begin_params_axis)
+      << "begin_norm_axis and begin_params_axis must be equal, but got " << begin_norm_axis
+      << " and " << begin_params_axis;
+  for (int i = 0; i < begin_norm_axis; ++i) {
+    ctx->NewBuilder()
+        .Split(ctx->inputs(), i)
+        .Split(user_op::OpArg("dx", 0), i)
+        .PartialSum(user_op::OpArg("gamma_diff", 0))
+        .PartialSum(user_op::OpArg("beta_diff", 0))
+        .Broadcast(broadcast_args)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> FuseLayerNormGradOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type())
+      << "InferDataType Failed. Expected " << DataType_Name(x.data_type()) << ", but got "
+      << DataType_Name(dy.data_type());
+  const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
+  const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
+  DataType bn_param_data_type = InferBnParamDataType(x.data_type());
+  CHECK_EQ_OR_RETURN(mean.data_type(), bn_param_data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(bn_param_data_type) << ", but got "
+      << DataType_Name(mean.data_type());
+  CHECK_EQ_OR_RETURN(inv_variance.data_type(), bn_param_data_type)
+      << "InferDataType Failed. Expected " << DataType_Name(bn_param_data_type) << ", but got "
+      << DataType_Name(inv_variance.data_type());
+  user_op::TensorDesc* dx = ctx->MutOutputTensorDesc("dx", 0);
+  dx->set_data_type(dy.data_type());
+  if (ctx->has_input("_add_to_output", 0)) {
+    const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
+    CHECK_EQ_OR_RETURN(add_to_output.data_type(), dx->data_type())
+        << "InferDataType Failed. Expected " << DataType_Name(dx->data_type()) << ", but got "
+        << DataType_Name(add_to_output.data_type());
+  }
+
+  auto has_tensor = [ctx](const std::string& bn) -> bool {
+    bool ret = false;
+    for (auto& t : ctx->inputs()) {
+      if (bn == t.first) { return true; }
+    }
+    for (auto& t : ctx->outputs()) {
+      if (bn == t.first) { return true; }
+    }
+    return ret;
+  };
+  const bool has_beta_diff = has_tensor("beta_diff");
+  const bool has_gamma_diff = has_tensor("gamma_diff");
+  if (has_beta_diff) {
+    user_op::TensorDesc* beta_diff = ctx->MutOutputTensorDesc("beta_diff", 0);
+    beta_diff->set_data_type(dy.data_type());
+  }
+  if (has_gamma_diff) {
+    user_op::TensorDesc* gamma_diff = ctx->MutOutputTensorDesc("gamma_diff", 0);
+    gamma_diff->set_data_type(dy.data_type());
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace oneflow

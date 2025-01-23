@@ -95,6 +95,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "layer_norm",
                               "layer_norm_param_grad",
                               "layer_norm_grad",
+                              "fuse_layer_norm_grad",
                               "skip_layer_norm",
                               "rms_norm",
                               "rms_norm_grad",
