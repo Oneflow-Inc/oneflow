@@ -279,12 +279,14 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   CHECK_GT_OR_RETURN(begin_norm_axis, 0) << "begin_norm_axis must be greater than 0.";
   const Shape& bn_param_shape = InferBnParamShape(x.shape(), begin_norm_axis);
   CHECK_EQ_OR_RETURN(mean.shape(), bn_param_shape) << "mean shape must match bn_param_shape.";
-  CHECK_EQ_OR_RETURN(inv_variance.shape(), bn_param_shape) << "inv_variance shape must match bn_param_shape.";
+  CHECK_EQ_OR_RETURN(inv_variance.shape(), bn_param_shape)
+      << "inv_variance shape must match bn_param_shape.";
   dx->set_shape(dy.shape());
   dx->set_is_dynamic(dy.is_dynamic());
   if (ctx->has_input("_add_to_output", 0)) {
     const auto& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
-    CHECK_EQ_OR_RETURN(add_to_output.shape(), dx->shape()) << "add_to_output shape must match dx shape.";
+    CHECK_EQ_OR_RETURN(add_to_output.shape(), dx->shape())
+        << "add_to_output shape must match dx shape.";
   }
 
   auto has_tensor = [ctx](const std::string& bn) -> bool {
@@ -300,8 +302,10 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
   const bool has_beta_diff = has_tensor("beta_diff");
   const bool has_gamma_diff = has_tensor("gamma_diff");
-  CHECK_GE_OR_RETURN(begin_params_axis, 1) << "begin_params_axis must be greater than or equal to 1.";
-  CHECK_LT_OR_RETURN(begin_params_axis, dy.shape().NumAxes()) << "begin_params_axis must be less than the number of axes in dy shape.";
+  CHECK_GE_OR_RETURN(begin_params_axis, 1)
+      << "begin_params_axis must be greater than or equal to 1.";
+  CHECK_LT_OR_RETURN(begin_params_axis, dy.shape().NumAxes())
+      << "begin_params_axis must be less than the number of axes in dy shape.";
   DimVector param_shape_dim_vec;
   param_shape_dim_vec.insert(param_shape_dim_vec.end(),
                              dy.shape().dim_vec().cbegin() + begin_params_axis,
