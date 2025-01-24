@@ -418,7 +418,7 @@ class NcclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState
   }
   ~NcclLogical2DSameDim1KernelCommState() = default;
 
-  ccl::CclComm ccl_comm() {
+  const ccl::CclComm& ccl_comm() {
     if (!is_init_) {
       std::set<std::pair<int64_t, int64_t>> device_set;
       const Shape& hierarchy = *parallel_desc_.hierarchy();
