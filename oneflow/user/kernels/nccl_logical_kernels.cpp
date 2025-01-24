@@ -42,7 +42,7 @@ class NcclLogicalKernelCommState : public user_op::OpKernelState {
   }
   ~NcclLogicalKernelCommState() override = default;
 
-  ccl::CclComm ccl_comm() {
+  const ccl::CclComm& ccl_comm() {
     if (!is_init_) {
       std::set<std::pair<int64_t, int64_t>> device_set;
       FOR_RANGE(int64_t, parallel_id, 0, parallel_desc_.parallel_num()) {
