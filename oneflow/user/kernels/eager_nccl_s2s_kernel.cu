@@ -35,7 +35,7 @@ class EagerNcclOpKernelCache final : public user_op::OpKernelCache {
   ~EagerNcclOpKernelCache() override = default;
 
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
-  ccl::CclComm ccl_comm() const { return ccl_comm_; }
+  const ccl::CclComm& ccl_comm() const { return ccl_comm_; }
 
  private:
   void Init(user_op::KernelCacheContext* ctx) {
