@@ -41,16 +41,10 @@ class EagerNcclOpKernelCache final : public user_op::OpKernelCache {
   void Init(user_op::KernelCacheContext* ctx) {
     const std::string& parallel_conf_txt = ctx->Attr<std::string>("parallel_conf");
     ParallelConf parallel_conf;
-    std::set<std::pair<int64_t, int64_t>> device_set;
     CHECK(TxtString2PbMessage(parallel_conf_txt, &parallel_conf));
     parallel_desc_ = SymbolOf(ParallelDesc(parallel_conf));
-    FOR_RANGE(int64_t, parallel_id, 0, parallel_desc_->parallel_num()) {
-      int64_t machine_id = CHECK_JUST(parallel_desc_->MachineId4ParallelId(parallel_id));
-      int64_t device_id = CHECK_JUST(parallel_desc_->DeviceId4ParallelId(parallel_id));
-      device_set.emplace(std::make_pair(machine_id, device_id));
-    }
     EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    ccl_comm_ = comm_mgr->GetCclCommForDevice(device_set);
+    ccl_comm_ = comm_mgr->GetCclCommForParallelDesc(parallel_conf);
   }
 
   Symbol<ParallelDesc> parallel_desc_;

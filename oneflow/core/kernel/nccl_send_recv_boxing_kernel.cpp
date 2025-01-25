@@ -52,14 +52,9 @@ class NcclSendRecvBoxingKernel final : public Kernel {
 
   void Init() const {
     ParallelDesc parallel_desc(parallel_conf_);
-    std::set<std::pair<int64_t, int64_t>> device_set;
-    for (int64_t parallel_id = 0; parallel_id < parallel_desc.parallel_num(); ++parallel_id) {
-      int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
-      int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
-      device_set.emplace(std::make_pair(machine_id, device_id));
-    }
     EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    ccl::CclComm ccl_comm = comm_mgr->GetCclCommForDeviceAndStreamName(device_set, stream_name_);
+    ccl::CclComm ccl_comm =
+        comm_mgr->GetCclCommForParallelDescAndStreamName(parallel_desc, stream_name_);
     ccl_comm_.reset(new Comm(ccl_comm));
   }
 
