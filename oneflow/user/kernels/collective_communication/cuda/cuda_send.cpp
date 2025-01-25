@@ -34,6 +34,7 @@ class CudaSend final : public Send {
   void Launch(ep::Stream* stream, const void* in, size_t elem_cnt, int64_t dst) const override {
 #if HAS_NCCL_SEND_RECV
     const auto& comm_and_peer_rank = GetNcclCommAndPeerNcclRank(dst);
+    printf("\n CudaSend >>> Launch >>> communication_ctx");
     OF_NCCL_CHECK(ncclSend(in, elem_cnt, nccl_datatype_, comm_and_peer_rank.second,
                            comm_and_peer_rank.first, stream->As<ep::CudaStream>()->cuda_stream()));
 #else
@@ -42,7 +43,7 @@ class CudaSend final : public Send {
   }
 
   void Launch(ep::Stream* stream, const void* in, size_t elem_cnt, int64_t dst,
-              CclComm ccl_comm) const override {
+              ccl::CclComm ccl_comm) const override {
 #if HAS_NCCL_SEND_RECV
     ncclComm_t* comm = reinterpret_cast<ncclComm_t*>(ccl_comm.getComm());
     OF_NCCL_CHECK(ncclSend(in, elem_cnt, nccl_datatype_, dst, *comm,
@@ -50,6 +51,7 @@ class CudaSend final : public Send {
 #else
     UNIMPLEMENTED() << "GPU send is only supported when nccl version >= 2.7"
 #endif  // HAS_NCCL_SEND_RECV
+    printf("\n CudaSend >>> Launch >>> ccl::CclComm");
   }
 
  private:
