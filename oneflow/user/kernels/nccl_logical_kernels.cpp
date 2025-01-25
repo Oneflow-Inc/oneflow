@@ -42,7 +42,7 @@ class NcclLogicalKernelCommState : public user_op::OpKernelState {
   }
   ~NcclLogicalKernelCommState() override = default;
 
-  ccl::CclComm ccl_comm() {
+  const ccl::CclComm& ccl_comm() {
     if (!is_init_) {
       EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
       ccl_comm_ = comm_mgr->GetCclCommForParallelDescAndStreamName(parallel_desc_, stream_name_);
