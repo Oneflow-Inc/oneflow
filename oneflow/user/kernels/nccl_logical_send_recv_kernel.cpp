@@ -193,14 +193,14 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
       in_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), send_in_ptr.at(i), in->dptr());
     }
   }
-  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
 
   std::unique_ptr<ccl::AllToAll> all_to_all = ccl::NewCollectiveCommunication<ccl::AllToAll>(
       ctx->stream()->device_type(), data_type, data_type, parallel_num);
   void* send_buf = reinterpret_cast<void*>(buf_ptr);
   void* recv_buf = reinterpret_cast<void*>(buf_ptr + recv_offset);
   all_to_all->Launch(ctx->stream(), send_buf, send_elem_cnts.data(), send_offsets.data(), recv_buf,
-                     recv_elem_cnts.data(), recv_offsets.data(), ccl_comm);
+                     recv_elem_cnts.data(), recv_offsets.data(), ccl_comm, /*has_input=*/true,
+                     /*has_output=*/true);
 
   const std::vector<std::shared_ptr<TensorSliceCopier>>& out_tensor_slice_copier_vec =
       kernel_state->out_tensor_slice_copier_vec();

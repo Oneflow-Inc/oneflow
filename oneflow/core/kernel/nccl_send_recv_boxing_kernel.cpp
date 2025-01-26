@@ -119,13 +119,14 @@ void NcclSendRecvBoxingKernel::ForwardDataContent(KernelContext* ctx) const {
     }
   }
 
-  if (this->has_input() && this->has_output()) {
+  if (this->has_input() || this->has_output()) {
     std::unique_ptr<ccl::AllToAll> all_to_all = ccl::NewCollectiveCommunication<ccl::AllToAll>(
         ctx->stream()->device_type(), data_type, data_type, parallel_num);
     void* send_buf = reinterpret_cast<void*>(buf_ptr);
     void* recv_buf = reinterpret_cast<void*>(buf_ptr + recv_offset);
     all_to_all->Launch(ctx->stream(), send_buf, send_elem_cnts.data(), send_offsets.data(),
-                       recv_buf, recv_elem_cnts.data(), recv_offsets.data(), ccl_comm);
+                       recv_buf, recv_elem_cnts.data(), recv_offsets.data(), ccl_comm,
+                       this->has_input(), this->has_output());
   }
 
   if (!this->has_output()) { return; }
