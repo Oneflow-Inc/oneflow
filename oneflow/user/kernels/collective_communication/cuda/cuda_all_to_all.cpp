@@ -39,7 +39,7 @@ class CudaAllToAll final : public AllToAll {
   }
 
   void Launch(ep::Stream* stream, void* send, int64_t send_count, void* recv, int64_t recv_count,
-              ccl::CclComm ccl_comm) const override {
+              const ccl::CclComm& ccl_comm) const override {
     ncclComm_t* nccl_comm = reinterpret_cast<ncclComm_t*>(ccl_comm.getComm());
     int64_t send_offset = 0;
     int64_t recv_offset = 0;
@@ -63,7 +63,7 @@ class CudaAllToAll final : public AllToAll {
 
   void Launch(ep::Stream* stream, void* send, const void* send_counts, const void* send_offsets,
               void* recv, const void* recv_counts, const void* recv_offsets,
-              ccl::CclComm ccl_comm) const override {
+              const ccl::CclComm& ccl_comm) const override {
     ncclComm_t* nccl_comm = reinterpret_cast<ncclComm_t*>(ccl_comm.getComm());
     int64_t* send_counts_ptr = static_cast<int64_t*>(const_cast<void*>(send_counts));
     int64_t* recv_counts_ptr = static_cast<int64_t*>(const_cast<void*>(recv_counts));

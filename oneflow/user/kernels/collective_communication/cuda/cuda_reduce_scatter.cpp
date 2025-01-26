@@ -58,7 +58,7 @@ class CudaReduceScatter final : public ReduceScatter {
   }
 
   virtual void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
-                      ccl::CclComm ccl_comm) const override {
+                      const ccl::CclComm& ccl_comm) const override {
     ncclComm_t* nccl_comm = reinterpret_cast<ncclComm_t*>(ccl_comm.getComm());
     OF_NCCL_CHECK(ncclReduceScatter(in, out, elem_cnt, nccl_datatype_, nccl_reduce_op_, *nccl_comm,
                                     stream->As<ep::CudaStream>()->cuda_stream()));

@@ -41,7 +41,7 @@ class CpuSendImpl final : public Send {
   }
 
   void Launch(ep::Stream* stream, const void* in, size_t elem_cnt, int64_t dst,
-              CclComm comm) const override {
+              const ccl::CclComm& comm) const override {
     Launch(stream, in, elem_cnt, dst);
   }
 

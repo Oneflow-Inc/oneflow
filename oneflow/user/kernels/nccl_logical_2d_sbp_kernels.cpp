@@ -42,7 +42,7 @@ class NcclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
   }
   ~NcclLogical2DSameDim0KernelCommState() override = default;
 
-  ccl::CclComm ccl_comm() {
+  const ccl::CclComm& ccl_comm() {
     if (!is_init_) { Init(); }
     return ccl_comm_;
   }

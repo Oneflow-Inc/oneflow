@@ -42,7 +42,7 @@ class CudaRecv final : public Recv {
   }
 
   void Launch(ep::Stream* stream, void* out, size_t elem_cnt, int64_t src,
-              CclComm ccl_comm) const override {
+              const ccl::CclComm& ccl_comm) const override {
 #if HAS_NCCL_SEND_RECV
     ncclComm_t* comm = reinterpret_cast<ncclComm_t*>(ccl_comm.getComm());
     OF_NCCL_CHECK(ncclRecv(out, elem_cnt, nccl_datatype_, src, *comm,

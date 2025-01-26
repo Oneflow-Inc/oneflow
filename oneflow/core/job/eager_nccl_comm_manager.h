@@ -31,7 +31,7 @@ class NcclCommAdapter : public CommBase {
  public:
   explicit NcclCommAdapter(ncclComm_t comm) : comm_(comm) {}
 
-  void* getComm() override { return static_cast<void*>(&comm_); }
+  void* getComm() const override { return const_cast<void*>(static_cast<const void*>(&comm_)); }
 
  private:
   ncclComm_t comm_;
