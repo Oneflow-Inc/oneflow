@@ -31,6 +31,9 @@ class Send : public CollectiveCommunication {
   virtual void Init(DataType dtype) = 0;
 
   virtual void Launch(ep::Stream* stream, const void* in, size_t elem_cnt, int64_t dst) const = 0;
+
+  virtual void Launch(ep::Stream* stream, const void* in, size_t elem_cnt, int64_t dst,
+                      const ccl::CclComm& ccl_comm) const = 0;
 };
 
 inline bool IsSendRegistered(DeviceType device_type) {
