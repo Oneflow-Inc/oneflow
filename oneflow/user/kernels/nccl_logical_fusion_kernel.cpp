@@ -127,45 +127,17 @@ class CclLogicalFusionKernelState : public user_op::OpKernelState {
  private:
   void InitComm() {
     CHECK(!is_init_);
-    std::set<std::pair<int64_t, int64_t>> device_set;
     const Shape& hierarchy = *parallel_desc_.hierarchy();
 
     if (hierarchy.NumAxes() == 1) {
       num_ranks_ = parallel_desc_.parallel_num();
-      FOR_RANGE(int64_t, parallel_id, 0, parallel_desc_.parallel_num()) {
-        int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
-        int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
-        device_set.emplace(std::make_pair(machine_id, device_id));
-      }
     } else if (hierarchy.NumAxes() == 2) {
       CHECK(comm_key_ == "SameDim0" || comm_key_ == "SameDim1");
       if (comm_key_ == "SameDim0") {
-        const int64_t num_groups = hierarchy.At(0);
         const int64_t group_size = hierarchy.At(1);
-        CHECK_EQ(num_groups * group_size, parallel_desc_.parallel_num());
-        const int64_t this_group_begin_parallel_id = this_parallel_id_ / group_size * group_size;
-        CHECK_EQ(this_group_begin_parallel_id % group_size, 0);
-        CHECK_LE(this_group_begin_parallel_id + group_size, parallel_desc_.parallel_num());
-        for (int64_t id_in_group = 0; id_in_group < group_size; ++id_in_group) {
-          const int64_t parallel_id = this_group_begin_parallel_id + id_in_group;
-          const int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
-          const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
-          device_set.emplace(std::make_pair(machine_id, device_id));
-        }
         num_ranks_ = group_size;
       } else if (comm_key_ == "SameDim1") {
         const int64_t group_size = hierarchy.At(0);
-        const int64_t num_groups = hierarchy.At(1);
-        CHECK_EQ(num_groups * group_size, parallel_desc_.parallel_num());
-        const int64_t this_group_begin_parallel_id = this_parallel_id_ % num_groups;
-        CHECK_LT(this_group_begin_parallel_id + (group_size - 1) * num_groups,
-                 parallel_desc_.parallel_num());
-        for (int64_t id_in_group = 0; id_in_group < group_size; ++id_in_group) {
-          const int64_t parallel_id = this_group_begin_parallel_id + (id_in_group * num_groups);
-          const int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
-          const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
-          device_set.emplace(std::make_pair(machine_id, device_id));
-        }
         num_ranks_ = group_size;
       } else {
         UNIMPLEMENTED();
@@ -173,14 +145,10 @@ class CclLogicalFusionKernelState : public user_op::OpKernelState {
     } else {
       UNIMPLEMENTED();
     }
-    if (!Singleton<EagerCclCommMgr>::Get()) {
-      printf("\n InitComm() >>> Singleton<EagerCclCommMgr>::Get() >>> failed!");
-    } else {
-      printf("\n InitComm() >>> Singleton<EagerCclCommMgr>::Get() >>> success!");
-    }
-    fflush(stdout);
+
     EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    ccl_comm_ = comm_mgr->GetCclCommForDeviceAndStreamName(device_set, stream_name_);
+    ccl_comm_ = comm_mgr->GetCclCommForParallelDescNdHierarchy(parallel_desc_, stream_name_,
+                                                               this_parallel_id_, comm_key_);
     is_init_ = true;
   }
 
@@ -361,7 +329,7 @@ void* UpdateUnpackFromPtrByNcclType(void* unpack_from_ptr, const std::string& nc
 void DoPackBeforeNcclGroup(void* pack_to_ptr, const std::string& nccl_type,
                            const user_op::Tensor* in, user_op::KernelComputeContext* ctx,
                            CclLogicalFusionKernelState* kernel_state, const int32_t i) {
-  printf("\n DoPackBeforeNcclGroup >>> nccl_type >>> %s", nccl_type.c_str());
+  // printf("\n DoPackBeforeNcclGroup >>> nccl_type >>> %s", nccl_type.c_str());
   if (nccl_type == "_nccl_logical_reduce_scatter_noncontinuous") {
     // Do pack before reduce scatter
     const int64_t num_ranks = kernel_state->num_ranks();
@@ -648,7 +616,6 @@ void DoUnpackAfterNcclGroup(void* unpack_from_ptr, const std::string& nccl_type,
 void CclLogicalFusionKernel::Compute(user_op::KernelComputeContext* ctx,
                                      user_op::OpKernelState* state,
                                      const user_op::OpKernelCache*) const {
-  printf("\n CclLogicalFusionKernel::Compute() >>> ");
   auto* kernel_state = dynamic_cast<CclLogicalFusionKernelState*>(state);
   CHECK_NOTNULL(kernel_state);
   const int32_t nccl_num = kernel_state->nccl_num();

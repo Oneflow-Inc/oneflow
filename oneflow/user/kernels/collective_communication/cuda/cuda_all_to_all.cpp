@@ -39,7 +39,7 @@ class CudaAllToAll final : public AllToAll {
   }
 
   void Launch(ep::Stream* stream, void* send, int64_t send_count, void* recv, int64_t recv_count,
-              ccl::CclComm ccl_comm) const override {
+              const ccl::CclComm& ccl_comm) const override {
     ncclComm_t* nccl_comm = reinterpret_cast<ncclComm_t*>(ccl_comm.getComm());
     int64_t send_offset = 0;
     int64_t recv_offset = 0;
@@ -63,31 +63,37 @@ class CudaAllToAll final : public AllToAll {
 
   void Launch(ep::Stream* stream, void* send, const void* send_counts, const void* send_offsets,
               void* recv, const void* recv_counts, const void* recv_offsets,
-              ccl::CclComm ccl_comm) const override {
+              const ccl::CclComm& ccl_comm, const bool has_input,
+              const bool has_output) const override {
     ncclComm_t* nccl_comm = reinterpret_cast<ncclComm_t*>(ccl_comm.getComm());
     int64_t* send_counts_ptr = static_cast<int64_t*>(const_cast<void*>(send_counts));
     int64_t* recv_counts_ptr = static_cast<int64_t*>(const_cast<void*>(recv_counts));
     int64_t* send_offsets_ptr = static_cast<int64_t*>(const_cast<void*>(send_offsets));
     int64_t* recv_offsets_ptr = static_cast<int64_t*>(const_cast<void*>(recv_offsets));
-    OF_NCCL_CHECK(ncclGroupStart());
-    for (int64_t i = 0; i < this->rank_count_; ++i) {
-      uint64_t send_offset = static_cast<uint64_t>(send_offsets_ptr[i]);
-      uint64_t send_count = static_cast<uint64_t>(send_counts_ptr[i]);
-      char* send_ptr = static_cast<char*>(send) + send_offset;
-      if (send_count > 0) {
-        OF_NCCL_CHECK(ncclSend(send_ptr, send_count, this->nccl_send_dtype_, i, *nccl_comm,
-                               stream->As<ep::CudaStream>()->cuda_stream()));
+    if (has_input || has_output) {
+      OF_NCCL_CHECK(ncclGroupStart());
+      for (int64_t i = 0; i < this->rank_count_; ++i) {
+        if (has_input) {
+          const uint64_t send_count = static_cast<uint64_t>(send_counts_ptr[i]);
+          if (send_count > 0) {
+            uint64_t send_offset = static_cast<uint64_t>(send_offsets_ptr[i]);
+            char* send_ptr = static_cast<char*>(send) + send_offset;
+            OF_NCCL_CHECK(ncclSend(send_ptr, send_count, this->nccl_send_dtype_, i, *nccl_comm,
+                                   stream->As<ep::CudaStream>()->cuda_stream()));
+          }
+        }
+        if (has_output) {
+          const uint64_t recv_count = static_cast<uint64_t>(recv_counts_ptr[i]);
+          if (recv_count > 0) {
+            uint64_t recv_offset = static_cast<uint64_t>(recv_offsets_ptr[i]);
+            char* recv_ptr = static_cast<char*>(recv) + recv_offset;
+            OF_NCCL_CHECK(ncclRecv(recv_ptr, recv_count, this->nccl_recv_dtype_, i, *nccl_comm,
+                                   stream->As<ep::CudaStream>()->cuda_stream()));
+          }
+        }
       }
-
-      uint64_t recv_offset = static_cast<uint64_t>(recv_offsets_ptr[i]);
-      uint64_t recv_count = static_cast<uint64_t>(recv_counts_ptr[i]);
-      char* recv_ptr = static_cast<char*>(recv) + recv_offset;
-      if (recv_count > 0) {
-        OF_NCCL_CHECK(ncclRecv(recv_ptr, recv_count, this->nccl_recv_dtype_, i, *nccl_comm,
-                               stream->As<ep::CudaStream>()->cuda_stream()));
-      }
+      OF_NCCL_CHECK(ncclGroupEnd());
     }
-    OF_NCCL_CHECK(ncclGroupEnd());
   }
 
  private:

@@ -31,10 +31,13 @@ class EagerCclCommMgr {
   virtual void CreateCommFromPlan(const Plan& plan) = 0;
   virtual bool IsAsyncLaunchCclLogicalKernel() const = 0;
   virtual void SetAsyncLaunchCclLogicalKernel(bool val) = 0;
-  virtual ccl::CclComm GetCclCommForDevice(
-      const std::set<std::pair<int64_t, int64_t>>& device_set) = 0;
-  virtual ccl::CclComm GetCclCommForDeviceAndStreamName(
-      const std::set<std::pair<int64_t, int64_t>>& device_set, const std::string& stream_name) = 0;
+  virtual ccl::CclComm GetCclCommForParallelDesc(const ParallelDesc& parallel_desc) = 0;
+  virtual ccl::CclComm GetCclCommForParallelDescAndStreamName(const ParallelDesc& parallel_desc,
+                                                              const std::string& stream_name) = 0;
+  virtual ccl::CclComm GetCclCommForParallelDescNdHierarchy(const ParallelDesc& parallel_desc,
+                                                            const std::string& stream_name,
+                                                            const int64_t this_parallel_id,
+                                                            const std::string& comm_key) = 0;
 
   template<typename T>
   T* As() {

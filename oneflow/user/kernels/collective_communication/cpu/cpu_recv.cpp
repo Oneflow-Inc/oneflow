@@ -41,7 +41,7 @@ class CpuRecvImpl final : public Recv {
   }
 
   void Launch(ep::Stream* stream, void* out, size_t elem_cnt, int64_t src,
-              CclComm ccl_comm) const override {
+              const ccl::CclComm& ccl_comm) const override {
     Launch(stream, out, elem_cnt, src);
   }
 

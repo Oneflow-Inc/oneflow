@@ -32,12 +32,13 @@ class AllToAll : public CollectiveCommunication {
 
   // for normal alltoall（balanced send/resv count)
   virtual void Launch(ep::Stream* stream, void* send, int64_t send_count, void* recv,
-                      int64_t recv_count, ccl::CclComm ccl_comm) const = 0;
+                      int64_t recv_count, const ccl::CclComm& ccl_comm) const = 0;
 
   // for unbalanced all to all(e.g. nccl all2all using send/recv; hccl HcclAlltoAllV)
   virtual void Launch(ep::Stream* stream, void* send, const void* send_counts,
                       const void* send_offsets, void* recv, const void* recv_counts,
-                      const void* recv_offsets, ccl::CclComm ccl_comm) const = 0;
+                      const void* recv_offsets, const ccl::CclComm& ccl_comm, const bool has_input,
+                      const bool has_output) const = 0;
 };
 
 inline bool IsAllToAllRegistered(DeviceType device_type) {

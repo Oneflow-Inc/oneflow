@@ -156,16 +156,84 @@ ncclComm_t EagerNcclCommMgr::GetCommForDeviceAndStreamName(
   return comm;
 }
 
-ccl::CclComm EagerNcclCommMgr::GetCclCommForDevice(
-    const std::set<std::pair<int64_t, int64_t>>& device_set) {
+ccl::CclComm EagerNcclCommMgr::GetCclCommForParallelDesc(const ParallelDesc& parallel_desc) {
+  std::set<std::pair<int64_t, int64_t>> device_set;
+  FOR_RANGE(int64_t, parallel_id, 0, parallel_desc.parallel_num()) {
+    int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+    int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+    device_set.emplace(std::make_pair(machine_id, device_id));
+  }
+
   ncclComm_t comm = GetCommForDevice(device_set);
   std::shared_ptr<ccl::CommBase> ncclCommAdapter = std::make_shared<ccl::NcclCommAdapter>(comm);
   ccl::CclComm ccl_comm(ncclCommAdapter);
   return ccl_comm;
 }
 
-ccl::CclComm EagerNcclCommMgr::GetCclCommForDeviceAndStreamName(
-    const std::set<std::pair<int64_t, int64_t>>& device_set, const std::string& stream_name) {
+ccl::CclComm EagerNcclCommMgr::GetCclCommForParallelDescAndStreamName(
+    const ParallelDesc& parallel_desc, const std::string& stream_name) {
+  std::set<std::pair<int64_t, int64_t>> device_set;
+  FOR_RANGE(int64_t, parallel_id, 0, parallel_desc.parallel_num()) {
+    int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+    int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+    device_set.emplace(std::make_pair(machine_id, device_id));
+  }
+
+  ncclComm_t comm = GetCommForDeviceAndStreamName(device_set, stream_name);
+  std::shared_ptr<ccl::CommBase> ncclCommAdapter = std::make_shared<ccl::NcclCommAdapter>(comm);
+  ccl::CclComm ccl_comm(ncclCommAdapter);
+  return ccl_comm;
+}
+
+ccl::CclComm EagerNcclCommMgr::GetCclCommForParallelDescNdHierarchy(
+    const ParallelDesc& parallel_desc, const std::string& stream_name,
+    const int64_t this_parallel_id, const std::string& comm_key) {
+  std::set<std::pair<int64_t, int64_t>> device_set;
+  const Shape& hierarchy = *parallel_desc.hierarchy();
+  CHECK_LE(hierarchy.NumAxes(), 2);
+
+  // 1D
+  if (hierarchy.NumAxes() == 1) {
+    // 1D hierarchy
+    for (int64_t parallel_id = 0; parallel_id < parallel_desc.parallel_num(); ++parallel_id) {
+      int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+      int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+      device_set.emplace(std::make_pair(machine_id, device_id));
+    }
+  } else if (hierarchy.NumAxes() == 2) {
+    // 2D hierarchy
+    CHECK(comm_key == "SameDim0" || comm_key == "SameDim1");
+    if (comm_key == "SameDim0") {
+      const int64_t num_groups = hierarchy.At(0);
+      const int64_t group_size = hierarchy.At(1);
+      CHECK_EQ(num_groups * group_size, parallel_desc.parallel_num());
+      const int64_t this_group_begin_parallel_id = this_parallel_id / group_size * group_size;
+      CHECK_EQ(this_group_begin_parallel_id % group_size, 0);
+      CHECK_LE(this_group_begin_parallel_id + group_size, parallel_desc.parallel_num());
+      for (int64_t id_in_group = 0; id_in_group < group_size; ++id_in_group) {
+        const int64_t parallel_id = this_group_begin_parallel_id + id_in_group;
+        const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+        const int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+        device_set.emplace(std::make_pair(machine_id, device_id));
+      }
+    } else if (comm_key == "SameDim1") {
+      const int64_t group_size = hierarchy.At(0);
+      const int64_t num_groups = hierarchy.At(1);
+      CHECK_EQ(num_groups * group_size, parallel_desc.parallel_num());
+      const int64_t this_group_begin_parallel_id = this_parallel_id % num_groups;
+      CHECK_LT(this_group_begin_parallel_id + (group_size - 1) * num_groups,
+               parallel_desc.parallel_num());
+      for (int64_t id_in_group = 0; id_in_group < group_size; ++id_in_group) {
+        const int64_t parallel_id = this_group_begin_parallel_id + (id_in_group * num_groups);
+        const int64_t machine_id = CHECK_JUST(parallel_desc.MachineId4ParallelId(parallel_id));
+        const int64_t device_id = CHECK_JUST(parallel_desc.DeviceId4ParallelId(parallel_id));
+        device_set.emplace(std::make_pair(machine_id, device_id));
+      }
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+
   ncclComm_t comm = GetCommForDeviceAndStreamName(device_set, stream_name);
   std::shared_ptr<ccl::CommBase> ncclCommAdapter = std::make_shared<ccl::NcclCommAdapter>(comm);
   ccl::CclComm ccl_comm(ncclCommAdapter);

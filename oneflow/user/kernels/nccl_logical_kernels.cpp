@@ -98,16 +98,10 @@ class NcclLogicalKernelCommState : public user_op::OpKernelState {
   }
   ~NcclLogicalKernelCommState() override = default;
 
-  ccl::CclComm ccl_comm() {
+  const ccl::CclComm& ccl_comm() {
     if (!is_init_) {
-      std::set<std::pair<int64_t, int64_t>> device_set;
-      FOR_RANGE(int64_t, parallel_id, 0, parallel_desc_.parallel_num()) {
-        int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
-        int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
-        device_set.emplace(std::make_pair(machine_id, device_id));
-      }
       EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-      ccl_comm_ = comm_mgr->GetCclCommForDeviceAndStreamName(device_set, stream_name_);
+      ccl_comm_ = comm_mgr->GetCclCommForParallelDescAndStreamName(parallel_desc_, stream_name_);
       is_init_ = true;
     }
     return ccl_comm_;

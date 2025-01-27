@@ -47,7 +47,7 @@ class CommBase {
   virtual ~CommBase() = default;
 
   // return impl of comm
-  virtual void* getComm() = 0;
+  virtual void* getComm() const = 0;
 };
 
 class CclComm {
@@ -55,7 +55,7 @@ class CclComm {
   CclComm() {}
   explicit CclComm(std::shared_ptr<CommBase> comm) : comm_(std::move(comm)) {}
 
-  void* getComm() { return comm_->getComm(); }
+  void* getComm() const { return comm_->getComm(); }
 
  private:
   std::shared_ptr<CommBase> comm_{};

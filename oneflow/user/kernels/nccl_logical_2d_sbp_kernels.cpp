@@ -69,7 +69,7 @@ class CclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
   }
   ~CclLogical2DSameDim0KernelCommState() override = default;
 
-  ccl::CclComm ccl_comm() {
+  const ccl::CclComm& ccl_comm() {
     if (!is_init_) { Init(); }
     return ccl_comm_;
   }
@@ -84,23 +84,12 @@ class CclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
  private:
   void Init() {
     CHECK(!is_init_);
-    std::set<std::pair<int64_t, int64_t>> device_set;
     const Shape& hierarchy = *parallel_desc_.hierarchy();
     CHECK_EQ(hierarchy.NumAxes(), 2);
-    const int64_t num_groups = hierarchy.At(0);
     const int64_t group_size = hierarchy.At(1);
-    CHECK_EQ(num_groups * group_size, parallel_desc_.parallel_num());
-    const int64_t this_group_begin_parallel_id = this_parallel_id_ / group_size * group_size;
-    CHECK_EQ(this_group_begin_parallel_id % group_size, 0);
-    CHECK_LE(this_group_begin_parallel_id + group_size, parallel_desc_.parallel_num());
-    for (int64_t id_in_group = 0; id_in_group < group_size; ++id_in_group) {
-      const int64_t parallel_id = this_group_begin_parallel_id + id_in_group;
-      const int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
-      const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
-      device_set.emplace(std::make_pair(machine_id, device_id));
-    }
     EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    ccl_comm_ = comm_mgr->GetCclCommForDeviceAndStreamName(device_set, stream_name_);
+    ccl_comm_ = comm_mgr->GetCclCommForParallelDescNdHierarchy(parallel_desc_, stream_name_,
+                                                               this_parallel_id_, "SameDim0");
     num_ranks_ = group_size;
     is_init_ = true;
   }
@@ -445,25 +434,13 @@ class CclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState 
   }
   ~CclLogical2DSameDim1KernelCommState() = default;
 
-  ccl::CclComm ccl_comm() {
+  const ccl::CclComm& ccl_comm() {
     if (!is_init_) {
-      std::set<std::pair<int64_t, int64_t>> device_set;
       const Shape& hierarchy = *parallel_desc_.hierarchy();
       CHECK_EQ(hierarchy.NumAxes(), 2);
-      const int64_t group_size = hierarchy.At(0);
-      const int64_t num_groups = hierarchy.At(1);
-      CHECK_EQ(num_groups * group_size, parallel_desc_.parallel_num());
-      const int64_t this_group_begin_parallel_id = this_parallel_id_ % num_groups;
-      CHECK_LT(this_group_begin_parallel_id + (group_size - 1) * num_groups,
-               parallel_desc_.parallel_num());
-      for (int64_t id_in_group = 0; id_in_group < group_size; ++id_in_group) {
-        const int64_t parallel_id = this_group_begin_parallel_id + (id_in_group * num_groups);
-        const int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
-        const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
-        device_set.emplace(std::make_pair(machine_id, device_id));
-      }
       EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-      ccl_comm_ = comm_mgr->GetCclCommForDeviceAndStreamName(device_set, stream_name_);
+      ccl_comm_ = comm_mgr->GetCclCommForParallelDescNdHierarchy(parallel_desc_, stream_name_,
+                                                                 this_parallel_id_, "SameDim1");
       is_init_ = true;
     }
     return ccl_comm_;

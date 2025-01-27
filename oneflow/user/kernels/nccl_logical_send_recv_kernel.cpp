@@ -126,14 +126,9 @@ CclLogicalSendRecvState::CclLogicalSendRecvState(user_op::KernelInitContext* ctx
 }
 
 void CclLogicalSendRecvState::InitComm() const {
-  std::set<std::pair<int64_t, int64_t>> device_set;
-  for (int64_t parallel_id = 0; parallel_id < parallel_desc_->parallel_num(); ++parallel_id) {
-    int64_t machine_id = CHECK_JUST(parallel_desc_->MachineId4ParallelId(parallel_id));
-    int64_t device_id = CHECK_JUST(parallel_desc_->DeviceId4ParallelId(parallel_id));
-    device_set.emplace(std::make_pair(machine_id, device_id));
-  }
   EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-  ccl::CclComm ccl_comm = comm_mgr->GetCclCommForDeviceAndStreamName(device_set, stream_name_);
+  ccl::CclComm ccl_comm =
+      comm_mgr->GetCclCommForParallelDescAndStreamName(*parallel_desc_.get(), stream_name_);
   ccl_comm_.reset(new Comm(ccl_comm));
 }
 
@@ -204,7 +199,8 @@ void CclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::Op
   void* send_buf = reinterpret_cast<void*>(buf_ptr);
   void* recv_buf = reinterpret_cast<void*>(buf_ptr + recv_offset);
   all_to_all->Launch(ctx->stream(), send_buf, send_elem_cnts.data(), send_offsets.data(), recv_buf,
-                     recv_elem_cnts.data(), recv_offsets.data(), ccl_comm);
+                     recv_elem_cnts.data(), recv_offsets.data(), ccl_comm, /*has_input=*/true,
+                     /*has_output=*/true);
 
   const std::vector<std::shared_ptr<TensorSliceCopier>>& out_tensor_slice_copier_vec =
       kernel_state->out_tensor_slice_copier_vec();

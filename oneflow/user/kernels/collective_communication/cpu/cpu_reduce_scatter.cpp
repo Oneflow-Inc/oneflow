@@ -121,7 +121,7 @@ class CpuReduceScatter final : public ReduceScatter {
   }
 
   void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
-              ccl::CclComm ccl_comm) const override {
+              const ccl::CclComm& ccl_comm) const override {
     UNIMPLEMENTED();
   }
 
