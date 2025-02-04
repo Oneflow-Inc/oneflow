@@ -127,6 +127,7 @@ class Linear(Module):
             flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
+        print("run oneflow linear module")
         if self.use_fused_matmul_bias:
             return flow._C.fused_matmul_bias(x, self.weight, self.bias)
         else:
