@@ -123,11 +123,11 @@ class GraphConfig(object):
         if not mode:
             self.proto.optimizer_placement_optimization_mode = "none"
             return
-        assert stage >= 1 and stage <= 3, "ZeRO stage must range from 1 to 3."
+        assert 1 <= stage <= 3, "ZeRO stage must range from 1 to 3."
         assert (
             shard_min_size > 0
         ), "ZeRO min size of a sharded optimizer state must > 0."
-        assert stage >= 1 and stage <= 3, "ZeRO stage must range from 1 to 3."
+        assert 1 <= stage <= 3, "ZeRO stage must range from 1 to 3."
         if stage >= 1:
             self.proto.optimizer_placement_optimization_mode = "distributed_split"
             self.proto.optimizer_placement_optimization_threshold = shard_min_size

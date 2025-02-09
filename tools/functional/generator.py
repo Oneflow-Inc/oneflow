@@ -402,7 +402,7 @@ class FunctionSignature:
             fmt = "{0} {1}(".format(self._ret.to_string(to_cpp=to_cpp), self._name)
         keyword_start = False
         for i, arg in enumerate(self._args):
-            if i > 0 and i < len(self._args):
+            if 0 < i < len(self._args):
                 fmt += ", "
             if not keyword_start and arg._keyword_only:
                 keyword_start = True
