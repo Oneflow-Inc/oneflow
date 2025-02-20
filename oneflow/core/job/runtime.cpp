@@ -70,9 +70,13 @@ Runtime::Runtime(
     Singleton<RuntimeJobDescs>::Get()->AddPlan(plan);
     collective_boxing_scheduler_plan_token_ =
         Singleton<boxing::collective::Scheduler>::Get()->AddPlan(plan);
-#ifdef WITH_CUDA
+    const auto& vaild_ccl_comm_mgr_device_types =
+        EagerCclCommMgrBuilder::Get().vaild_ccl_comm_mgr_device_types();
+    if (!vaild_ccl_comm_mgr_device_types.empty() && !Singleton<EagerCclCommMgr>::Get()) {
+      Singleton<EagerCclCommMgr>::SetAllocated(
+          EagerCclCommMgrBuilder::Get().NewCclCommMgr(vaild_ccl_comm_mgr_device_types.front()));
+    }
     Singleton<EagerCclCommMgr>::Get()->CreateCommFromPlan(plan);
-#endif  // WITH_CUDA
   }
   std::vector<const TaskProto*> source_tasks;
   source_tasks.reserve(plan.task().size());
