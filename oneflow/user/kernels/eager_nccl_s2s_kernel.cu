@@ -23,16 +23,16 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+// #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
 namespace oneflow {
 
 namespace {
 
-class EagerNcclOpKernelCache final : public user_op::OpKernelCache {
+class EagerCclOpKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit EagerNcclOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
-  ~EagerNcclOpKernelCache() override = default;
+  explicit EagerCclOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  ~EagerCclOpKernelCache() override = default;
 
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
   const ccl::CclComm& ccl_comm() const { return ccl_comm_; }
@@ -51,7 +51,7 @@ class EagerNcclOpKernelCache final : public user_op::OpKernelCache {
   ccl::CclComm ccl_comm_{};
 };
 
-size_t InferEagerNcclS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
+size_t InferEagerCclS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   size_t tensor_byte_size =
       GetCudaAlignedSize(in_tensor.shape().elem_cnt() * GetSizeOfDataType(in_tensor.data_type()));
@@ -60,31 +60,31 @@ size_t InferEagerNcclS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
   return tensor_byte_size * 2;
 }
 
-void InitEagerNcclOpKernelCache(user_op::KernelCacheContext* ctx,
-                                std::shared_ptr<user_op::OpKernelCache>* cache_ptr) {
+void InitEagerCclOpKernelCache(user_op::KernelCacheContext* ctx,
+                               std::shared_ptr<user_op::OpKernelCache>* cache_ptr) {
   // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
   // once parallel_conf is determined, so only init the cache at the first time.
-  if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerNcclOpKernelCache>(ctx); }
+  if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerCclOpKernelCache>(ctx); }
 }
 }  // namespace
 
 template<typename T>
-class EagerNcclS2SKernel final : public user_op::OpKernel {
+class EagerCclS2SKernel final : public user_op::OpKernel {
  public:
-  EagerNcclS2SKernel() = default;
-  ~EagerNcclS2SKernel() override = default;
+  EagerCclS2SKernel() = default;
+  ~EagerCclS2SKernel() override = default;
 
   void InitOpKernelCacheWithFlags(
       user_op::KernelCacheContext* ctx, int8_t flag,
       std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
-    InitEagerNcclOpKernelCache(ctx, cache_ptr);
+    InitEagerCclOpKernelCache(ctx, cache_ptr);
   }
 
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerNcclOpKernelCache*>(cache);
+    auto* kernel_cache = dynamic_cast<const EagerCclOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
     // NOTE(hanbinbin): Compute logic copy from _nccl_logical_s2s
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -145,7 +145,7 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
       const int64_t elem_per_chunk = elem_cnt / num_ranks;
       std::unique_ptr<ccl::AllToAll> all_to_all = ccl::NewCollectiveCommunication<ccl::AllToAll>(
           ctx->stream()->device_type(), in->data_type(), in->data_type(), num_ranks);
-      auto& ccl_comm = kernel_cache->ccl_comm();
+      const auto& ccl_comm = kernel_cache->ccl_comm();
       all_to_all->Launch(ctx->stream(), const_cast<char*>(pack_to_ptr), elem_per_chunk,
                          unpack_from_ptr, elem_per_chunk, ccl_comm);
     }
@@ -174,11 +174,11 @@ class EagerNcclS2SKernel final : public user_op::OpKernel {
 
 #define REGISTER_CUDA_EAGER_CCL_S2S_KERNEL(dtype)                                        \
   REGISTER_USER_KERNEL("eager_ccl_s2s")                                                  \
-      .SetCreateFn<EagerNcclS2SKernel<dtype>>()                                          \
+      .SetCreateFn<EagerCclS2SKernel<dtype>>()                                           \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(InferEagerNcclS2SKernelTmpBufferSize);
+      .SetInferTmpSizeFn(InferEagerCclS2SKernelTmpBufferSize);
 
 REGISTER_CUDA_EAGER_CCL_S2S_KERNEL(int8_t)
 REGISTER_CUDA_EAGER_CCL_S2S_KERNEL(int32_t)
@@ -189,4 +189,4 @@ REGISTER_CUDA_EAGER_CCL_S2S_KERNEL(double)
 REGISTER_CUDA_EAGER_CCL_S2S_KERNEL(float16)
 }  // namespace oneflow
 
-#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
+// #endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700

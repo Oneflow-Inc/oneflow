@@ -99,10 +99,12 @@ class NDNcclSendRecvBoxingSubTskGphBuilder final : public HierarchicalSubTskGphB
                                       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
                                       const NdSbp& in_nd_sbp, const NdSbp& out_nd_sbp,
                                       const Shape& time_shape) const override {
-    if (in_parallel_desc.device_type() == DeviceType::kCUDA
-        && out_parallel_desc.device_type() == DeviceType::kCUDA
+    if (in_parallel_desc.device_type() != DeviceType::kCPU
+        && out_parallel_desc.device_type() != DeviceType::kCPU
         && !NdSbpHasPartialParallel(out_nd_sbp)) {
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+      // TODO: (zhaoluyang) use WITH_DEVICE or another way to support multi devices(e.g.
+      // cuda/npu/xpu....)
+      // #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
       ParallelConf merged_parallel_conf;
       MergeParallelConf(in_parallel_desc.parallel_conf(), out_parallel_desc.parallel_conf(),
                         &merged_parallel_conf);
@@ -136,9 +138,9 @@ class NDNcclSendRecvBoxingSubTskGphBuilder final : public HierarchicalSubTskGphB
         if (has_output) { sorted_out_tasks->push_back(node); }
       }
       return BuildSubTskGphBuilderStatus("NDNcclSendRecvBoxingSubTskGphBuilder", "");
-#else
-      return Error::BoxingNotSupportedError() << "No CUDA or low NCCL version";
-#endif
+      // #else
+      //       return Error::BoxingNotSupportedError() << "No CUDA or low NCCL version";
+      // #endif
     } else {
       return Error::BoxingNotSupportedError()
              << "Partial SBP in the consumer or not running on CUDA";
@@ -267,8 +269,8 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
   if ((in_hierarchy->NumAxes() > 2 || out_hierarchy->NumAxes() > 2)
-      && reduced_in_parallel_desc.device_type() == DeviceType::kCUDA
-      && reduced_out_parallel_desc.device_type() == DeviceType::kCUDA) {
+      && reduced_in_parallel_desc.device_type() != DeviceType::kCPU
+      && reduced_out_parallel_desc.device_type() != DeviceType::kCPU) {
     return impl_->nd_nccl_send_recv_boxing_sub_tsk_gph_builder_->Build(
         ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
         reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_nd_sbp, reduced_out_nd_sbp,
@@ -285,8 +287,8 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
           ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
           reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_nd_sbp, reduced_out_nd_sbp,
           time_shape);
-    } else if (reduced_in_parallel_desc.device_type() == DeviceType::kCUDA
-               && reduced_out_parallel_desc.device_type() == DeviceType::kCUDA) {
+    } else if (reduced_in_parallel_desc.device_type() != DeviceType::kCPU
+               && reduced_out_parallel_desc.device_type() != DeviceType::kCPU) {
       return impl_->nd_nccl_send_recv_boxing_sub_tsk_gph_builder_->Build(
           ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
           reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_nd_sbp, reduced_out_nd_sbp,
