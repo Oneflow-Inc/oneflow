@@ -145,6 +145,9 @@ void ExecutorImpl::InitJob(int64_t job_id) {
 }
 
 void ExecutorImpl::DeinitJob(int64_t job_id) {
+  printf("\n    Runtime::~Runtime() >>> Scheduler::DeletePlan >>> ExecutorImpl::DeinitJob >>> "
+         "job_id:%d",
+         int(job_id));
   const auto& vaild_executor_device_types = ExecutorBackendMgr::Get().vaild_executor_device_types();
   for (DeviceType device_type : vaild_executor_device_types) {
     CHECK(backends_.at(device_type));
@@ -258,6 +261,8 @@ SchedulerPlanToken* Scheduler::AddPlan(const Plan& plan) {
 }
 
 void Scheduler::DeletePlan(SchedulerPlanToken* plan_token) {
+  printf("\n    Runtime::~Runtime() >>> Scheduler::DeletePlan");
+  fflush(stdout);
   const std::vector<int64_t>& job_ids = plan_token->job_ids();
   for (const auto& job_id : job_ids) {
     impl_->coordinator->DeinitJob(job_id);

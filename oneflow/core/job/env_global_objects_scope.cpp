@@ -235,12 +235,24 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+  VLOG(1) << "MultiClientSessionContext::~MultiClientSessionContext() >>> "
+             "EnvGlobalObjectsScope::~EnvGlobalObjectsScope()"
+          << std::endl;
   VLOG(2) << "Try to close env global objects scope." << std::endl;
   OF_ENV_BARRIER();
   if (is_normal_exit_.has_value() && !CHECK_JUST(is_normal_exit_)) { return; }
+  VLOG(1) << "   EnvGlobalObjectsScope::~EnvGlobalObjectsScope() >>> TensorBufferPool::Delete()"
+          << std::endl;
   TensorBufferPool::Delete();
+  VLOG(1) << "    EnvGlobalObjectsScope::~EnvGlobalObjectsScope() >>> "
+             "Singleton<KernelObserver>::Delete()"
+          << std::endl;
   Singleton<KernelObserver>::Delete();
 #ifdef __linux__
+  VLOG(1) << "    EnvGlobalObjectsScope::~EnvGlobalObjectsScope() >>> "
+             "Singleton<CommNet/TransportEpollCommNet>::Delete()"
+          << std::endl;
+  fflush(stdout);
   if (Singleton<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
     if (Singleton<EpollCommNet>::Get() != dynamic_cast<EpollCommNet*>(Singleton<CommNet>::Get())) {
       Singleton<CommNet>::Delete();

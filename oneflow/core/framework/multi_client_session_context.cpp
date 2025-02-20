@@ -60,10 +60,14 @@ MultiClientSessionContext::MultiClientSessionContext(
 }
 
 MultiClientSessionContext::~MultiClientSessionContext() {
+  VLOG(1) << "MultiClientSessionContext::~MultiClientSessionContext() >>> TryClose" << std::endl;
   CHECK_JUST(TryClose());
   if (Singleton<MultiClientSessionContext>::Get() != nullptr) {
     Singleton<MultiClientSessionContext>::SetAllocated(nullptr);
   }
+  VLOG(1)
+      << "MultiClientSessionContext::~MultiClientSessionContext() >>> reset EnvGlobalObjectsScope"
+      << std::endl;
   env_ctx_.reset();
 }
 

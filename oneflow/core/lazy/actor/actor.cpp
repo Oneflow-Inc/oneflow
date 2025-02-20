@@ -381,6 +381,10 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
                 << " ] , Recv ActorMsg from: " << msg.src_actor_id()
                 << " to: " << msg.dst_actor_id() << " with regst: " << msg.regst_desc_id();
     }
+    printf("\n ========  Actor::HandlerNormal >>> ActorMsgType:%d; op_name:%s; in act_cnt:%d; "
+           "total_reading_cnt_:%d; remaining_eord_cnt_:%d",
+           int(msg.msg_type()), op_name_.c_str(), int(act_cnt_), int(total_reading_cnt_),
+           int(remaining_eord_cnt_));
     ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
@@ -405,6 +409,9 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       OF_SET_MSG_HANDLER(nullptr);
       return 1;
     } else {
+      printf("\n ========  Actor::HandlerNormal >>> OF_SET_MSG_HANDLER(&Actor::HandlerZombie) >>> "
+             "op_name:%s; total_reading_cnt_:%d; remaining_eord_cnt_:%d",
+             op_name_.c_str(), int(total_reading_cnt_), int(remaining_eord_cnt_));
       OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
       return 0;
     }
@@ -413,6 +420,10 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
 }
 
 int Actor::HandlerZombie(const ActorMsg& msg) {
+  printf("\n ========  Actor::HandlerZombie >>> ActorMsgType:%d; op_name:%s; act_cnt:%d; "
+         "total_reading_cnt_:%d; remaining_eord_cnt_:%d",
+         int(msg.msg_type()), op_name_.c_str(), int(act_cnt_), int(total_reading_cnt_),
+         int(remaining_eord_cnt_));
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     CHECK_GE(remaining_eord_cnt_, 1);
     remaining_eord_cnt_ -= 1;

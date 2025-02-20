@@ -21,6 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 ThreadMgr::~ThreadMgr() {
+  printf("\n    Runtime::~Runtime() >>> ThreadMgr::DeleteThreads >>> ThreadMgr::~ThreadMgr()");
   for (auto& thread_pair : threads_) {
     ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
     thread_pair.second->GetMsgChannelPtr()->Send(msg);
@@ -50,11 +51,14 @@ void ThreadMgr::AddThreads(const HashSet<int64_t>& thread_ids) {
     Thread* thread = new Thread(stream_id);
     CHECK_NOTNULL(thread);
     threads_[thrd_id].reset(thread);
+    printf("\n ThreadMgr::AddThreads >>>  Actor thread: %d created", int(thrd_id));
     VLOG(1) << " Actor thread: " << thrd_id << " created.";
   }
 }
 
 void ThreadMgr::DeleteThreads(const HashSet<int64_t>& thread_ids) {
+  printf("\n    Runtime::~Runtime() >>> ThreadMgr::DeleteThreads");
+  fflush(stdout);
   std::unique_lock<std::mutex> lock(mutex4del_threads_);
   for (int64_t thrd_id : thread_ids) {
     const auto& it = threads_.find(thrd_id);

@@ -70,9 +70,10 @@ Runtime::Runtime(
     Singleton<RuntimeJobDescs>::Get()->AddPlan(plan);
     collective_boxing_scheduler_plan_token_ =
         Singleton<boxing::collective::Scheduler>::Get()->AddPlan(plan);
-#ifdef WITH_CUDA
+    // #ifdef WITH_CUDA
+    //     Singleton<EagerCclCommMgr>::Get()->CreateCommFromPlan(plan);
+    // #endif  // WITH_CUDA
     Singleton<EagerCclCommMgr>::Get()->CreateCommFromPlan(plan);
-#endif  // WITH_CUDA
   }
   std::vector<const TaskProto*> source_tasks;
   source_tasks.reserve(plan.task().size());
@@ -110,13 +111,18 @@ Runtime::Runtime(
 }
 
 Runtime::~Runtime() {
+  printf("\n ========== Runtime::~Runtime() start ==========");
   for (auto pair : job_id2actor_size_) {
+    printf("\n    Runtime::~Runtime() >>> Singleton<RuntimeCtx>::Get()->WaitUntilCntEqualZero >>> "
+           "name:%s",
+           GetRunningActorCountKeyByJobId(pair.first).c_str());
     Singleton<RuntimeCtx>::Get()->WaitUntilCntEqualZero(GetRunningActorCountKeyByJobId(pair.first));
   }
   OF_SESSION_BARRIER();
   Singleton<ThreadMgr>::Get()->DeleteThreads(independent_thread_ids_);
   Singleton<boxing::collective::Scheduler>::Get()->DeletePlan(
       collective_boxing_scheduler_plan_token_);
+  printf("\n ========== Runtime::~Runtime() finish! ==========");
 }
 
 void Runtime::DumpThreadIdsFromPlan(const Plan& plan) {

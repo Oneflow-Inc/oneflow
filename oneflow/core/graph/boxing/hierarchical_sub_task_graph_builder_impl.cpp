@@ -268,8 +268,8 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
   if ((in_hierarchy->NumAxes() > 2 || out_hierarchy->NumAxes() > 2)
-      && reduced_in_parallel_desc.device_type() == DeviceType::kCUDA
-      && reduced_out_parallel_desc.device_type() == DeviceType::kCUDA) {
+      && reduced_in_parallel_desc.device_type() != DeviceType::kCPU
+      && reduced_out_parallel_desc.device_type() != DeviceType::kCPU) {
     return impl_->nd_nccl_send_recv_boxing_sub_tsk_gph_builder_->Build(
         ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
         reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_nd_sbp, reduced_out_nd_sbp,
@@ -286,8 +286,8 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
           ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
           reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_nd_sbp, reduced_out_nd_sbp,
           time_shape);
-    } else if (reduced_in_parallel_desc.device_type() == DeviceType::kCUDA
-               && reduced_out_parallel_desc.device_type() == DeviceType::kCUDA) {
+    } else if (reduced_in_parallel_desc.device_type() != DeviceType::kCPU
+               && reduced_out_parallel_desc.device_type() != DeviceType::kCPU) {
       return impl_->nd_nccl_send_recv_boxing_sub_tsk_gph_builder_->Build(
           ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
           reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_nd_sbp, reduced_out_nd_sbp,

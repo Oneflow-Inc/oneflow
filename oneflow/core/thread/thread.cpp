@@ -90,6 +90,9 @@ void Thread::PollMsgChannel() {
       const int64_t job_id = job_id_it->second;
       id2job_id_.erase(job_id_it);
       id2actor_ptr_.erase(actor_it);
+      printf("\n ========== Thread::PollMsgChannel() >>> actor_id:%d; RuntimeCtx DecreaseCounter "
+             "msg.msg_type():%d",
+             int(actor_id), int(msg.msg_type()));
       Singleton<RuntimeCtx>::Get()->DecreaseCounter(GetRunningActorCountKeyByJobId(job_id));
     } else {
       CHECK_EQ(process_msg_ret, 0);

@@ -19,6 +19,7 @@ namespace oneflow {
 
 void RuntimeCtx::NewCounter(const std::string& name, int64_t val) {
   VLOG(3) << "NewCounter " << name << " " << val;
+  printf("\n ======= RuntimeCtx::NewCounter name:%s %d=======", name.c_str(), int(val));
   CHECK(counters_.emplace(name, std::make_unique<BlockingCounter>(val)).second);
 }
 
@@ -26,13 +27,17 @@ void RuntimeCtx::DecreaseCounter(const std::string& name) {
   auto it = counters_.find(name);
   CHECK(it != counters_.end());
   int64_t cur_val = it->second->Decrease();
+  printf("\n ======= RuntimeCtx::DecreaseCounter name:%s cnt_val_:%d ======= ", name.c_str(),
+         int(cur_val));
   VLOG(3) << "DecreaseCounter " << name << ", current val is " << cur_val;
 }
 
 void RuntimeCtx::WaitUntilCntEqualZero(const std::string& name) {
   auto it = counters_.find(name);
   CHECK(it != counters_.end());
+  printf("\n ======= RuntimeCtx::WaitUntilCntEqualZero name:%s start ======= ", name.c_str());
   it->second->WaitForeverUntilCntEqualZero();
+  printf("\n ======= RuntimeCtx::WaitUntilCntEqualZero name:%s finish ======= ", name.c_str());
   counters_.erase(it);
 }
 

@@ -35,9 +35,9 @@ bool SubTskGphBuilderUtil::HasEmptySliceIfSplit(int64_t parallel_num,
   }
 }
 
-bool SubTskGphBuilderUtil::IsOnSameCUDADevice(const TaskNode* lhs, const TaskNode* rhs) {
+bool SubTskGphBuilderUtil::IsOnSameDevice(const TaskNode* lhs, const TaskNode* rhs) {
   return lhs->stream_id().device_id() == rhs->stream_id().device_id()
-         && lhs->stream_id().device_id().device_type() == DeviceType::kCUDA;
+         && lhs->stream_id().device_id().device_type() != DeviceType::kCPU;
 }
 
 bool SubTskGphBuilderUtil::IsBoxingS2S(const SbpParallel& src, const SbpParallel& dst) {
