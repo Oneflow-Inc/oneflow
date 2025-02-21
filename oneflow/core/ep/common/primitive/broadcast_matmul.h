@@ -106,21 +106,21 @@ inline void Simplify(size_t num_a_dims, const int64_t* a_dims, size_t num_b_dims
       prev_broadcast_c = broadcast_c;
     }
   }
-  if (*num_batch_dims >= 1 && a_batch_dims[*num_batch_dims - 1] != 1
-      && b_batch_dims[*num_batch_dims - 1] == 1 && c_batch_dims[*num_batch_dims - 1] != 1
-      && transpose_a == BlasTransposeType::N) {
-    *m *= a_batch_dims[*num_batch_dims - 1];
-    *num_batch_dims -= 1;
-  }
+  // if (*num_batch_dims >= 1 && a_batch_dims[*num_batch_dims - 1] != 1
+  //     && b_batch_dims[*num_batch_dims - 1] == 1 && c_batch_dims[*num_batch_dims - 1] != 1
+  //     && transpose_a == BlasTransposeType::N) {
+  //   *m *= a_batch_dims[*num_batch_dims - 1];
+  //   *num_batch_dims -= 1;
+  // }
 }
 
 template<size_t max_num_dims, typename Func>
 void ForEachMatmul(DataType data_type, size_t m, size_t n, size_t k, Scalar beta,
                    size_t num_batch_dims, const int64_t* broadcast_batch_dims,
                    const int64_t* a_batch_dims, const int64_t* b_batch_dims,
-                   const int64_t* c_batch_dims, const void* a, const void* b, void* c, Func func) {
+                   const int64_t* c_batch_dims, const void* a, const void* b, void* c, Func func, void* workspace) {
   if (num_batch_dims == 0) {
-    func(a, b, c, beta);
+    func(a, b, c, beta, workspace);
     return;
   }
   const size_t size_of_data_type = GetSizeOfDataType(data_type);
@@ -167,7 +167,7 @@ void ForEachMatmul(DataType data_type, size_t m, size_t n, size_t k, Scalar beta
     const void* b_ptr = static_cast<const unsigned char*>(b) + b_batch_id * stride_b;
     void* c_ptr = static_cast<unsigned char*>(c) + c_batch_id * stride_c;
     const Scalar batch_beta = init_c ? beta : Scalar(1);
-    func(a_ptr, b_ptr, c_ptr, batch_beta);
+    func(a_ptr, b_ptr, c_ptr, batch_beta, workspace);
   }
 }
 
@@ -180,7 +180,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
                            const int64_t* broadcast_batch_dims, const int64_t* a_batch_dims,
                            const int64_t* b_batch_dims, const int64_t* c_batch_dims, int64_t m,
                            int64_t n, int64_t k, Scalar alpha, const void* a, const void* b,
-                           Scalar beta, void* c);
+                           Scalar beta, void* c, void* workspace);
 
 template<size_t max_num_dims>
 class BroadcastMatmulImpl : public BroadcastMatmul {
@@ -193,7 +193,7 @@ class BroadcastMatmulImpl : public BroadcastMatmul {
 
   void Launch(Stream* stream, Scalar alpha, size_t num_a_dims, const int64_t* a_dims, const void* a,
               size_t num_b_dims, const int64_t* b_dims, const void* b, Scalar beta,
-              size_t num_c_dims, const int64_t* c_dims, void* c) override {
+              size_t num_c_dims, const int64_t* c_dims, void* c, void* workspace) override {
     CHECK_LE(num_a_dims, max_num_dims);
     CHECK_LE(num_b_dims, max_num_dims);
     CHECK_LE(num_c_dims, max_num_dims);
@@ -210,7 +210,7 @@ class BroadcastMatmulImpl : public BroadcastMatmul {
              c_batch_dims);
     LaunchBroadcastMatmul(stream, data_type_, transpose_a_, transpose_b_, num_batch_dims,
                           broadcast_batch_dims, a_batch_dims, b_batch_dims, c_batch_dims, m, n, k,
-                          alpha, a, b, beta, c);
+                          alpha, a, b, beta, c, workspace);
   }
 
  private:

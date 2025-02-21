@@ -31,8 +31,8 @@ class MatmulImpl : public Matmul {
   ~MatmulImpl() override = default;
 
   void Launch(Stream* stream, size_t m, size_t n, size_t k, Scalar alpha, const void* a,
-              const void* b, Scalar beta, void* c) override {
-    batch_matmul_->Launch(stream, 1, m, n, k, alpha, a, b, beta, c);
+              const void* b, Scalar beta, void* c, void* workspace) override {
+    batch_matmul_->Launch(stream, 1, m, n, k, alpha, a, b, beta, c, workspace);
   }
 
  private:

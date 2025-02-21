@@ -100,18 +100,18 @@ void LaunchCblasBroadcastMatmul(Stream* /*stream*/, DataType data_type,
                                 int64_t num_batch_dims, const int64_t* broadcast_batch_dims,
                                 const int64_t* a_batch_dims, const int64_t* b_batch_dims,
                                 const int64_t* c_batch_dims, int64_t m, int64_t n, int64_t k,
-                                Scalar alpha, const void* a, const void* b, Scalar beta, void* c) {
+                                Scalar alpha, const void* a, const void* b, Scalar beta, void* c, void* workspace) {
   const CBLAS_TRANSPOSE cblas_trans_a = GetCblasTranspose(transpose_a, data_type);
   const CBLAS_TRANSPOSE cblas_trans_b = GetCblasTranspose(transpose_b, data_type);
   const T alpha_value = alpha.Value<T>();
-  auto func = [&](const void* batch_a, const void* batch_b, void* batch_c, Scalar batch_beta) {
+  auto func = [&](const void* batch_a, const void* batch_b, void* batch_c, Scalar batch_beta, void* workspace) {
     const T beta_value = batch_beta.Value<T>();
     CblasMatmul<T>(cblas_trans_a, cblas_trans_b, m, n, k, alpha_value,
                    static_cast<const T*>(batch_a), static_cast<const T*>(batch_b), beta_value,
                    static_cast<T*>(batch_c));
   };
   ForEachMatmul<kMaxNumDims>(data_type, m, n, k, beta, num_batch_dims, broadcast_batch_dims,
-                             a_batch_dims, b_batch_dims, c_batch_dims, a, b, c, func);
+                             a_batch_dims, b_batch_dims, c_batch_dims, a, b, c, func, workspace);
 }
 
 void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType transpose_a,
@@ -119,23 +119,23 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
                            const int64_t* broadcast_batch_dims, const int64_t* a_batch_dims,
                            const int64_t* b_batch_dims, const int64_t* c_batch_dims, int64_t m,
                            int64_t n, int64_t k, Scalar alpha, const void* a, const void* b,
-                           Scalar beta, void* c) {
+                           Scalar beta, void* c, void* workspace) {
   if (data_type == DataType::kFloat) {
     LaunchCblasBroadcastMatmul<float>(stream, data_type, transpose_a, transpose_b, num_batch_dims,
                                       broadcast_batch_dims, a_batch_dims, b_batch_dims,
-                                      c_batch_dims, m, n, k, alpha, a, b, beta, c);
+                                      c_batch_dims, m, n, k, alpha, a, b, beta, c, workspace);
   } else if (data_type == DataType::kDouble) {
     LaunchCblasBroadcastMatmul<double>(stream, data_type, transpose_a, transpose_b, num_batch_dims,
                                        broadcast_batch_dims, a_batch_dims, b_batch_dims,
-                                       c_batch_dims, m, n, k, alpha, a, b, beta, c);
+                                       c_batch_dims, m, n, k, alpha, a, b, beta, c, workspace);
   } else if (data_type == DataType::kComplex64) {
     LaunchCblasBroadcastMatmul<std::complex<float>>(
         stream, data_type, transpose_a, transpose_b, num_batch_dims, broadcast_batch_dims,
-        a_batch_dims, b_batch_dims, c_batch_dims, m, n, k, alpha, a, b, beta, c);
+        a_batch_dims, b_batch_dims, c_batch_dims, m, n, k, alpha, a, b, beta, c, workspace);
   } else if (data_type == DataType::kComplex128) {
     LaunchCblasBroadcastMatmul<std::complex<double>>(
         stream, data_type, transpose_a, transpose_b, num_batch_dims, broadcast_batch_dims,
-        a_batch_dims, b_batch_dims, c_batch_dims, m, n, k, alpha, a, b, beta, c);
+        a_batch_dims, b_batch_dims, c_batch_dims, m, n, k, alpha, a, b, beta, c, workspace);
   } else {
     UNIMPLEMENTED();
   }

@@ -35,7 +35,8 @@ ep::primitive::BlasTransposeType GetBlasTransposeType(Context* ctx, const std::s
   return GetBlasTransposeType(ctx->template Attr<bool>(attr));
 }
 
-void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const ShapeView& c_shape,
+template<typename Shape>
+void InferMatmulMNK(const Shape& a_shape, const Shape& b_shape, const Shape& c_shape,
                     ep::primitive::BlasTransposeType transpose_a,
                     ep::primitive::BlasTransposeType transpose_b, size_t* m, size_t* n, size_t* k) {
   const int64_t num_a_axes = a_shape.NumAxes();
@@ -64,6 +65,19 @@ void InferMatmulMNK(const ShapeView& a_shape, const ShapeView& b_shape, const Sh
   }
   CHECK_EQ(c_shape.At(num_c_axes - 2), *m);
   CHECK_EQ(c_shape.At(num_c_axes - 1), *n);
+}
+
+size_t InferTmpBufferSize(user_op::InferContext* ctx) {
+  const auto trans_a = GetBlasTransposeType(ctx, "transpose_a");
+  const auto trans_b = GetBlasTransposeType(ctx, "transpose_b");
+  auto a_shape = ctx->InputTensorDesc("a", 0).shape();
+  auto b_shape = ctx->InputTensorDesc("b", 0).shape();
+  auto c_shape = ctx->InputTensorDesc("out", 0).shape();
+  size_t m = 0;
+  size_t n = 0;
+  size_t k = 0;
+  InferMatmulMNK(a_shape, b_shape, c_shape, trans_a, trans_b, &m, &n, &k);
+  return m * n * sizeof(float);
 }
 
 template<typename Context>
@@ -178,7 +192,7 @@ class MatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     }
     auto matmul = NewMatmulPrimitive(ctx);
     CHECK(matmul);
-    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr(), ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr());
   }
 };
 
@@ -191,7 +205,8 @@ REGISTER_USER_KERNEL("matmul")
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetInferTmpSizeFn(InferTmpBufferSize);
 
 class BatchMatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
@@ -242,7 +257,7 @@ class BatchMatmulKernel final : public user_op::OpKernel, public user_op::CudaGr
     auto batch_matmul = NewBatchMatmulPrimitive(ctx);
     CHECK(batch_matmul);
     batch_matmul->Launch(ctx->stream(), batch_size, m, n, k, alpha, a->dptr(), b->dptr(), beta,
-                         out->mut_dptr());
+                         out->mut_dptr(), ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr());
   }
 };
 
@@ -255,7 +270,18 @@ REGISTER_USER_KERNEL("batch_matmul")
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetInferTmpSizeFn(InferTmpBufferSize);
+
+size_t InferTmpBufferSize2(user_op::InferContext* ctx) {
+  auto a_shape = ctx->InputTensorDesc("a", 0).shape();
+  const int64_t num_a_axes = a_shape.NumAxes();
+  size_t m = a_shape.At(num_a_axes - 2);
+  auto b_shape = ctx->InputTensorDesc("b", 0).shape();
+  const int64_t num_b_axes = b_shape.NumAxes();
+  size_t n = b_shape.At(num_b_axes - 1);
+  return m * n * sizeof(float);
+}
 
 class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
@@ -291,7 +317,7 @@ class BroadcastMatmulKernel final : public user_op::OpKernel, public user_op::Cu
     CHECK(broadcast_matmul);
     broadcast_matmul->Launch(ctx->stream(), alpha, a_num_axes, a->shape_view().ptr(), a->dptr(),
                              b_num_axes, b->shape_view().ptr(), b->dptr(), beta, out_num_axes,
-                             out->shape_view().ptr(), out->mut_dptr());
+                             out->shape_view().ptr(), out->mut_dptr(), ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr());
   }
 };
 
@@ -304,7 +330,8 @@ REGISTER_USER_KERNEL("broadcast_matmul")
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetInferTmpSizeFn(InferTmpBufferSize2);
 
 template<typename Context>
 std::unique_ptr<ep::primitive::Matmul> NewMatmulPrimitiveForBroadcastMatmulGradB(Context* ctx) {
@@ -345,7 +372,7 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel,
     int64_t n = b->shape_view().At(b->shape_view().NumAxes() - 1);
     auto matmul = NewMatmulPrimitiveForBroadcastMatmulGradB(ctx);
     CHECK(matmul);
-    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr());
+    matmul->Launch(ctx->stream(), m, n, k, alpha, a->dptr(), b->dptr(), beta, out->mut_dptr(), ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr());
   }
 };
 
@@ -364,7 +391,8 @@ REGISTER_USER_KERNEL("broadcast_matmul_grad_b")
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetInferTmpSizeFn(InferTmpBufferSize2);
 }  // namespace
 
 }  // namespace oneflow

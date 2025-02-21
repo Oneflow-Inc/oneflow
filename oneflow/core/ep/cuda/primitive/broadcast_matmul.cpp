@@ -131,7 +131,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
                            const int64_t* broadcast_batch_dims, const int64_t* a_batch_dims,
                            const int64_t* b_batch_dims, const int64_t* c_batch_dims, int64_t m,
                            int64_t n, int64_t k, Scalar alpha, const void* a, const void* b,
-                           Scalar beta, void* c) {
+                           Scalar beta, void* c, void* workspace) {
   auto* cuda_stream = stream->As<CudaStream>();
   const auto cuda_data_type = GetCudaDataType(data_type);
   const auto compute_type = GetComputeType(data_type, cuda_stream);
@@ -210,7 +210,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
         cublas_ldb, cublas_stride_b, &sp_beta, cublas_c, cuda_data_type, cublas_ldc,
         cublas_stride_c, batch_count, compute_type, algo));
   } else {
-    auto func = [&](const void* batch_a, const void* batch_b, void* batch_c, Scalar batch_beta) {
+    auto func = [&](const void* batch_a, const void* batch_b, void* batch_c, Scalar batch_beta, void* workspace) {
       const auto sp_beta = GetCublasScalarParameter(batch_beta, compute_type);
       const void* cublas_a = batch_b;
       const void* cublas_b = batch_a;
@@ -221,7 +221,7 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
           cublas_ldb, &sp_beta, cublas_c, cuda_data_type, cublas_ldc, compute_type, algo));
     };
     ForEachMatmul<kMaxNumDims>(data_type, m, n, k, beta, num_batch_dims, broadcast_batch_dims,
-                               a_batch_dims, b_batch_dims, c_batch_dims, a, b, c, func);
+                               a_batch_dims, b_batch_dims, c_batch_dims, a, b, c, func, workspace);
   }
 }
 
