@@ -40,6 +40,11 @@ class CpuSendImpl final : public Send {
     CHECK_JUST(CpuSend(in, buffer_size, dst));
   }
 
+  void Launch(ep::Stream* stream, const void* in, size_t elem_cnt, int64_t dst,
+              const ccl::CclComm& comm) const override {
+    Launch(stream, in, elem_cnt, dst);
+  }
+
  private:
   size_t size_of_dtype_;
 };

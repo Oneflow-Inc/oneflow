@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COMMUNICATION_CONTEXT_H_
 #define ONEFLOW_USER_KERNELS_COLLECTIVE_COMMUNICATION_INCLUDE_COMMUNICATION_CONTEXT_H_
 
+#include "collective_communication.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 

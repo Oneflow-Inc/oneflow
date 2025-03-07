@@ -41,6 +41,26 @@ enum ReduceType {
   MAKE_TYPED_CTRV_SEQ(ReduceType, \
                       OF_PP_FOR_EACH_TUPLE(OF_PP_I_MAKE_REPLICATE_TUPLE_SEQ, REDUCE_TYPE_SEQ))
 
+// abstruct base class for comm
+class CommBase {
+ public:
+  virtual ~CommBase() = default;
+
+  // return impl of comm
+  virtual void* getComm() const = 0;
+};
+
+class CclComm {
+ public:
+  CclComm() {}
+  explicit CclComm(std::shared_ptr<CommBase> comm) : comm_(std::move(comm)) {}
+
+  void* getComm() const { return comm_->getComm(); }
+
+ private:
+  std::shared_ptr<CommBase> comm_{};
+};
+
 class CollectiveCommunication {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CollectiveCommunication);

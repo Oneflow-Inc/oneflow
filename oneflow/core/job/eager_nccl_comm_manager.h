@@ -25,6 +25,19 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
+namespace ccl {
+
+class NcclCommAdapter : public CommBase {
+ public:
+  explicit NcclCommAdapter(ncclComm_t comm) : comm_(comm) {}
+
+  void* getComm() const override { return const_cast<void*>(static_cast<const void*>(&comm_)); }
+
+ private:
+  ncclComm_t comm_;
+};
+
+}  // namespace ccl
 
 class EagerNcclCommMgr final : public EagerCclCommMgr {
  public:
@@ -36,6 +49,13 @@ class EagerNcclCommMgr final : public EagerCclCommMgr {
   ncclComm_t GetCommForDevice(const std::set<std::pair<int64_t, int64_t>>& device_set);
   ncclComm_t GetCommForDeviceAndStreamName(const std::set<std::pair<int64_t, int64_t>>& device_set,
                                            const std::string& stream_name);
+  ccl::CclComm GetCclCommForParallelDesc(const ParallelDesc& parallel_desc) override;
+  ccl::CclComm GetCclCommForParallelDescAndStreamName(const ParallelDesc& parallel_desc,
+                                                      const std::string& stream_name) override;
+  ccl::CclComm GetCclCommForParallelDescNdHierarchy(const ParallelDesc& parallel_desc,
+                                                    const std::string& stream_name,
+                                                    const int64_t this_parallel_id,
+                                                    const std::string& comm_key) override;
 
   void CreateCommFromPlan(const Plan& plan) override;
   bool IsAsyncLaunchCclLogicalKernel() const override { return async_launch_nccl_logical_kernel_; }
