@@ -94,7 +94,7 @@ Maybe<one::Tensor> cached_cast(const std::shared_ptr<one::Tensor>& tensor, Symbo
                     && cast_type == get_lower_precision_fp_from_device_type(device_type)
                     && tensor->dtype()->data_type() == DataType::kFloat && tensor->is_leaf()
                     && !tensor->is_view());
-  if (use_cache) {
+  if (use_cache && tensor->is_local()) {
     auto it = cached_casts()->find(
         std::make_pair(JUST(tensor->mut_eager_local_tensor_impl()), cast_type->data_type()));
     if (it == cached_casts()->end() || it->second.first.lock() == nullptr) {
