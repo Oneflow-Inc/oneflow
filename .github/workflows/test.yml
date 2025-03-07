@@ -1162,7 +1162,7 @@ jobs:
           wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
           chmod +x oneflow-clang-tidy-16 clang-tidy-diff.py
       - name: Cache third party dir
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         with:
           path: ~/.ccache
