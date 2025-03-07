@@ -114,13 +114,13 @@ jobs:
           sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip ninja-build
       - name: Cache pip (Linux)
         if: startsWith(runner.os, 'Linux')
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ matrix.os }}-pip-${{ hashFiles('**/requirements.txt') }}
       - name: Cache pip (macOS)
         if: startsWith(runner.os, 'macOS')
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/Library/Caches/pip
           key: ${{ matrix.os }}-pip-${{ hashFiles('**/requirements.txt') }}
