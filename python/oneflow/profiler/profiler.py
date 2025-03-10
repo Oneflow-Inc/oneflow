@@ -22,6 +22,7 @@ from oneflow.profiler.events import Events
 class ProfilerActivity(Enum):
     CPU = 1
     CUDA = 2
+    NPU = 3
 
 
 class ProfilerAction(Enum):
@@ -43,6 +44,7 @@ def supported_activities() -> Set[ProfilerActivity]:
     activities = set([ProfilerActivity.CPU])
     if oneflow.cuda.is_available():
         activities.add(ProfilerActivity.CUDA)
+    activities.add(ProfilerActivity.NPU)
     return activities
 
 
@@ -75,6 +77,7 @@ class profile:
         oneflow._oneflow_internal.profiler.EnableProfiler(
             ProfilerActivity.CPU in self.activities,
             ProfilerActivity.CUDA in self.activities,
+            ProfilerActivity.NPU in self.activities,
             self.record_shapes,
             self.record_attrs,
             self.record_bandwidth_for_cuda,
