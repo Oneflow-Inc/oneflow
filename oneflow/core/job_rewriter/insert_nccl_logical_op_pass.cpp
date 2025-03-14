@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#ifdef WITH_CUDA
+// #ifdef WITH_CUDA
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -146,7 +146,8 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
     CHECK(visited.insert(seed_node).second);
     const ParallelDesc& seed_parallel_desc = seed_node->parallel_desc();
     // NOTE(chengcheng): ONLY consider GPU op and parallel num > 1.
-    if (seed_parallel_desc.device_type() != DeviceType::kCUDA) { continue; }
+    // if (seed_parallel_desc.device_type() != DeviceType::kCUDA) { continue; }
+    if (seed_parallel_desc.device_type() == DeviceType::kCPU) { continue; }
     if (seed_parallel_desc.parallel_num() <= 1) { continue; }
     // NOTE(chengcheng): using fastest time shape for merge acc into bw subgraph.
     if (!SharedPtrShapeEqual(GetOpNodeFastestTimeShape(seed_node), seed_time_shape)) { continue; }
@@ -883,4 +884,4 @@ REGISTER_JOB_PASS("InsertNcclLogicalOpPass", InsertNcclLogicalOpPass);
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA
+// #endif  // WITH_CUDA

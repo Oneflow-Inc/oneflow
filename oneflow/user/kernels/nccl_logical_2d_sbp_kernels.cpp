@@ -25,22 +25,49 @@ limitations under the License.
 #include "oneflow/user/kernels/collective_communication/include/all_gather.h"
 #include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+// #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
 namespace oneflow {
 
 namespace {
 
-class NcclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
+auto AllReduceCollectiveCommunicationExists() {
+  return hob::make_custom("AllReduceCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsAllReduceRegistered(device_type);
+                          });
+}
+
+auto AllGatherCollectiveCommunicationExists() {
+  return hob::make_custom("AllGatherCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsAllGatherRegistered(device_type);
+                          });
+}
+
+auto AllToAllCollectiveCommunicationExists() {
+  return hob::make_custom("AllToAllCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsAllToAllRegistered(device_type);
+                          });
+}
+
+class CclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
  public:
-  explicit NcclLogical2DSameDim0KernelCommState(user_op::KernelInitContext* ctx)
+  explicit CclLogical2DSameDim0KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
+        stream_name_(EagerCclCommMgr::kDefaultCclStreamName),
         parallel_desc_(ctx->parallel_desc()),
         this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
     if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   }
-  ~NcclLogical2DSameDim0KernelCommState() override = default;
+  ~CclLogical2DSameDim0KernelCommState() override = default;
 
   const ccl::CclComm& ccl_comm() {
     if (!is_init_) { Init(); }
@@ -75,12 +102,12 @@ class NcclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
   ccl::CclComm ccl_comm_{};
 };
 
-class NcclLogical2DSameDim0AllGatherNoncontinuousKernelState
-    : public NcclLogical2DSameDim0KernelCommState {
+class CclLogical2DSameDim0AllGatherNoncontinuousKernelState
+    : public CclLogical2DSameDim0KernelCommState {
  public:
-  explicit NcclLogical2DSameDim0AllGatherNoncontinuousKernelState(user_op::KernelInitContext* ctx)
-      : NcclLogical2DSameDim0KernelCommState(ctx), src_split_axis_(-1) {}
-  ~NcclLogical2DSameDim0AllGatherNoncontinuousKernelState() override = default;
+  explicit CclLogical2DSameDim0AllGatherNoncontinuousKernelState(user_op::KernelInitContext* ctx)
+      : CclLogical2DSameDim0KernelCommState(ctx), src_split_axis_(-1) {}
+  ~CclLogical2DSameDim0AllGatherNoncontinuousKernelState() override = default;
 
   int64_t src_split_axis() const { return src_split_axis_; }
   void set_src_split_axis(int64_t split_axis) { src_split_axis_ = split_axis; }
@@ -89,11 +116,11 @@ class NcclLogical2DSameDim0AllGatherNoncontinuousKernelState
   int64_t src_split_axis_;
 };
 
-class NcclLogical2DSameDim0All2AllKernelState : public NcclLogical2DSameDim0KernelCommState {
+class CclLogical2DSameDim0All2AllKernelState : public CclLogical2DSameDim0KernelCommState {
  public:
-  explicit NcclLogical2DSameDim0All2AllKernelState(user_op::KernelInitContext* ctx)
-      : NcclLogical2DSameDim0KernelCommState(ctx), src_split_axis_(-1), dst_split_axis_(-1) {}
-  ~NcclLogical2DSameDim0All2AllKernelState() override = default;
+  explicit CclLogical2DSameDim0All2AllKernelState(user_op::KernelInitContext* ctx)
+      : CclLogical2DSameDim0KernelCommState(ctx), src_split_axis_(-1), dst_split_axis_(-1) {}
+  ~CclLogical2DSameDim0All2AllKernelState() override = default;
 
   int64_t src_split_axis() const { return src_split_axis_; }
   void set_src_split_axis(int64_t split_axis) { src_split_axis_ = split_axis; }
@@ -105,20 +132,20 @@ class NcclLogical2DSameDim0All2AllKernelState : public NcclLogical2DSameDim0Kern
   int64_t dst_split_axis_;
 };
 
-class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
+class CclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
  public:
-  NcclLogical2DSameDim0AllReduce() = default;
-  ~NcclLogical2DSameDim0AllReduce() override = default;
+  CclLogical2DSameDim0AllReduce() = default;
+  ~CclLogical2DSameDim0AllReduce() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<NcclLogical2DSameDim0KernelCommState>(ctx);
+    return std::make_shared<CclLogical2DSameDim0KernelCommState>(ctx);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* comm_state = dynamic_cast<NcclLogical2DSameDim0KernelCommState*>(state);
+    auto* comm_state = dynamic_cast<CclLogical2DSameDim0KernelCommState*>(state);
     CHECK(comm_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -142,20 +169,20 @@ class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
   }
 };
 
-class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
+class CclLogical2DSameDim0AllGather final : public user_op::OpKernel {
  public:
-  NcclLogical2DSameDim0AllGather() = default;
-  ~NcclLogical2DSameDim0AllGather() override = default;
+  CclLogical2DSameDim0AllGather() = default;
+  ~CclLogical2DSameDim0AllGather() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<NcclLogical2DSameDim0KernelCommState>(ctx);
+    return std::make_shared<CclLogical2DSameDim0KernelCommState>(ctx);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* comm_state = dynamic_cast<NcclLogical2DSameDim0KernelCommState*>(state);
+    auto* comm_state = dynamic_cast<CclLogical2DSameDim0KernelCommState*>(state);
     CHECK(comm_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -180,14 +207,14 @@ class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
 };
 
 template<typename T>
-class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKernel {
+class CclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKernel {
  public:
-  NcclLogical2DSameDim0AllGatherNoncontinuous() = default;
-  ~NcclLogical2DSameDim0AllGatherNoncontinuous() override = default;
+  CclLogical2DSameDim0AllGatherNoncontinuous() = default;
+  ~CclLogical2DSameDim0AllGatherNoncontinuous() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    auto state = std::make_shared<NcclLogical2DSameDim0AllGatherNoncontinuousKernelState>(ctx);
+    auto state = std::make_shared<CclLogical2DSameDim0AllGatherNoncontinuousKernelState>(ctx);
     NdSbp src_nd_sbp;
     CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_reduced_nd_sbp", &src_nd_sbp));
     CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
@@ -200,7 +227,7 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
     auto* kernel_state =
-        dynamic_cast<NcclLogical2DSameDim0AllGatherNoncontinuousKernelState*>(state);
+        dynamic_cast<CclLogical2DSameDim0AllGatherNoncontinuousKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -261,14 +288,14 @@ size_t Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize(user_op::InferCo
 }
 
 template<typename T>
-class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
+class CclLogical2DSameDim0All2All final : public user_op::OpKernel {
  public:
-  NcclLogical2DSameDim0All2All() = default;
-  ~NcclLogical2DSameDim0All2All() override = default;
+  CclLogical2DSameDim0All2All() = default;
+  ~CclLogical2DSameDim0All2All() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    auto state = std::make_shared<NcclLogical2DSameDim0All2AllKernelState>(ctx);
+    auto state = std::make_shared<CclLogical2DSameDim0All2AllKernelState>(ctx);
     NdSbp src_nd_sbp;
     NdSbp dst_nd_sbp;
     CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_reduced_nd_sbp", &src_nd_sbp));
@@ -285,7 +312,7 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<NcclLogical2DSameDim0All2AllKernelState*>(state);
+    auto* kernel_state = dynamic_cast<CclLogical2DSameDim0All2AllKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -396,16 +423,16 @@ size_t Infer2DSameDim0All2AllKernelTmpBufferSize(user_op::InferContext* ctx) {
   return ret;
 }
 
-class NcclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState {
+class CclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState {
  public:
-  explicit NcclLogical2DSameDim1KernelCommState(user_op::KernelInitContext* ctx)
+  explicit CclLogical2DSameDim1KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
+        stream_name_(EagerCclCommMgr::kDefaultCclStreamName),
         parallel_desc_(ctx->parallel_desc()),
         this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
     if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   }
-  ~NcclLogical2DSameDim1KernelCommState() = default;
+  ~CclLogical2DSameDim1KernelCommState() = default;
 
   const ccl::CclComm& ccl_comm() {
     if (!is_init_) {
@@ -429,20 +456,20 @@ class NcclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState
   ccl::CclComm ccl_comm_{};
 };
 
-class NcclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
+class CclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
  public:
-  NcclLogical2DSameDim1AllReduce() = default;
-  ~NcclLogical2DSameDim1AllReduce() override = default;
+  CclLogical2DSameDim1AllReduce() = default;
+  ~CclLogical2DSameDim1AllReduce() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<NcclLogical2DSameDim1KernelCommState>(ctx);
+    return std::make_shared<CclLogical2DSameDim1KernelCommState>(ctx);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* comm_state = dynamic_cast<NcclLogical2DSameDim1KernelCommState*>(state);
+    auto* comm_state = dynamic_cast<CclLogical2DSameDim1KernelCommState*>(state);
     CHECK(comm_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -470,17 +497,17 @@ class NcclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
 }  // namespace
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_reduce")
-    .SetCreateFn<NcclLogical2DSameDim0AllReduce>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+    .SetCreateFn<CclLogical2DSameDim0AllReduce>()
+    .SetIsMatchedHob(AllReduceCollectiveCommunicationExists());
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather")
-    .SetCreateFn<NcclLogical2DSameDim0AllGather>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+    .SetCreateFn<CclLogical2DSameDim0AllGather>()
+    .SetIsMatchedHob(AllGatherCollectiveCommunicationExists());
 
 #define REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                      \
   REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")            \
-      .SetCreateFn<NcclLogical2DSameDim0AllGatherNoncontinuous<dtype>>()                 \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
+      .SetCreateFn<CclLogical2DSameDim0AllGatherNoncontinuous<dtype>>()                  \
+      .SetIsMatchedHob(AllGatherCollectiveCommunicationExists()                          \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize);
@@ -498,8 +525,8 @@ REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(nv_bfloat16)
 
 #define REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(dtype)                                      \
   REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all2all")                             \
-      .SetCreateFn<NcclLogical2DSameDim0All2All<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
+      .SetCreateFn<CclLogical2DSameDim0All2All<dtype>>()                                 \
+      .SetIsMatchedHob(AllToAllCollectiveCommunicationExists()                           \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(Infer2DSameDim0All2AllKernelTmpBufferSize);
@@ -516,15 +543,15 @@ REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(nv_bfloat16)
 #endif
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim1_all_reduce")
-    .SetCreateFn<NcclLogical2DSameDim1AllReduce>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+    .SetCreateFn<CclLogical2DSameDim1AllReduce>()
+    .SetIsMatchedHob(AllReduceCollectiveCommunicationExists());
 
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_reduce");
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_gather");
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_gather_noncontinuous");
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_2D_same_dim0_all2all");
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_2D_same_dim1_all_reduce");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_reduce");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_gather");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_gather_noncontinuous");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_2D_same_dim0_all2all");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_2D_same_dim1_all_reduce");
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
+// #endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
