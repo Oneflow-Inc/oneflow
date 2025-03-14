@@ -139,7 +139,7 @@ jobs:
           git push
       - name: Upload patch
         if: ${{ failure() && steps.git_push.outcome == 'failure' }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: license_and_format-${{ github.sha }}.patch
           path: license_and_format.patch
