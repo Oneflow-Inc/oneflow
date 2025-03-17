@@ -353,6 +353,11 @@ if(BUILD_CUDA)
                               PROPERTIES COMPILE_FLAGS "-DCUDA_REAL_ARCHS=\"${CUDA_REAL_ARCHS}\"")
 endif()
 
+if(BUILD_NPU)
+  add_definitions(-DWITH_NPU)
+endif()
+message(STATUS "BUILD_NPU: ${BUILD_NPU}")
+
 if(BUILD_CUDA AND WITH_CUTLASS)
   if(CUDA_VERSION VERSION_GREATER_EQUAL "10.1")
     add_definitions(-DCUTLASS_ENABLE_TENSOR_CORE_MMA=1)
