@@ -73,6 +73,8 @@ CollectiveBoxingConf ResourceDesc::collective_boxing_conf() const {
 bool ResourceDesc::nccl_use_compute_stream() const {
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
   return resource_.nccl_use_compute_stream();
+#elif defined(WITH_NPU)  // TODO: find a batter way for multi devices
+  return true;
 #else
   return false;
 #endif
