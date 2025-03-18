@@ -71,11 +71,12 @@ CollectiveBoxingConf ResourceDesc::collective_boxing_conf() const {
 }
 
 bool ResourceDesc::nccl_use_compute_stream() const {
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
-  return resource_.nccl_use_compute_stream();
-#else
-  return false;
-#endif
+  // #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+  //   return resource_.nccl_use_compute_stream();
+  // #else
+  //   return false;
+  // #endif
+  return true;
 }
 
 void ResourceDesc::DumpCudnnConf(const JobConfigProto& job_conf) {
