@@ -317,6 +317,12 @@ add_definitions(-DONEFLOW_BINARY_DIR="${PROJECT_BINARY_DIR}")
 
 include(op_schema)
 
+if(BUILD_NPU)
+  include(${PROJECT_SOURCE_DIR}/cmake/ascend_npu.cmake)
+  target_include_directories(oneflow PRIVATE ${ASCEND_INCLUDE_DIRS})
+  target_link_libraries(oneflow ${ASCEND_LIBRARIES})
+endif()
+
 get_property(EXTERNAL_TARGETS GLOBAL PROPERTY EXTERNAL_TARGETS)
 
 if(APPLE)
