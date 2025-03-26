@@ -581,7 +581,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
     return Maybe<void>::Ok();
   }
 
-  #if defined(WITH_CUDA) || defined(WITH_NPU)
+#if defined(WITH_CUDA) || defined(WITH_NPU)
   // Use a general basic communication if no P in the consumer
   if (((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
         && producer_parallel_desc == consumer_parallel_desc)
