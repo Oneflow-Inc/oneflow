@@ -35,6 +35,8 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
   if (collective_boxing_conf.nccl_enable_all_to_all()) {
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
     builders.emplace_back(new CclAll2AllSubTskGphBuilder(DeviceType::kCUDA));
+#elif defined(WITH_NPU)
+    builders.emplace_back(new CclAll2AllSubTskGphBuilder(DeviceType::kNPU));
 #else
     LOG(WARNING) << "nccl_enable_all_to_all is unavailable unless NCCL_VERSION > 2.7.0";
 #endif

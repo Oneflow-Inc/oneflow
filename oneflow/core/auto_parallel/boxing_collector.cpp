@@ -581,14 +581,14 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
     return Maybe<void>::Ok();
   }
 
-#ifdef WITH_CUDA
+  #if defined(WITH_CUDA) || defined(WITH_NPU)
   // Use a general basic communication if no P in the consumer
   if (((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
         && producer_parallel_desc == consumer_parallel_desc)
        || enable_general_basic_communication)
       && (!NdSbpHasPartialParallel(sbp_consumer))
-      && producer_parallel_desc.device_type() == DeviceType::kCUDA
-      && consumer_parallel_desc.device_type() == DeviceType::kCUDA) {
+      && producer_parallel_desc.device_type() == consumer_parallel_desc.device_type()
+      && producer_parallel_desc.device_type() != DeviceType::kCPU) {
     if (NdSbpHasPartialParallel(sbp_producer) && NdSbpHasBroadcastParallel(sbp_consumer)) {
       // (?, P, ?)->(Si, Sj)->(?, B, ?), two-step transfer
       // Directly applying general basic communication would have O(n^2) time complexity for P->B
@@ -600,7 +600,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
     // Otherwise, one-step transfer
     return Maybe<void>::Ok();
   }
-#endif  // WITH_CUDA
+#endif  // WITH_CUDA || WITH_NPU
 
   if (JUST(ComputeLazyCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc,
                                            producer_parallel_desc, consumer_parallel_desc,

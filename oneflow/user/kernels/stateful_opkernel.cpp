@@ -975,7 +975,7 @@ void StatefulOpKernel::Compute(eager::CallContext* call_ctx, ep::Stream* stream,
   OF_PROFILER_RANGE_GUARD("Compute");
   auto er_guard = CHECK_JUST(profiler::EventRecorder::CreateKernelEventRecorder(
       op_type_name(),
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_NPU)
       [compute_ctx]() -> int64_t {
         const auto CalMemorySize = [compute_ctx](const one::ArgVec& args) -> int64_t {
           const auto Func = [compute_ctx](int64_t mem_size, const auto& pair) {
