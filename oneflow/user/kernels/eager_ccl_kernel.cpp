@@ -308,8 +308,8 @@ class EagerCclTouchKernel final : public user_op::OpKernel {
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
-               const user_op::OpKernelCache* cache) const override {
-    // Do nothing.
+               const user_op::OpKernelCache* cache) const override{
+      // Do nothing.
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
