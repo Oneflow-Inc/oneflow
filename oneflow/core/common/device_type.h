@@ -38,10 +38,6 @@ std::string PrintGeneratorAvailableDevices();
 #define DEVICE_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
   OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA)
-#elif defined(WITH_NPU)
-#define DEVICE_TYPE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kNPU)
 #else
 #define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
 #endif
