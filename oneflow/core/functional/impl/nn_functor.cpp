@@ -930,9 +930,9 @@ class SkipLayerNormFunctor {
                 std::tuple<bool, bool, bool, bool>(has_skip, has_gamma, has_beta, has_bias),
                 op_expr));
           }  // has_bias
-        }    // has_beta
-      }      // has_gamma
-    }        // has_skip
+        }  // has_beta
+      }  // has_gamma
+    }  // has_skip
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -1170,8 +1170,8 @@ class SkipRMSNormFunctor {
           ops_.insert(std::pair<std::tuple<bool, bool, bool>, std::shared_ptr<OpExpr>>(
               std::tuple<bool, bool, bool>(has_weight, has_skip, has_bias), op_expr));
         }  // has_bias
-      }    // has_skip
-    }      // has_weight
+      }  // has_skip
+    }  // has_weight
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -1477,7 +1477,7 @@ class MaxUnpoolNDFunctor {
                            .Input("x")
                            .Input("indices")
                            .Output("y")
-                           .Build())){};
+                           .Build())) {};
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& indices,
                            const std::vector<int32_t>& kernel_size,
@@ -1819,6 +1819,7 @@ class NLLLossFunctor {
                          .Input("target")
                          .Output("output")
                          .Output("out_weight")
+                         .Output("reduced_out")
                          .Build());
 
     op_weight_ = CHECK_JUST(one::OpBuilder("nll")
@@ -1827,6 +1828,7 @@ class NLLLossFunctor {
                                 .Input("weight")
                                 .Output("output")
                                 .Output("out_weight")
+                                .Output("reduced_out")
                                 .Build());
   }
 
@@ -1875,8 +1877,10 @@ class NLLLossFunctor {
       target_ = target;
     }
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("ignore_index");
-    attrs.SetAllAttrs(ignore_index);
+    // auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("ignore_index");
+    // attrs.SetAllAttrs(ignore_index);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("ignore_index", "reduction");
+    attrs.SetAllAttrs(ignore_index, reduction);
 
     std::shared_ptr<TensorTuple> nll_result;
     if (weight) {
@@ -1890,9 +1894,14 @@ class NLLLossFunctor {
     if (K > 2) { output = JUST(functional::Reshape(output, *target_shape)); }
 
     if (reduction == "none") { return output; }
-
+#ifdef WITH_NPU
+    // npu device
+    if (!input->is_cpu()) {
+      auto reduced_out = JUST(VectorAt(*nll_result, 2));
+      if (reduction == "sum" || reduction == "mean") { return reduced_out; }
+    }
+#endif  // WITH_NPU
     auto sum = JUST(functional::ReduceSum(output, {}, false, NullOpt));
-
     if (reduction == "sum") { return sum; }
 
     auto total_weight =
@@ -1915,6 +1924,7 @@ class CrossEntropyFunctor {
                              .Input("target")
                              .Output("output")
                              .Output("out_weight")
+                             .Output("reduced_out")
                              .Build());
 
     op_nll_weight_ = CHECK_JUST(one::OpBuilder("nll")
@@ -1923,6 +1933,7 @@ class CrossEntropyFunctor {
                                     .Input("weight")
                                     .Output("output")
                                     .Output("out_weight")
+                                    .Output("reduced_out")
                                     .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
@@ -1959,8 +1970,8 @@ class CrossEntropyFunctor {
 
     const auto target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
 
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("ignore_index");
-    attrs.SetAllAttrs(ignore_index);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("ignore_index", "reduction");
+    attrs.SetAllAttrs(ignore_index, reduction);
 
     std::shared_ptr<TensorTuple> nll_result;
     if (weight) {
@@ -1974,6 +1985,12 @@ class CrossEntropyFunctor {
     output = JUST(functional::Reshape(output, *target_shape));
     if (reduction == "none") { return output; }
 
+#ifdef WITH_NPU
+    if (!input->is_cpu()) {
+      auto reduced_out = JUST(VectorAt(*nll_result, 2));
+      if (reduction == "sum" || reduction == "mean") { return reduced_out; }
+    }
+#endif  // WITH_NPU
     auto sum = JUST(functional::ReduceSum(output, {}, false, NullOpt));
     if (reduction == "sum") { return sum; }
 

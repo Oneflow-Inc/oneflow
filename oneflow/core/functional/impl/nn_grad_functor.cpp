@@ -468,9 +468,12 @@ class NLLGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_grad,
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
-                           const Optional<one::Tensor>& weight, const int64_t ignore_index) const {
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("ignore_index");
-    attrs.SetAllAttrs(ignore_index);
+                           const Optional<one::Tensor>& weight, const int64_t ignore_index,
+                           const std::string& reduction) const {
+    // auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("ignore_index");
+    // attrs.SetAllAttrs(ignore_index);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("ignore_index", "reduction");
+    attrs.SetAllAttrs(ignore_index, reduction);
 
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(

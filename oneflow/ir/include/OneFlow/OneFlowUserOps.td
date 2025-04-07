@@ -6106,10 +6106,12 @@ def OneFlow_NLLOp : OneFlow_BaseOp<"nll", [NoMemoryEffect, DeclareOpInterfaceMet
   );
   let output = (outs
     OneFlow_Tensor:$output,
-    OneFlow_Tensor:$out_weight
+    OneFlow_Tensor:$out_weight,
+    OneFlow_Tensor:$reduced_out
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$ignore_index
+    DefaultValuedAttr<SI64Attr, "0">:$ignore_index,
+    DefaultValuedAttr<StrAttr, "\"none\"">:$reduction
   );
   let has_data_type_infer_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -6128,7 +6130,8 @@ def OneFlow_NLLGradOp : OneFlow_BaseOp<"nll_grad", [NoMemoryEffect, DeclareOpInt
     OneFlow_Tensor:$in_grad
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "0">:$ignore_index
+    DefaultValuedAttr<SI64Attr, "0">:$ignore_index,
+    DefaultValuedAttr<StrAttr, "\"none\"">:$reduction
   );
   let has_data_type_infer_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;

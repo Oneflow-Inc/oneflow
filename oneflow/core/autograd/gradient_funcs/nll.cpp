@@ -24,6 +24,7 @@ namespace one {
 struct NLLCaptureState : public AutoGradCaptureState {
   bool requires_grad = false;
   int64_t ignore_index = -100;
+  std::string reduction = "none";
 };
 
 class NLLGradFunction : public OpExprGradFunction<NLLCaptureState> {
@@ -53,6 +54,7 @@ Maybe<void> NLLGradFunction::Capture(NLLCaptureState* ctx, const TensorTuple& in
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->ignore_index = JUST(composed_attrs.GetAttr<int64_t>("ignore_index"));
+  ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
   ctx->SaveTensorForBackward(input);                      // input
   ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 1)));  // target
   if (inputs.size() == 3) {
@@ -65,7 +67,7 @@ Maybe<void> NLLGradFunction::Apply(const NLLCaptureState* ctx, const TensorTuple
                                    TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-  CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
+  // CHECK_EQ_OR_RETURN(out_grads.size(), 2);  // NOLINT(maybe-need-error-msg)
   CHECK_GE_OR_RETURN(ctx->SavedTensors().size(), 2)
       << Error::RuntimeError()
       << "The number of saved tensors is expected to be greater than or equal to 2, but got "
@@ -77,13 +79,13 @@ Maybe<void> NLLGradFunction::Apply(const NLLCaptureState* ctx, const TensorTuple
   in_grads->resize(ctx->SavedTensors().size());
 
   if (ctx->SavedTensors().size() == 2) {
-    JUST(VectorAt(*in_grads, 0)) =
-        JUST(functional::NLLGrad(out_grad, input, target, NullOpt, ctx->ignore_index));
+    JUST(VectorAt(*in_grads, 0)) = JUST(
+        functional::NLLGrad(out_grad, input, target, NullOpt, ctx->ignore_index, ctx->reduction));
   } else {
     // has weight
     auto weight = JUST(VectorAt(ctx->SavedTensors(), 2));
-    JUST(VectorAt(*in_grads, 0)) =
-        JUST(functional::NLLGrad(out_grad, input, target, weight, ctx->ignore_index));
+    JUST(VectorAt(*in_grads, 0)) = JUST(
+        functional::NLLGrad(out_grad, input, target, weight, ctx->ignore_index, ctx->reduction));
   }
 
   return Maybe<void>::Ok();
