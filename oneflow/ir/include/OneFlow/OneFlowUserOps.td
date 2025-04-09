@@ -6122,6 +6122,7 @@ def OneFlow_NLLOp : OneFlow_BaseOp<"nll", [NoMemoryEffect, DeclareOpInterfaceMet
 def OneFlow_NLLGradOp : OneFlow_BaseOp<"nll_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$out_grad,
+    OneFlow_Tensor:$reduced_out_grad,
     OneFlow_Tensor:$input,
     OneFlow_Tensor:$target,
     Optional<OneFlow_Tensor>:$weight

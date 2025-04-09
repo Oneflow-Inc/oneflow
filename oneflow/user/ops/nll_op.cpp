@@ -179,6 +179,7 @@ namespace oneflow {
                       .Split(user_op::OpArg("input", 0), 0)
                       .Split(user_op::OpArg("target", 0), 0)
                       .Split(user_op::OpArg("out_grad", 0), 0)
+                      .Broadcast(user_op::OpArg("reduced_out_grad", 0))
                       .Split(user_op::OpArg("in_grad", 0), 0);
   if (ctx->user_op_conf().has_input("weight", 0)) {
     builder1.Broadcast(user_op::OpArg("weight", 0));
@@ -191,6 +192,7 @@ namespace oneflow {
                       .Split(user_op::OpArg("input", 0), shape.NumAxes() - 1)
                       .Broadcast(user_op::OpArg("target", 0))
                       .Broadcast(user_op::OpArg("out_grad", 0))
+                      .Broadcast(user_op::OpArg("reduced_out_grad", 0))
                       .Split(user_op::OpArg("in_grad", 0), shape.NumAxes() - 1);
   if (ctx->user_op_conf().has_input("weight", 0)) {
     builder2.Split(user_op::OpArg("weight", 0), 0);

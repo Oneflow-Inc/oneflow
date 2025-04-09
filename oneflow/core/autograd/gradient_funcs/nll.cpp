@@ -72,20 +72,31 @@ Maybe<void> NLLGradFunction::Apply(const NLLCaptureState* ctx, const TensorTuple
       << Error::RuntimeError()
       << "The number of saved tensors is expected to be greater than or equal to 2, but got "
       << ctx->SavedTensors().size();
-  const auto& out_grad = out_grads[0];
+  const auto& out_grad = out_grads[0];          // for reduction="none"
+  const auto& reduced_out_grad = out_grads[2];  // for reduction="mean"/"sum"
   const auto& input = ctx->SavedTensors()[0];
   const auto& target = ctx->SavedTensors()[1];
 
   in_grads->resize(ctx->SavedTensors().size());
 
   if (ctx->SavedTensors().size() == 2) {
-    JUST(VectorAt(*in_grads, 0)) = JUST(
-        functional::NLLGrad(out_grad, input, target, NullOpt, ctx->ignore_index, ctx->reduction));
+    if (ctx->reduction == "none") {
+      JUST(VectorAt(*in_grads, 0)) = JUST(functional::NLLGrad(
+          out_grad, reduced_out_grad, input, target, NullOpt, ctx->ignore_index, ctx->reduction));
+    } else {
+      JUST(VectorAt(*in_grads, 0)) = JUST(functional::NLLGrad(
+          out_grad, reduced_out_grad, input, target, NullOpt, ctx->ignore_index, ctx->reduction));
+    }
   } else {
     // has weight
     auto weight = JUST(VectorAt(ctx->SavedTensors(), 2));
-    JUST(VectorAt(*in_grads, 0)) = JUST(
-        functional::NLLGrad(out_grad, input, target, weight, ctx->ignore_index, ctx->reduction));
+    if (ctx->reduction == "none") {
+      JUST(VectorAt(*in_grads, 0)) = JUST(functional::NLLGrad(
+          out_grad, reduced_out_grad, input, target, weight, ctx->ignore_index, ctx->reduction));
+    } else {
+      JUST(VectorAt(*in_grads, 0)) = JUST(functional::NLLGrad(
+          out_grad, reduced_out_grad, input, target, weight, ctx->ignore_index, ctx->reduction));
+    }
   }
 
   return Maybe<void>::Ok();
