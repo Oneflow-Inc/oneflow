@@ -32,7 +32,7 @@ env:
 jobs:
   source_info:
     name: Collect information about PR and source
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
       - name: Check out OneFlow
@@ -60,7 +60,7 @@ jobs:
 
   mirror_third_party:
     name: Mirror third party dependencies
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
       - uses: actions/checkout@v2
@@ -78,7 +78,7 @@ jobs:
 
   check_license_and_format:
     name: License and format
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v2
@@ -1132,7 +1132,7 @@ jobs:
 
   static_analysis_with_clang_on_diff:
     name: Static analysis with clang on diff
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
       - name: Check out OneFlow
