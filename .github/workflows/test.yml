@@ -101,6 +101,7 @@ jobs:
         run: |
           which clang-format
           clang-format --version
+          sudo apt install libtinfo5
           python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
       - name: Run C++/CUDA format
         id: cpp_fmt
@@ -108,6 +109,7 @@ jobs:
         run: |
           which clang-format
           clang-format --version
+          sudo apt install libtinfo5
           python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow --fix
       - name: Check Python format
         id: py_check
