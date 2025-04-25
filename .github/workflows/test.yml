@@ -114,6 +114,7 @@ jobs:
         id: py_fmt
         if: ${{ failure() }}
         run: |
+          python3 -m pip install black==19.10b0 --user
           python3 ci/check/run_py_format.py --source_dir $PWD --fix
       - name: Check CMake format
         id: cmake_check
