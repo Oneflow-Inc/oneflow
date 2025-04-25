@@ -1201,6 +1201,7 @@ jobs:
         # use clang as compiler for correct compiler flags
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         run: |
+          sudo apt install clang-12 lldb-12 lld-12 
           cd build
           rm CMakeCache.txt
           cmake .. -C ../cmake/caches/international/cpu.cmake \
