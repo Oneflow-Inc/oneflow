@@ -1649,10 +1649,8 @@ Maybe<Shape> GetNdHierarchyPhysicalShape(const Shape& logical_shape, const NdSbp
   return physical;
 }
 
-}  // namespace
-
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
-                              const ParallelDesc& parallel_desc, int64_t parallel_id) {
+Maybe<Shape> RawGetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
+                                 const ParallelDesc& parallel_desc, int64_t parallel_id) {
   CHECK_GE_OR_RETURN(parallel_id, 0);
   CHECK_LT_OR_RETURN(parallel_id, parallel_desc.hierarchy()->elem_cnt());
   CHECK_EQ_OR_RETURN(parallel_desc.hierarchy()->NumAxes(), nd_sbp.sbp_parallel_size());
@@ -1664,10 +1662,19 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
   }
 }
 
+static constexpr auto* CachedGetPhysicalShape = DECORATE(&RawGetPhysicalShape, ThreadLocalCopiable);
+
+}  // namespace
+
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
+                              const ParallelDesc& parallel_desc, int64_t parallel_id) {
+  return CachedGetPhysicalShape(logical_shape, nd_sbp, parallel_desc, parallel_id);
+}
+
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const ParallelContext& parallel_ctx) {
-  return GetPhysicalShape(logical_shape, nd_sbp, parallel_desc, parallel_ctx.parallel_id());
+  return CachedGetPhysicalShape(logical_shape, nd_sbp, parallel_desc, parallel_ctx.parallel_id());
 }
 
 Maybe<Shape> GetLogicalShape(const Shape& physical_shape, const NdSbp& nd_sbp,
