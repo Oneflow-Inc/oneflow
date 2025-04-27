@@ -43,11 +43,17 @@ void ProfileManager::UnregisterEventRecorder(const std::string& event_recorder_k
 }
 
 std::string ProfileManager::DumpResultsJson() {
-  const json j = ExportEvents();
+#ifdef WITH_NPU
+  AclReleaseTrace(profConfig_);
+#else
+  ProcessRawEvents();
+#endif
+  const json j = events_result_;
+  decltype(events_result_)().swap(events_result_);
   return j.dump();
 }
 
-std::vector<std::shared_ptr<IEvent>> ProfileManager::ExportEvents() {
+void ProfileManager::ProcessRawEvents() {
 #if defined(WITH_CUDA)
   auto trace = StopTrace();
   const auto& kineto_events = *(trace.get()->activities());
@@ -73,7 +79,6 @@ std::vector<std::shared_ptr<IEvent>> ProfileManager::ExportEvents() {
     }
   }
 #endif  // WITH_CUDA
-  std::vector<std::shared_ptr<IEvent>> events;
   while (!events_.empty()) {
     auto evt = events_.front();
     events_.pop();
@@ -95,9 +100,8 @@ std::vector<std::shared_ptr<IEvent>> ProfileManager::ExportEvents() {
       }
     }
 #endif  // WITH_CUDA
-    events.emplace_back(evt);
+    events_result_.emplace_back(evt);
   }
-  return events;
 }
 
 std::string ProfileManager::GetNextEventRecorderKey(const std::string& name) {
