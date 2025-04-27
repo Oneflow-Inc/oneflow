@@ -135,7 +135,6 @@ jobs:
         run: |
           git diff -p > license_and_format.patch
           cat license_and_format.patch
-          git add license_and_format.patch
           git config --global user.email "ci-bot@oneflow.org"
           git config --global user.name "oneflow-ci-bot"
           git add -u
