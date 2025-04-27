@@ -117,6 +117,7 @@ def _test_graph_clip_grad_value_impl(test_case, shape, device, clip_value):
     )
 
 
+# TODO(lml): find why fail on ci machine
 def _test_clip_grad_norm_global_impl(
     test_case, shape, sbp, placement, max_norm, norm_type
 ):
