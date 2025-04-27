@@ -11379,7 +11379,8 @@ def OneFlow_UpsampleLinear1DGradOp : OneFlow_BaseOp<"upsample_linear_1d_grad", [
 
 def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$like
   );
   let output = (outs
     OneFlow_Tensor:$y
@@ -11398,7 +11399,8 @@ def OneFlow_UpsampleNearest1DOp : OneFlow_BaseOp<"upsample_nearest_1d", [NoMemor
 def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$like
   );
   let output = (outs
     OneFlow_Tensor:$dx
@@ -11416,7 +11418,8 @@ def OneFlow_UpsampleNearest1DGradOp : OneFlow_BaseOp<"upsample_nearest_1d_grad",
 
 def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$like
   );
   let output = (outs
     OneFlow_Tensor:$y
@@ -11436,7 +11439,8 @@ def OneFlow_UpsampleNearest2DOp : OneFlow_BaseOp<"upsample_nearest_2d", [NoMemor
 def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$like
   );
   let output = (outs
     OneFlow_Tensor:$dx
@@ -11455,7 +11459,8 @@ def OneFlow_UpsampleNearest2DGradOp : OneFlow_BaseOp<"upsample_nearest_2d_grad",
 
 def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$like
   );
   let output = (outs
     OneFlow_Tensor:$y
@@ -11476,7 +11481,8 @@ def OneFlow_UpsampleNearest3DOp : OneFlow_BaseOp<"upsample_nearest_3d", [NoMemor
 def OneFlow_UpsampleNearest3DGradOp : OneFlow_BaseOp<"upsample_nearest_3d_grad", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$like
   );
   let output = (outs
     OneFlow_Tensor:$dx

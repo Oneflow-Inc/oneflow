@@ -1781,27 +1781,35 @@
   bind_python: False
 
 - name: "upsample_nearest_1d"
-  signature:
-    'Tensor (Tensor x, Double scale_factor=0.0, Int64List[1] output_size=None,
-    String data_format="channels_first") => UpsampleNearest1D'
+  signature: [
+      'Tensor (Tensor x, Double scale_factor=0.0, Int64List[1] output_size=None,
+       String data_format="channels_first") => UpsampleNearest1D',
+      'Tensor (Tensor x, Tensor like, String data_format="channels_first") => UpsampleNearest1D'
+    ]
   bind_python: True
 
 - name: "upsample_nearest_1d_grad"
-  signature:
-    'Tensor (Tensor dy, Tensor x, Double scale_factor=0.0, Int64List[1] output_size=None,
-    String data_format="channels_first") => UpsampleNearest1DGrad'
+  signature: [
+      'Tensor (Tensor dy, Tensor x, Double scale_factor=0.0, Int64List[1] output_size=None,
+       String data_format="channels_first") => UpsampleNearest1DGrad',
+      'Tensor (Tensor dy, Tensor x, Tensor like, String data_format="channels_first") => UpsampleNearest1DGrad'
+    ]
   bind_python: False
 
 - name: "upsample_nearest_2d"
-  signature:
-    'Tensor (Tensor x, Double height_scale=0.0, Double width_scale=0.0, Int64List[2] output_size=None,
-    String data_format="channels_first") => UpsampleNearest2D'
+  signature: [
+      'Tensor (Tensor x, Double height_scale=0.0, Double width_scale=0.0, Int64List[2] output_size=None,
+       String data_format="channels_first") => UpsampleNearest2D',
+      'Tensor (Tensor x, Tensor like, String data_format="channels_first") => UpsampleNearest2D'
+    ]
   bind_python: True
 
 - name: "upsample_nearest_2d_grad"
-  signature:
-    'Tensor (Tensor dy, Tensor x, Double height_scale=0.0, Double width_scale=0.0, Int64List[2] output_size=None,
-    String data_format="channels_first") => UpsampleNearest2DGrad'
+  signature: [
+      'Tensor (Tensor dy, Tensor x, Double height_scale=0.0, Double width_scale=0.0, Int64List[2] output_size=None,
+       String data_format="channels_first") => UpsampleNearest2DGrad',
+      'Tensor (Tensor dy, Tensor x, Tensor like, String data_format="channels_first") =>UpsampleNearest2DGrad'
+    ]
   bind_python: False
 
 - name: "upsample_bilinear_2d"
@@ -1829,15 +1837,19 @@
   bind_python: False
 
 - name: "upsample_nearest_3d"
-  signature:
-    'Tensor (Tensor x, Double depth_scale=0.0, Double height_scale=0.0, Double width_scale=0.0, Int64List[3] output_size=None,
-    String data_format="channels_first") => UpsampleNearest3D'
+  signature: [
+      'Tensor (Tensor x, Double depth_scale=0.0, Double height_scale=0.0, Double width_scale=0.0, Int64List[3] output_size=None,
+       String data_format="channels_first") => UpsampleNearest3D',
+      'Tensor (Tensor x, Tensor like, String data_format="channels_first") => UpsampleNearest3D'
+    ]
   bind_python: True
 
 - name: "upsample_nearest_3d_grad"
-  signature:
-    'Tensor (Tensor dy, Tensor x, Double depth_scale=0.0, Double height_scale=0.0, Double width_scale=0.0, Int64List[3] output_size=None,
-    String data_format="channels_first") => UpsampleNearest3DGrad'
+  signature: [
+      'Tensor (Tensor dy, Tensor x, Double depth_scale=0.0, Double height_scale=0.0, Double width_scale=0.0, Int64List[3] output_size=None,
+       String data_format="channels_first") => UpsampleNearest3DGrad',
+      'Tensor (Tensor dy, Tensor x, Tensor like, String data_format="channels_first") => UpsampleNearest3DGrad'
+  ]
   bind_python: False
 
 - name: "upsample_trilinear_3d"
@@ -3506,3 +3518,8 @@
 - name: "fused_clip_grad"
   signature: "Tensor (TensorTuple model_diff, Float max_norm, Float norm_type) => FusedClipGrad"
   bind_python: True
+
+- name: "fused_group_norm_quantization"
+  signature: 'TensorTuple[y, y_scale, y_zero_point] (Tensor x, Tensor gamma=None, Tensor beta=None, Bool affine, Int32 num_groups, Double epsilon=1e-5, String data_format="channels_first", String activation="none", String quantization_scheme="affine", Int32 quantization_bit=8, String quantization_formula="oneflow", String quantization_mode="tensorwise") => FusedGroupNormQuantization'
+  bind_python: True
+  
