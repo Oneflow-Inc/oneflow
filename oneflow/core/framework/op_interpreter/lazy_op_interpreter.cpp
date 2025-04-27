@@ -764,8 +764,10 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     // NOTE(chengcheng): handle for source UserOp like OFRecordReader, CoinFlip
     return LazyInterpreterApplyImplForSourceUserOpExpr(op_expr, outputs, ctx);
   }
-  if (op_expr.op_type_name() == "copy") {
+  if (op_expr.op_type_name() == "copy"
+      && !ParseBooleanFromEnv("ONEFLOW_DISABLE_HD_COPY_STREAM", false)) {
     // NOTE(chengcheng): handle for copy UserOp which will NOT add op to job.
+    // Unless ONEFLOW_DISABLE_HD_COPY_STREAM is True
     return LazyInterpreterApplyImplForCopyUserOpExpr(op_expr, inputs, outputs, ctx);
   }
 
@@ -858,21 +860,52 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   VLOG(3) << "Lazy nn.Graph name " << graph_name << " infer and and op attr : \n"
           << op_attr.DebugString() << std::endl;
 
-  int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
-  auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
-  for (int i = 0; i < op_expr.output_size(); ++i) {
-    const std::string& obn = op_expr.indexed_obns().at(i);
-    if (!(*outputs)[i]) {
-      (*outputs)[i] =
-          JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
+  if (op_expr.op_type_name() == "copy") {
+    CHECK_OR_RETURN(ParseBooleanFromEnv("ONEFLOW_DISABLE_HD_COPY_STREAM", false));
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);          // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(op_expr.input_size(), 1);   // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(outputs->size(), 1);        // NOLINT(maybe-need-error-msg)
+    CHECK_EQ_OR_RETURN(op_expr.output_size(), 1);  // NOLINT(maybe-need-error-msg)
+    const std::shared_ptr<Tensor>& input_tensor = JUST(VectorAt(inputs, 0));
+    const std::string& obn = JUST(VectorAt(op_expr.indexed_obns(), 0));
+    auto device = JUST(ctx.attrs.GetAttr<Symbol<Device>>("device"));
+
+    if (input_tensor->is_local()) {
+      (*outputs)[0] =
+          JUST(LocalTensor::MakeTensor(input_tensor->shape(), JUST(input_tensor->stride()),
+                                       input_tensor->dtype()->data_type(), device,
+                                       /* is_lazy= */ true,
+                                       /*requires_grad=*/false, /*is_leaf=*/true));
     } else {
-      VLOG(2) << "Lazy nn.Graph name " << graph_name << " op name " << new_op_name
-              << " run with inplace.";
-      const std::shared_ptr<Tensor>& inplace_out = (*outputs)[i];
-      JUST(CheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, is_local));
+      ParallelConf parallel_conf = JUST(input_tensor->parallel_desc())->parallel_conf();
+      parallel_conf.set_device_tag(device->type());
+      ParallelDesc parallel_desc(parallel_conf);
+      (*outputs)[0] =
+          JUST(GlobalTensor::MakeTensor(input_tensor->shape(), input_tensor->dtype()->data_type(),
+                                        JUST(input_tensor->nd_sbp()), SymbolOf(parallel_desc),
+                                        /* is_lazy= */ true,
+                                        /*requires_grad=*/false, /*is_leaf=*/true));
     }
-    TensorNameScope::Global()->Record((*outputs)[i], GenLogicalBlobName(new_op_name, obn));
+
+    TensorNameScope::Global()->Record((*outputs)[0], GenLogicalBlobName(new_op_name, obn));
+  } else {
+    int64_t parallel_desc_sym_id = JUST(scope->GetParallelDescSymbolId(*op_conf));
+    auto blob_parallel_desc = JUST(GetSymbol<ParallelDesc>(parallel_desc_sym_id));
+    for (int i = 0; i < op_expr.output_size(); ++i) {
+      const std::string& obn = JUST(VectorAt(op_expr.indexed_obns(), i));
+      if (!(*outputs)[i]) {
+        (*outputs)[i] =
+            JUST(BuildTensor(op_attr, obn, blob_parallel_desc, /* is_lazy= */ true, is_local));
+      } else {
+        VLOG(2) << "Lazy nn.Graph name " << graph_name << " op name " << new_op_name
+                << " run with inplace.";
+        const std::shared_ptr<Tensor>& inplace_out = (*outputs)[i];
+        JUST(CheckTensorMatchAttr(inplace_out, op_attr, obn, blob_parallel_desc, is_local));
+      }
+      TensorNameScope::Global()->Record((*outputs)[i], GenLogicalBlobName(new_op_name, obn));
+    }
   }
+
   return Maybe<void>::Ok();
 }
 
