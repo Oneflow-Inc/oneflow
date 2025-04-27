@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import warnings
 from typing import List, Optional
 
 from oneflow.framework.tensor import Tensor
 import oneflow as flow
 
 # ref https://github.com/pytorch/pytorch/blob/master/torch/nn/functional.py
-def softmax(input: Tensor, dim: Optional[int] = None, dtype=None) -> Tensor:
+def softmax(input: Tensor, dim: Optional[int] = None, _stacklevel: int = 3, dtype=None) -> Tensor:
     r"""Applies a softmax function.
     Softmax is defined as:
     :math:`\text{Softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}`
@@ -41,6 +42,12 @@ def softmax(input: Tensor, dim: Optional[int] = None, dtype=None) -> Tensor:
         which expects the Log to be computed between the Softmax and itself.
         Use log_softmax instead (it's faster and has better numerical properties).
     """
+    if dim is None:
+        warnings.warn(
+            f"Implicit dimension choice for softmax has been deprecated. "
+            "Change the call to include dim=X as an argument.",
+            stacklevel=_stacklevel,
+        )
     if dtype is None:
         ret = flow._C.softmax(input, dim)
     else:
