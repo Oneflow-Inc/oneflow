@@ -120,7 +120,7 @@ class TensorGenerator(object):
                 parallel_mode = [parallel_mode]
 
             assert all(p.upper() in ("DP", "MP", "PP") for p in parallel_mode)
-            assert len(parallel_mode) > 0 and len(parallel_mode) <= 2
+            assert 0 < len(parallel_mode) <= 2
 
             self.input_sbp = []
             self.target_sbp = []
@@ -254,7 +254,7 @@ def _compare_with_eager(
     # print(f"[rank{rank}] local_loss.numel(): {local_loss.numel()}")
     # print(f"[rank{rank}] local_loss: {local_loss}")
 
-    if acc > 1 and graph_loss.numel() == acc:
+    if 1 < acc == graph_loss.numel():
         graph_loss = graph_loss.mean()
 
     if parallel_mode is None:

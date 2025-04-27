@@ -58,13 +58,13 @@ def gen_numpy_test_sample(input, padding):
             ip_x = ip_y = 0
             if j < pad_left:
                 ip_x = pad_left * 2 - j
-            elif j >= pad_left and j < dx_width + pad_left:
+            elif pad_left <= j < dx_width + pad_left:
                 ip_x = j
             else:
                 ip_x = (dx_width + pad_left - 1) * 2 - j
             if i < pad_top:
                 ip_y = pad_top * 2 - i
-            elif i >= pad_top and i < dx_height + pad_top:
+            elif pad_top <= i < dx_height + pad_top:
                 ip_y = i
             else:
                 ip_y = (dx_height + pad_top - 1) * 2 - i
