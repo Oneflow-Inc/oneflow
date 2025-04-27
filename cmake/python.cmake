@@ -25,7 +25,7 @@ endif()
 
 function(install_py_dev_deps)
   execute_process(COMMAND ${ARGV0} -m pip install ${extra_index_arg} ${PIP_INDEX_MIRROR} -r
-                          ${requirements_txt} --user RESULT_VARIABLE PIP_INSTALL_STATUS)
+                          ${requirements_txt} RESULT_VARIABLE PIP_INSTALL_STATUS)
   if(NOT PIP_INSTALL_STATUS EQUAL 0)
     message(FATAL_ERROR "fail to install pip packages")
   endif()
