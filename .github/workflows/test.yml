@@ -72,7 +72,6 @@ jobs:
           then
             exit 0
           fi
-          openssl version
           python3 -m pip install -U pip "setuptools<=68.2.2" wheel
           python3 -m pip install 'cryptography<=3.4' oss2
           python3 tools/package_mirror.py -i $PWD
@@ -100,16 +99,12 @@ jobs:
       - name: Check C++/CUDA format
         id: cpp_check
         run: |
-          which clang-format
-          clang-format --version
           sudo apt install libtinfo5
           python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
       - name: Run C++/CUDA format
         id: cpp_fmt
         if: ${{ failure() }}
         run: |
-          which clang-format
-          clang-format --version
           sudo apt install libtinfo5
           python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow --fix
       - name: Check Python format
