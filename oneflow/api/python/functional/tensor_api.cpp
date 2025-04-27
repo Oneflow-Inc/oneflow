@@ -22,8 +22,10 @@ limitations under the License.
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/eager/tensor_storage.h"
 #include "oneflow/core/framework/mutable_attr_map.h"
 #include "oneflow/core/framework/stream.h"
@@ -209,7 +211,7 @@ class TensorWithShapeGenericCtorFunctor {
     if (device) {
       device_ = JUST(device);
     } else {
-      device_ = JUST(Device::New("cpu"));
+      device_ = GetDefaultDevice();
     }
     return functional::Empty(shape, dtype, device_, /*requires_grad=*/false, /*pin_memory=*/false);
   }

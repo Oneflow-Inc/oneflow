@@ -48,7 +48,7 @@ class _ConstantBase:
             dtype = flow.get_default_dtype()
         if placement is None:
             if device is None:
-                self.device = flow.device("cpu")
+                self.device = flow.get_default_device()
         else:
             assert device is None
         self.placement = placement
