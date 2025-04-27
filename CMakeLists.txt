@@ -217,6 +217,7 @@ use_mirror(VARIABLE CUTLASS_URL URL ${CUTLASS_URL})
 set(CUTLASS_MD5 425f8cf064ff47c81124e55490135f5c)
 
 include(cuda)
+include(CPM)
 add_subdirectory(external)
 include(third_party)
 
