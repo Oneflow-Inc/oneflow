@@ -6,7 +6,7 @@ on:
 
 jobs:
   check_labels:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     name: Labels
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:

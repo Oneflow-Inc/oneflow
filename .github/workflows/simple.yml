@@ -18,7 +18,7 @@ concurrency:
 jobs:
   static_analysis_with_clang:
     name: Static analysis with clang
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
     steps:
       - name: Check out OneFlow
@@ -77,7 +77,7 @@ jobs:
             os: "macos-10.15"
             make_concurrency: 2
           - test_suite: ubuntu
-            os: "ubuntu-20.04"
+            os: "ubuntu-22.04"
             make_concurrency: 2
         exclude:
           - test_suite: mac
