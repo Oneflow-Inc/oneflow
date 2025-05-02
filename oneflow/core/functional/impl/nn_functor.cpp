@@ -2254,6 +2254,10 @@ class SparseSoftmaxCrossEntropyFunctor {
   Maybe<bool> RunWithMsVersion(const std::shared_ptr<one::Tensor>& logits,
                                const std::shared_ptr<one::Tensor>& label) const {
     if (!(logits->is_global() && label->is_global())) { return false; }
+    // npu-implementation not support ms version yet
+#ifdef WITH_NPU
+    return false;
+#endif
 
     if (JUST(logits->parallel_desc())->parallel_num() == 1) { return false; }
 

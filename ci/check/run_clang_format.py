@@ -81,7 +81,7 @@ def download(dry=False):
     if os.getenv("CI"):
         url = "https://github.com/Oneflow-Inc/oneflow-fmt/raw/master/clang-format/linux-x86/clang-format-11"
     dst_dir = ".cache/bin"
-    dst = f"{dst_dir}/clang-format"
+    dst = f"{dst_dir}/clang-format-11"
     if dry:
         if os.path.isfile(dst):
             return dst
