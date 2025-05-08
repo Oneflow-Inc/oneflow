@@ -1820,6 +1820,7 @@ class NLLLossFunctor {
                          .Output("output")
                          .Output("out_weight")
                          .Output("reduced_out")
+                         .Output("total_weight")
                          .Build());
 
     op_weight_ = CHECK_JUST(one::OpBuilder("nll")
@@ -1829,6 +1830,7 @@ class NLLLossFunctor {
                                 .Output("output")
                                 .Output("out_weight")
                                 .Output("reduced_out")
+                                .Output("total_weight")
                                 .Build());
   }
 

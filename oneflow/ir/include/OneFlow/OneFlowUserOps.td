@@ -6107,7 +6107,8 @@ def OneFlow_NLLOp : OneFlow_BaseOp<"nll", [NoMemoryEffect, DeclareOpInterfaceMet
   let output = (outs
     OneFlow_Tensor:$output,
     OneFlow_Tensor:$out_weight,
-    OneFlow_Tensor:$reduced_out
+    OneFlow_Tensor:$reduced_out,
+    OneFlow_Tensor:$total_weight
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$ignore_index,
@@ -6125,6 +6126,7 @@ def OneFlow_NLLGradOp : OneFlow_BaseOp<"nll_grad", [NoMemoryEffect, DeclareOpInt
     OneFlow_Tensor:$reduced_out_grad,
     OneFlow_Tensor:$input,
     OneFlow_Tensor:$target,
+    OneFlow_Tensor:$total_weight,
     Optional<OneFlow_Tensor>:$weight
   );
   let output = (outs

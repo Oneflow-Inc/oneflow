@@ -452,6 +452,7 @@ class NLLGradFunctor {
     op_ = CHECK_JUST(one::OpBuilder("nll_grad")
                          .Input("out_grad")
                          .Input("reduced_out_grad")
+                         .Input("total_weight")
                          .Input("input")
                          .Input("target")
                          .Output("in_grad")
@@ -460,6 +461,7 @@ class NLLGradFunctor {
     op_weight_ = CHECK_JUST(one::OpBuilder("nll_grad")
                                 .Input("out_grad")
                                 .Input("reduced_out_grad")
+                                .Input("total_weight")
                                 .Input("input")
                                 .Input("target")
                                 .Input("weight")
@@ -469,6 +471,7 @@ class NLLGradFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_grad,
                            const std::shared_ptr<one::Tensor>& reduced_out_grad,
+                           const std::shared_ptr<one::Tensor>& total_weight,
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const Optional<one::Tensor>& weight, const int64_t ignore_index,
@@ -480,11 +483,12 @@ class NLLGradFunctor {
 
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *op_weight_, {out_grad, reduced_out_grad, input, target, JUST(JUST(weight)->detach())},
+          *op_weight_,
+          {out_grad, reduced_out_grad, total_weight, input, target, JUST(JUST(weight)->detach())},
           attrs);
     } else {
-      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {out_grad, reduced_out_grad, input, target},
-                                                 attrs);
+      return OpInterpUtil::Dispatch<one::Tensor>(
+          *op_, {out_grad, reduced_out_grad, total_weight, input, target}, attrs);
     }
   }
 

@@ -32,6 +32,7 @@ namespace oneflow {
   ctx->SetOutputDType("output", 0, input_dtype);
   ctx->SetOutputDType("out_weight", 0, input_dtype);
   ctx->SetOutputDType("reduced_out", 0, input_dtype);
+  ctx->SetOutputDType("total_weight", 0, input_dtype);
 
   return Maybe<void>::Ok();
 }
@@ -74,6 +75,10 @@ namespace oneflow {
   reduced_out_desc->set_is_dynamic(false);
   reduced_out_desc->set_shape(Shape({}));
 
+  user_op::TensorDesc* total_weight_desc = ctx->MutOutputTensorDesc("total_weight", 0);
+  total_weight_desc->set_is_dynamic(false);
+  total_weight_desc->set_shape(Shape({}));
+
   return Maybe<void>::Ok();
 }
 
@@ -84,7 +89,8 @@ namespace oneflow {
                       .Split(user_op::OpArg("target", 0), 0)
                       .Split(user_op::OpArg("output", 0), 0)
                       .Split(user_op::OpArg("out_weight", 0), 0)
-                      .Broadcast(user_op::OpArg("reduced_out", 0));
+                      .Broadcast(user_op::OpArg("reduced_out", 0))
+                      .Broadcast(user_op::OpArg("total_weight", 0));
   if (ctx->user_op_conf().has_input("weight", 0)) {
     builder1.Broadcast(user_op::OpArg("weight", 0));
   }
@@ -97,7 +103,8 @@ namespace oneflow {
                       .Broadcast(user_op::OpArg("target", 0))
                       .Broadcast(user_op::OpArg("output", 0))
                       .Broadcast(user_op::OpArg("out_weight", 0))
-                      .Broadcast(user_op::OpArg("reduced_out", 0));
+                      .Broadcast(user_op::OpArg("reduced_out", 0))
+                      .Broadcast(user_op::OpArg("total_weight", 0));
   if (ctx->user_op_conf().has_input("weight", 0)) {
     builder2.Split(user_op::OpArg("weight", 0), 0);
   }
@@ -180,6 +187,7 @@ namespace oneflow {
                       .Split(user_op::OpArg("target", 0), 0)
                       .Split(user_op::OpArg("out_grad", 0), 0)
                       .Broadcast(user_op::OpArg("reduced_out_grad", 0))
+                      .Broadcast(user_op::OpArg("total_weight", 0))
                       .Split(user_op::OpArg("in_grad", 0), 0);
   if (ctx->user_op_conf().has_input("weight", 0)) {
     builder1.Broadcast(user_op::OpArg("weight", 0));
@@ -193,6 +201,7 @@ namespace oneflow {
                       .Broadcast(user_op::OpArg("target", 0))
                       .Broadcast(user_op::OpArg("out_grad", 0))
                       .Broadcast(user_op::OpArg("reduced_out_grad", 0))
+                      .Broadcast(user_op::OpArg("total_weight", 0))
                       .Split(user_op::OpArg("in_grad", 0), shape.NumAxes() - 1);
   if (ctx->user_op_conf().has_input("weight", 0)) {
     builder2.Split(user_op::OpArg("weight", 0), 0);
