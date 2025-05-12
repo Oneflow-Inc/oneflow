@@ -1927,6 +1927,7 @@ class CrossEntropyFunctor {
                              .Output("output")
                              .Output("out_weight")
                              .Output("reduced_out")
+                             .Output("total_weight")
                              .Build());
 
     op_nll_weight_ = CHECK_JUST(one::OpBuilder("nll")
@@ -1936,6 +1937,7 @@ class CrossEntropyFunctor {
                                     .Output("output")
                                     .Output("out_weight")
                                     .Output("reduced_out")
+                                    .Output("total_weight")
                                     .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
@@ -1990,6 +1992,7 @@ class CrossEntropyFunctor {
 #ifdef WITH_NPU
     if (!input->is_cpu()) {
       auto reduced_out = JUST(VectorAt(*nll_result, 2));
+      // auto total_weight = JUST(VectorAt(*nll_result, 3));
       if (reduction == "sum" || reduction == "mean") { return reduced_out; }
     }
 #endif  // WITH_NPU

@@ -60,7 +60,7 @@ Maybe<void> NLLGradFunction::Capture(NLLCaptureState* ctx, const TensorTuple& in
   if (inputs.size() == 3) {
     ctx->SaveTensorForBackward(inputs[2]);  // weight
   }
-  ctx->SaveTensorForBackward(outputs[3]);  // totol_weight
+  ctx->SaveTensorForBackward(outputs[3]);  // total_weight
   return Maybe<void>::Ok();
 }
 
@@ -84,27 +84,15 @@ Maybe<void> NLLGradFunction::Apply(const NLLCaptureState* ctx, const TensorTuple
 
   if (ctx->SavedTensors().size() == 3) {  // no weight
     const auto& total_weight = ctx->SavedTensors()[2];
-    if (ctx->reduction == "none") {
-      JUST(VectorAt(*in_grads, 0)) =
-          JUST(functional::NLLGrad(out_grad, reduced_out_grad, total_weight, input, target, NullOpt,
-                                   ctx->ignore_index, ctx->reduction));
-    } else {
-      JUST(VectorAt(*in_grads, 0)) =
-          JUST(functional::NLLGrad(out_grad, reduced_out_grad, total_weight, input, target, NullOpt,
-                                   ctx->ignore_index, ctx->reduction));
-    }
+    JUST(VectorAt(*in_grads, 0)) =
+        JUST(functional::NLLGrad(out_grad, reduced_out_grad, input, target, total_weight, NullOpt,
+                                 ctx->ignore_index, ctx->reduction));
   } else if (ctx->SavedTensors().size() == 4) {  // has weight
     const auto& weight = ctx->SavedTensors()[2];
     const auto& total_weight = ctx->SavedTensors()[3];
-    if (ctx->reduction == "none") {
-      JUST(VectorAt(*in_grads, 0)) =
-          JUST(functional::NLLGrad(out_grad, reduced_out_grad, total_weight, input, target, weight,
-                                   ctx->ignore_index, ctx->reduction));
-    } else {
-      JUST(VectorAt(*in_grads, 0)) =
-          JUST(functional::NLLGrad(out_grad, reduced_out_grad, total_weight, input, target, weight,
-                                   ctx->ignore_index, ctx->reduction));
-    }
+    JUST(VectorAt(*in_grads, 0)) =
+        JUST(functional::NLLGrad(out_grad, reduced_out_grad, input, target, total_weight, weight,
+                                 ctx->ignore_index, ctx->reduction));
   }
 
   return Maybe<void>::Ok();

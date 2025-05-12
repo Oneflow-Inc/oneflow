@@ -452,18 +452,18 @@ class NLLGradFunctor {
     op_ = CHECK_JUST(one::OpBuilder("nll_grad")
                          .Input("out_grad")
                          .Input("reduced_out_grad")
-                         .Input("total_weight")
                          .Input("input")
                          .Input("target")
+                         .Input("total_weight")
                          .Output("in_grad")
                          .Build());
 
     op_weight_ = CHECK_JUST(one::OpBuilder("nll_grad")
                                 .Input("out_grad")
                                 .Input("reduced_out_grad")
-                                .Input("total_weight")
                                 .Input("input")
                                 .Input("target")
+                                .Input("total_weight")
                                 .Input("weight")
                                 .Output("in_grad")
                                 .Build());
@@ -471,24 +471,23 @@ class NLLGradFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& out_grad,
                            const std::shared_ptr<one::Tensor>& reduced_out_grad,
-                           const std::shared_ptr<one::Tensor>& total_weight,
                            const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
+                           const std::shared_ptr<one::Tensor>& total_weight,
                            const Optional<one::Tensor>& weight, const int64_t ignore_index,
                            const std::string& reduction) const {
     // auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("ignore_index");
     // attrs.SetAllAttrs(ignore_index);
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("ignore_index", "reduction");
     attrs.SetAllAttrs(ignore_index, reduction);
-
     if (weight) {
       return OpInterpUtil::Dispatch<one::Tensor>(
           *op_weight_,
-          {out_grad, reduced_out_grad, total_weight, input, target, JUST(JUST(weight)->detach())},
+          {out_grad, reduced_out_grad, input, target, total_weight, JUST(JUST(weight)->detach())},
           attrs);
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *op_, {out_grad, reduced_out_grad, total_weight, input, target}, attrs);
+          *op_, {out_grad, reduced_out_grad, input, target, total_weight}, attrs);
     }
   }
 
