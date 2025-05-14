@@ -56,6 +56,10 @@ def argwhere_op(input, dtype: Optional[flow.dtype] = flow.int32):
         raise ValueError("A lazy tensor can not be applied to argwhere.")
 
     (res, size) = flow._C.argwhere(input, dtype=dtype)
+    if res.device == flow.device("npu"):
+        assert res.ndim == 2, f"Expected res to be 2-D, but got {res.ndim} dimensions"
+        assert res.shape[-1] == input.ndim, f"Expected last dimension to be input.ndim, but got {res.shape[-1]}"
+        res = flow.transpose(res.view(input.ndim, -1), 0, 1)
     slice_tup_list = [(0, size.numpy().item(), 1)]
     return flow.slice(res, slice_tup_list=slice_tup_list)
 
