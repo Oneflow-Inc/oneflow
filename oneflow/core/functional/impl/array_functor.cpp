@@ -588,7 +588,21 @@ class ArgWhereFunctor {
                                 const Symbol<DType>& dtype) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype");
     attrs.SetAllAttrs(dtype->data_type());
+#ifdef WITH_NPU
+    std::string device_type = JUST(x->parallel_desc())->device_tag();
+    if (device_type == DeviceType::kNPU) {
+      auto cpu_tensor = JUST(functional::ToDevice(x, "cpu"));
+      auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {cpu_tensor}, attrs));
+      for (int i = 0; i < result->size(); ++i) {
+        (*result)[i] = JUST(functional::ToDevice((*result)[i], "npu"));
+      }
+      return result;
+    } else {
+        return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+    }
+#else
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+#endif  // WITH_NPU
   }
 
  private:
