@@ -48,11 +48,11 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> ArgSortOp::InferDataType(user_op::InferContext* ctx) {
-#ifdef WITH_NPU
-  ctx->SetOutputDType("out", 0, DataType::kInt64);
-#else
-  ctx->SetOutputDType("out", 0, DataType::kInt32);
-#endif
+  if (ctx->parallel_desc().device_type()==DeviceType::kNPU) {
+    ctx->SetOutputDType("out", 0, DataType::kInt64);
+  } else {
+    ctx->SetOutputDType("out", 0, DataType::kInt32);
+  }
   return Maybe<void>::Ok();
 }
 
