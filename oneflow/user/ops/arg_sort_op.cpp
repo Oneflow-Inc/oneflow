@@ -50,11 +50,10 @@ namespace oneflow {
 /* static */ Maybe<void> ArgSortOp::InferDataType(user_op::InferContext* ctx) {
 #ifdef WITH_NPU
   ctx->SetOutputDType("out", 0, DataType::kInt64);
-}
-else {
+#else
   ctx->SetOutputDType("out", 0, DataType::kInt32);
-}
-return Maybe<void>::Ok();
+#endif
+  return Maybe<void>::Ok();
 }
 
 }  // namespace oneflow
