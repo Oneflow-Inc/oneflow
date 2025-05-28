@@ -48,7 +48,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> ArgSortOp::InferDataType(user_op::InferContext* ctx) {
-  if (ctx->parallel_desc().device_type() == DeviceType::kNPU) {
+#ifdef WITH_NPU
     ctx->SetOutputDType("out", 0, DataType::kInt64);
   } else {
     ctx->SetOutputDType("out", 0, DataType::kInt32);
