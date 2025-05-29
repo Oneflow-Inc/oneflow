@@ -4020,16 +4020,14 @@ class NmsFunctor {
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-			   const Optional<one::Tensor>& scores,
-			   const float& iou_threshold,
+                           const Optional<one::Tensor>& scores, const float& iou_threshold,
                            const int32_t& keep_n) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("iou_threshold", "keep_n");
     attrs.SetAllAttrs(iou_threshold, keep_n);
     DeviceType device_type = JUST(x->device())->enum_type();
     if (device_type == DeviceType::kNPU) {
       return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {x, JUST(scores)}, attrs);
-    }
-    else {
+    } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     }
   }
