@@ -4026,7 +4026,11 @@ class NmsFunctor {
     attrs.SetAllAttrs(iou_threshold, keep_n);
     DeviceType device_type = JUST(x->device())->enum_type();
     if (device_type == DeviceType::kNPU) {
-      return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {x, JUST(scores)}, attrs);
+      if (scores) {
+        return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {x, JUST(scores)}, attrs);
+      } else {
+        return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+      }
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     }
