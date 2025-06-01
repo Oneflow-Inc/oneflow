@@ -588,7 +588,25 @@ class ArgWhereFunctor {
                                 const Symbol<DType>& dtype) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("dtype");
     attrs.SetAllAttrs(dtype->data_type());
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+
+    auto device_type = DeviceType::kCPU;
+    if (x->is_global()) {
+      device_type = JUST(x->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(x->device())->enum_type();
+    }
+
+    if (device_type == DeviceType::kNPU) {
+      // NOTE: use cpu argwhere when device="npu"
+      auto cpu_tensor = JUST(one::functional::To(x, "cpu"));
+      auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {cpu_tensor}, attrs));
+      for (int i = 0; i < result->size(); ++i) {
+        (*result)[i] = JUST(one::functional::To((*result)[i], "npu"));
+      }
+      return result;
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
+    }
   }
 
  private:
