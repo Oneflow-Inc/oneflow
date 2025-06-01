@@ -4016,18 +4016,25 @@ class NmsFunctor {
  public:
   NmsFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("nms").Input("in").Output("out").Build());
-    fused_op_ = CHECK_JUST(one::OpBuilder("nms").Input("in").Input("scores").Input("input_indices").Output("out").Build());
+    fused_op_ = CHECK_JUST(one::OpBuilder("nms")
+                               .Input("in")
+                               .Input("scores")
+                               .Input("input_indices")
+                               .Output("out")
+                               .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Optional<one::Tensor>& scores, const Optional<one::Tensor>& input_indices, const float& iou_threshold,
+                           const Optional<one::Tensor>& scores,
+                           const Optional<one::Tensor>& input_indices, const float& iou_threshold,
                            const int32_t& keep_n) const {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("iou_threshold", "keep_n");
     attrs.SetAllAttrs(iou_threshold, keep_n);
     DeviceType device_type = JUST(x->device())->enum_type();
     if (device_type == DeviceType::kNPU) {
       if (scores) {
-        return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {x, JUST(scores), JUST(input_indices)}, attrs);
+        return OpInterpUtil::Dispatch<Tensor>(*fused_op_, {x, JUST(scores), JUST(input_indices)},
+                                              attrs);
       } else {
         return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
       }
