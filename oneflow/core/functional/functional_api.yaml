@@ -2789,7 +2789,7 @@
   bind_python: False
 
 - name: "nms"
-  signature: "Tensor (Tensor x, Tensor scores=None, Float iou_threshold, Int32 keep_n=-1) => Nms"
+  signature: "Tensor (Tensor x, Tensor scores=None, Tensor input_indices=None, Float iou_threshold, Int32 keep_n=-1) => Nms"
   bind_python: True
 
 - name: "roi_align"
