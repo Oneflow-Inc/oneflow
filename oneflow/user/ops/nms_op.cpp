@@ -26,11 +26,7 @@ Maybe<void> InferNmsTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferNmsDataType(user_op::InferContext* ctx) {
-  if (ctx->parallel_desc().device_type() == DeviceType::kNPU) {
-    ctx->SetOutputDType("out", 0, DataType::kInt32);
-  } else {
-    ctx->SetOutputDType("out", 0, DataType::kInt8);
-  }
+  ctx->SetOutputDType("out", 0, DataType::kInt8);
   return Maybe<void>::Ok();
 }
 

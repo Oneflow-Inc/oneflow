@@ -1887,8 +1887,7 @@ def OneFlow_InTopKOp : OneFlow_BaseOp<"in_top_k", [NoMemoryEffect, NoGrad, Decla
 def OneFlow_NmsOp : OneFlow_BaseOp<"nms", [NoMemoryEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in,
-    Optional<OneFlow_Tensor>:$scores,
-    Optional<OneFlow_Tensor>:$input_indices
+    Optional<OneFlow_Tensor>:$scores
   );
   let output = (outs
     OneFlow_Tensor:$out
