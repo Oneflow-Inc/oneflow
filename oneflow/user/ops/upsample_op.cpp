@@ -23,6 +23,18 @@ typename std::enable_if<(N <= 3), Maybe<void>>::type UpsamplingInferLogicalDesc(
     user_op::InferContext* ctx, const std::string& func_name) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   user_op::TensorDesc* y_desc = ctx->MutOutputTensorDesc("y", 0);
+  if (ctx->has_input("like", 0)) {
+    const user_op::TensorDesc& like_desc = ctx->InputTensorDesc("like", 0);
+    int64_t like_num_axes = like_desc.shape().NumAxes();
+    CHECK_GT_OR_RETURN(like_num_axes, N)
+        << "like shape size should > " << N << ", but got " << like_desc.shape().ToString();
+    Shape output_shape = x_desc.shape();
+    for (int i = 0; i < N; ++i) {
+      output_shape[i + 2] = like_desc.shape().At(like_num_axes - N + i);
+    }
+    y_desc->set_shape(output_shape);
+    return Maybe<void>::Ok();
+  }
   if (N == 1) {
     CHECK_OR_RETURN(ctx->Attr<std::string>("data_format") == "channels_first"
                     && x_desc.shape().NumAxes() == (N + 2))
@@ -135,7 +147,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> UpsampleNearest2DOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0).Split(user_op::OpArg("y", 0), 0).Build();
+  ctx->NewBuilder().Split(ctx->inputs(), 0).Split(user_op::OpArg("y", 0), 0).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest2DOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -234,11 +246,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> UpsampleNearest1DGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
-      .Build();
+  ctx->NewBuilder().Split(ctx->inputs(), 0).Split(user_op::OpArg("dx", 0), 0).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest1DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -259,11 +267,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> UpsampleNearest2DGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
-      .Build();
+  ctx->NewBuilder().Split(ctx->inputs(), 0).Split(user_op::OpArg("dx", 0), 0).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest2DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -335,11 +339,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> UpsampleNearest3DGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
-      .Build();
+  ctx->NewBuilder().Split(ctx->inputs(), 0).Split(user_op::OpArg("dx", 0), 0).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest3DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
