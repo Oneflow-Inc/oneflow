@@ -321,10 +321,10 @@ REGISTER_USER_KERNEL("eager_ccl_touch")
 
 namespace {
 
-class EagerCclS2SOpKernelCache final : public user_op::OpKernelCache {
+class EagerCclS2SCpuOpKernelCache final : public user_op::OpKernelCache {
  public:
-  explicit EagerCclS2SOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
-  ~EagerCclS2SOpKernelCache() override = default;
+  explicit EagerCclS2SCpuOpKernelCache(user_op::KernelCacheContext* ctx) { Init(ctx); }
+  ~EagerCclS2SCpuOpKernelCache() override = default;
 
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
 
@@ -339,7 +339,7 @@ class EagerCclS2SOpKernelCache final : public user_op::OpKernelCache {
   Symbol<ParallelDesc> parallel_desc_;
 };
 
-size_t InferEagerCclS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
+size_t InferEagerCclS2SCpuKernelTmpBufferSize(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   size_t tensor_byte_size = in_tensor.shape().elem_cnt() * GetSizeOfDataType(in_tensor.data_type());
   // NOTE(hanbinbin): Set tmp_buffer_size to twice tensor_byte_size because the
@@ -364,24 +364,24 @@ static constexpr auto* GroupP2PPair = DECORATE(&RawGroupP2PPair, ThreadLocal);
 }  // namespace
 
 template<typename T>
-class EagerCclS2SKernel final : public user_op::OpKernel {
+class EagerCclS2SCPUKernel final : public user_op::OpKernel {
  public:
-  EagerCclS2SKernel() = default;
-  ~EagerCclS2SKernel() override = default;
+  EagerCclS2SCPUKernel() = default;
+  ~EagerCclS2SCPUKernel() override = default;
 
   void InitOpKernelCacheWithFlags(
       user_op::KernelCacheContext* ctx, int8_t flag,
       std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
     // NOTE(jianhao): the cache only depends on parallel_conf, and the kernel is singleton
     // once parallel_conf is determined, so only init the cache at the first time.
-    if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerCclS2SOpKernelCache>(ctx); }
+    if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerCclS2SCpuOpKernelCache>(ctx); }
   }
 
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    auto* kernel_cache = dynamic_cast<const EagerCclS2SOpKernelCache*>(cache);
+    auto* kernel_cache = dynamic_cast<const EagerCclS2SCpuOpKernelCache*>(cache);
     CHECK(kernel_cache != nullptr);
     // NOTE(hanbinbin): Compute logic copy from _nccl_logical_s2s
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -490,20 +490,22 @@ class EagerCclS2SKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EAGER_CCL_S2S_KERNEL(dtype)                                             \
+#define REGISTER_EAGER_CCL_S2S_CPU_KERNEL(dtype)                                         \
   REGISTER_USER_KERNEL("eager_ccl_s2s")                                                  \
-      .SetCreateFn<EagerCclS2SKernel<dtype>>()                                           \
+      .SetCreateFn<EagerCclS2SCPUKernel<dtype>>()                                        \
       .SetIsMatchedHob(!(user_op::HobDeviceType() == DeviceType::kCUDA)                  \
                        && HobIsSendAndRecvRegistered()                                   \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(InferEagerCclS2SKernelTmpBufferSize);
+      .SetInferTmpSizeFn(InferEagerCclS2SCpuKernelTmpBufferSize);
 
-REGISTER_EAGER_CCL_S2S_KERNEL(int8_t)
-REGISTER_EAGER_CCL_S2S_KERNEL(int32_t)
-REGISTER_EAGER_CCL_S2S_KERNEL(int64_t)
-REGISTER_EAGER_CCL_S2S_KERNEL(bool)
-REGISTER_EAGER_CCL_S2S_KERNEL(float)
-REGISTER_EAGER_CCL_S2S_KERNEL(double)
+REGISTER_EAGER_CCL_S2S_CPU_KERNEL(int8_t)
+REGISTER_EAGER_CCL_S2S_CPU_KERNEL(int32_t)
+REGISTER_EAGER_CCL_S2S_CPU_KERNEL(int64_t)
+REGISTER_EAGER_CCL_S2S_CPU_KERNEL(bool)
+REGISTER_EAGER_CCL_S2S_CPU_KERNEL(float)
+REGISTER_EAGER_CCL_S2S_CPU_KERNEL(double)
+
+#undef REGISTER_EAGER_CCL_S2S_KERNEL
 
 }  // namespace oneflow

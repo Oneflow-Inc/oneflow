@@ -31,6 +31,9 @@ class Recv : public CollectiveCommunication {
   virtual void Init(DataType dtype) = 0;
 
   virtual void Launch(ep::Stream* stream, void* out, size_t elem_cnt, int64_t src) const = 0;
+
+  virtual void Launch(ep::Stream* stream, void* out, size_t elem_cnt, int64_t src,
+                      const ccl::CclComm& ccl_comm) const = 0;
 };
 
 inline bool IsRecvRegistered(DeviceType device_type) {

@@ -19,6 +19,7 @@ if(BUILD_CUDA)
     message(FATAL_ERROR "CUDA_NVCC_GENCODES is deprecated, use CMAKE_CUDA_ARCHITECTURES instead")
   endif()
   add_definitions(-DWITH_CUDA)
+
   # NOTE: For some unknown reason, CUDAToolkit_VERSION may become empty when running cmake again
   set(CUDA_VERSION ${CUDAToolkit_VERSION} CACHE STRING "")
   if(NOT CUDA_VERSION)
@@ -88,6 +89,16 @@ if(BUILD_CUDA)
     if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
       # GeForce RTX 30xx
       list(APPEND CMAKE_CUDA_ARCHITECTURES 86-real)
+    endif()
+
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.8")
+      # GeForce RTX 40xx
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 89-real)
+    endif()
+
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "12.0")
+      # H100, H20
+      list(APPEND CMAKE_CUDA_ARCHITECTURES 90-real)
     endif()
   endif()
 

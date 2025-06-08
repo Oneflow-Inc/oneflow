@@ -21,37 +21,90 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/user/ops/nccl_logical_util.h"
+#include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
+#include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
+#include "oneflow/user/kernels/collective_communication/include/all_gather.h"
+#include "oneflow/user/kernels/collective_communication/include/reduce_scatter.h"
+#include "oneflow/user/kernels/collective_communication/include/broadcast.h"
+#include "oneflow/user/kernels/collective_communication/include/reduce.h"
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU)
 
 namespace oneflow {
 
 namespace {
 
+auto AllReduceCollectiveCommunicationExists() {
+  return hob::make_custom("AllReduceCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsAllReduceRegistered(device_type);
+                          });
+}
+
+auto ReduceScatterCollectiveCommunicationExists() {
+  return hob::make_custom("ReduceScatterCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsReduceScatterRegistered(device_type);
+                          });
+}
+
+auto AllGatherCollectiveCommunicationExists() {
+  return hob::make_custom("AllGatherCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsAllGatherRegistered(device_type);
+                          });
+}
+
+auto ReduceCollectiveCommunicationExists() {
+  return hob::make_custom("ReduceCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsReduceRegistered(device_type);
+                          });
+}
+
+auto BroadcastCollectiveCommunicationExists() {
+  return hob::make_custom("BroadcastCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsBroadcastRegistered(device_type);
+                          });
+}
+
+auto AllToAllCollectiveCommunicationExists() {
+  return hob::make_custom("AllToAllCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsAllToAllRegistered(device_type);
+                          });
+}
+
 class NcclLogicalKernelCommState : public user_op::OpKernelState {
  public:
   explicit NcclLogicalKernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
+        stream_name_(EagerCclCommMgr::kDefaultCclStreamName),
         parallel_desc_(ctx->parallel_desc()) {
     if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   }
   ~NcclLogicalKernelCommState() override = default;
 
-  ncclComm_t comm() {
+  const ccl::CclComm& ccl_comm() {
     if (!is_init_) {
-      std::set<std::pair<int64_t, int64_t>> device_set;
-      FOR_RANGE(int64_t, parallel_id, 0, parallel_desc_.parallel_num()) {
-        int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
-        int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
-        device_set.emplace(std::make_pair(machine_id, device_id));
-      }
       EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-      comm_ =
-          comm_mgr->As<EagerNcclCommMgr>()->GetCommForDeviceAndStreamName(device_set, stream_name_);
+      ccl_comm_ = comm_mgr->GetCclCommForParallelDescAndStreamName(parallel_desc_, stream_name_);
       is_init_ = true;
     }
-    return comm_;
+    return ccl_comm_;
   }
 
   const std::string& stream_name() const { return stream_name_; }
@@ -60,7 +113,7 @@ class NcclLogicalKernelCommState : public user_op::OpKernelState {
   bool is_init_;
   std::string stream_name_;
   ParallelDesc parallel_desc_;
-  ncclComm_t comm_{};
+  ccl::CclComm ccl_comm_{};
 };
 
 class NcclLogicalAllGatherNoncontinuousKernelState : public NcclLogicalKernelCommState {
@@ -105,10 +158,10 @@ class NcclLogicalS2SKernelState : public NcclLogicalKernelCommState {
   int64_t dst_split_axis_;
 };
 
-class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
+class CclLogicalAllReduceKernel final : public user_op::OpKernel {
  public:
-  NcclLogicalAllReduceKernel() = default;
-  ~NcclLogicalAllReduceKernel() override = default;
+  CclLogicalAllReduceKernel() = default;
+  ~CclLogicalAllReduceKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -118,19 +171,23 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
-    CHECK(nccl_comm != nullptr);
+    auto* comm_state = dynamic_cast<NcclLogicalKernelCommState*>(state);
+    CHECK(comm_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape_view(), out->shape_view());
     CHECK_EQ(in->data_type(), out->data_type());
-    VLOG(3) << "[NcclLogical][AllReduce] " << nccl_comm->stream_name() << " " << ctx->op_name()
+    VLOG(3) << "[NcclLogical][AllReduce] " << comm_state->stream_name() << " " << ctx->op_name()
             << std::endl;
-    ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
-    if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
-    OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), reduce_type, nccl_comm->comm(),
-                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+
+    ccl::CclComm ccl_comm = comm_state->ccl_comm();
+    ccl::ReduceType ccl_reduce_type = ccl::ReduceType::kSum;
+    if (in->data_type() == DataType::kBool) { ccl_reduce_type = ccl::ReduceType::kMax; }
+    std::unique_ptr<ccl::AllReduce> ccl_all_reduce =
+        ccl::NewCollectiveCommunication<ccl::AllReduce>(ctx->stream()->device_type(),
+                                                        in->data_type(), ccl_reduce_type);
+    ccl_all_reduce->Launch(ctx->stream(), in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
+                           ccl_comm);
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
@@ -139,10 +196,10 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
   }
 };
 
-class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
+class CclLogicalReduceScatterKernel final : public user_op::OpKernel {
  public:
-  NcclLogicalReduceScatterKernel() = default;
-  ~NcclLogicalReduceScatterKernel() override = default;
+  CclLogicalReduceScatterKernel() = default;
+  ~CclLogicalReduceScatterKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -152,20 +209,24 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
-    CHECK(nccl_comm != nullptr);
+    auto* comm_state = dynamic_cast<NcclLogicalKernelCommState*>(state);
+    CHECK(comm_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
     CHECK_EQ(in->shape_view().elem_cnt(), out->shape_view().elem_cnt() * num_ranks);
-    VLOG(3) << "[NcclLogical][ReduceScatter] " << nccl_comm->stream_name() << " " << ctx->op_name()
+    VLOG(3) << "[NcclLogical][ReduceScatter] " << comm_state->stream_name() << " " << ctx->op_name()
             << std::endl;
-    ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
-    if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
-    OF_NCCL_CHECK(ncclReduceScatter(
-        in->dptr(), out->mut_dptr(), out->shape_view().elem_cnt(), GetNcclDataType(in->data_type()),
-        reduce_type, nccl_comm->comm(), ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+
+    ccl::CclComm ccl_comm = comm_state->ccl_comm();
+    ccl::ReduceType ccl_reduce_type = ccl::ReduceType::kSum;
+    if (in->data_type() == DataType::kBool) { ccl_reduce_type = ccl::ReduceType::kMax; }
+    std::unique_ptr<ccl::ReduceScatter> ccl_reduce_scatter =
+        ccl::NewCollectiveCommunication<ccl::ReduceScatter>(ctx->stream()->device_type(),
+                                                            in->data_type(), ccl_reduce_type);
+    ccl_reduce_scatter->Launch(ctx->stream(), in->dptr(), out->mut_dptr(),
+                               out->shape_view().elem_cnt(), ccl_comm);
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
@@ -174,10 +235,10 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
   }
 };
 
-class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
+class CclLogicalAllGatherKernel final : public user_op::OpKernel {
  public:
-  NcclLogicalAllGatherKernel() = default;
-  ~NcclLogicalAllGatherKernel() override = default;
+  CclLogicalAllGatherKernel() = default;
+  ~CclLogicalAllGatherKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -187,18 +248,22 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* nccl_comm = dynamic_cast<NcclLogicalKernelCommState*>(state);
-    CHECK(nccl_comm != nullptr);
+    auto* comm_state = dynamic_cast<NcclLogicalKernelCommState*>(state);
+    CHECK(comm_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
     CHECK_EQ(in->shape_view().elem_cnt() * num_ranks, out->shape_view().elem_cnt());
-    VLOG(3) << "[NcclLogical][AllGather] " << nccl_comm->stream_name() << " " << ctx->op_name()
+    VLOG(3) << "[NcclLogical][AllGather] " << comm_state->stream_name() << " " << ctx->op_name()
             << std::endl;
-    OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), nccl_comm->comm(),
-                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+
+    ccl::CclComm ccl_comm = comm_state->ccl_comm();
+    std::unique_ptr<ccl::AllGather> ccl_all_gather =
+        ccl::NewCollectiveCommunication<ccl::AllGather>(ctx->stream()->device_type(),
+                                                        in->data_type());
+    ccl_all_gather->Launch(ctx->stream(), in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
+                           ccl_comm);
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
@@ -208,10 +273,10 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
 };
 
 template<typename T>
-class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
+class CclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
  public:
-  NcclLogicalAllGatherNoncontinuous() = default;
-  ~NcclLogicalAllGatherNoncontinuous() override = default;
+  CclLogicalAllGatherNoncontinuous() = default;
+  ~CclLogicalAllGatherNoncontinuous() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -250,9 +315,12 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
 
     // NOTE(chengcheng): Do AllGather
     CHECK_EQ(in->shape_view().elem_cnt() * num_ranks, out->shape_view().elem_cnt());
-    OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), kernel_state->comm(),
-                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+    ccl::CclComm ccl_comm = kernel_state->ccl_comm();
+    std::unique_ptr<ccl::AllGather> ccl_all_gather =
+        ccl::NewCollectiveCommunication<ccl::AllGather>(ctx->stream()->device_type(),
+                                                        in->data_type());
+    ccl_all_gather->Launch(ctx->stream(), in->dptr(), unpack_from_ptr, in->shape_view().elem_cnt(),
+                           ccl_comm);
 
     CHECK_GT(in_split_axis, 0);
     // NOTE(chengcheng): Do unpack.
@@ -283,10 +351,10 @@ size_t InferAllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx
 }
 
 template<typename T>
-class NcclLogicalReduceScatterNoncontinuous final : public user_op::OpKernel {
+class CclLogicalReduceScatterNoncontinuous final : public user_op::OpKernel {
  public:
-  NcclLogicalReduceScatterNoncontinuous() = default;
-  ~NcclLogicalReduceScatterNoncontinuous() override = default;
+  CclLogicalReduceScatterNoncontinuous() = default;
+  ~CclLogicalReduceScatterNoncontinuous() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -334,12 +402,15 @@ class NcclLogicalReduceScatterNoncontinuous final : public user_op::OpKernel {
                       transpose_in_dim_vec.data(), in->dptr(), perm.data(), tmp_buffer->mut_dptr());
     VLOG(3) << "[NcclLogical][ReduceScatterNoncontinuous] " << kernel_state->stream_name() << " "
             << ctx->op_name() << std::endl;
-    ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
-    if (in->data_type() == kBool) { reduce_type = ncclRedOp_t::ncclMax; }
-    OF_NCCL_CHECK(ncclReduceScatter(tmp_buffer->dptr(), out->mut_dptr(),
-                                    out->shape_view().elem_cnt(), GetNcclDataType(in->data_type()),
-                                    reduce_type, kernel_state->comm(),
-                                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+
+    ccl::CclComm ccl_comm = kernel_state->ccl_comm();
+    ccl::ReduceType ccl_reduce_type = ccl::ReduceType::kSum;
+    if (in->data_type() == DataType::kBool) { ccl_reduce_type = ccl::ReduceType::kMax; }
+    std::unique_ptr<ccl::ReduceScatter> ccl_reduce_scatter =
+        ccl::NewCollectiveCommunication<ccl::ReduceScatter>(ctx->stream()->device_type(),
+                                                            in->data_type(), ccl_reduce_type);
+    ccl_reduce_scatter->Launch(ctx->stream(), tmp_buffer->dptr(), out->mut_dptr(),
+                               out->shape_view().elem_cnt(), ccl_comm);
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
@@ -355,10 +426,10 @@ size_t InferReduceScatterNoncontinuousKernelTmpBufferSize(user_op::InferContext*
 }
 
 template<typename T>
-class NcclLogicalS2SKernel final : public user_op::OpKernel {
+class CclLogicalS2SKernel final : public user_op::OpKernel {
  public:
-  NcclLogicalS2SKernel() = default;
-  ~NcclLogicalS2SKernel() override = default;
+  CclLogicalS2SKernel() = default;
+  ~CclLogicalS2SKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -437,23 +508,13 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
     }
 
     {
-      // NOTE(chengcheng): init nccl comm need before ncclGroupStart.
-      ncclComm_t comm = kernel_state->comm();
       // NOTE(chengcheng): Do S2S
-      OF_NCCL_CHECK(ncclGroupStart());
       const int64_t elem_per_chunk = elem_cnt / num_ranks;
-      const int64_t chunk_size = elem_per_chunk * dtype_size;
-      for (int64_t j = 0; j < num_ranks; ++j) {
-        OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
-                                   reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
-                               elem_per_chunk, GetNcclDataType(in->data_type()), j, comm,
-                               ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-        OF_NCCL_CHECK(ncclRecv(
-            reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
-            elem_per_chunk, GetNcclDataType(in->data_type()), j, kernel_state->comm(),
-            ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-      }
-      OF_NCCL_CHECK(ncclGroupEnd());
+      std::unique_ptr<ccl::AllToAll> all_to_all = ccl::NewCollectiveCommunication<ccl::AllToAll>(
+          ctx->stream()->device_type(), in->data_type(), in->data_type(), num_ranks);
+      ccl::CclComm ccl_comm = kernel_state->ccl_comm();
+      all_to_all->Launch(ctx->stream(), const_cast<char*>(pack_to_ptr), elem_per_chunk,
+                         unpack_from_ptr, elem_per_chunk, ccl_comm);
     }
 
     if (in_split_axis != 0) {
@@ -503,21 +564,21 @@ size_t InferS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
 }  // namespace
 
 REGISTER_USER_KERNEL("_nccl_logical_all_reduce")
-    .SetCreateFn<NcclLogicalAllReduceKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+    .SetCreateFn<CclLogicalAllReduceKernel>()
+    .SetIsMatchedHob(AllReduceCollectiveCommunicationExists());
 
 REGISTER_USER_KERNEL("_nccl_logical_reduce_scatter")
-    .SetCreateFn<NcclLogicalReduceScatterKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+    .SetCreateFn<CclLogicalReduceScatterKernel>()
+    .SetIsMatchedHob(ReduceScatterCollectiveCommunicationExists());
 
 REGISTER_USER_KERNEL("_nccl_logical_all_gather")
-    .SetCreateFn<NcclLogicalAllGatherKernel>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+    .SetCreateFn<CclLogicalAllGatherKernel>()
+    .SetIsMatchedHob(AllGatherCollectiveCommunicationExists());
 
 #define REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                                   \
   REGISTER_USER_KERNEL("_nccl_logical_all_gather_noncontinuous")                         \
-      .SetCreateFn<NcclLogicalAllGatherNoncontinuous<dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
+      .SetCreateFn<CclLogicalAllGatherNoncontinuous<dtype>>()                            \
+      .SetIsMatchedHob(AllGatherCollectiveCommunicationExists()                          \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferAllGatherNoncontinuousKernelTmpBufferSize);
@@ -535,8 +596,8 @@ REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(nv_bfloat16)
 
 #define REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(dtype)                              \
   REGISTER_USER_KERNEL("_nccl_logical_reduce_scatter_noncontinuous")                     \
-      .SetCreateFn<NcclLogicalReduceScatterNoncontinuous<dtype>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
+      .SetCreateFn<CclLogicalReduceScatterNoncontinuous<dtype>>()                        \
+      .SetIsMatchedHob(ReduceScatterCollectiveCommunicationExists()                      \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferReduceScatterNoncontinuousKernelTmpBufferSize);
@@ -554,8 +615,8 @@ REGISTER_REDUCE_SCATTER_NONCONTINUOUS_KERNEL(nv_bfloat16)
 
 #define REGISTER_S2S_KERNEL(dtype)                                                       \
   REGISTER_USER_KERNEL("_nccl_logical_s2s")                                              \
-      .SetCreateFn<NcclLogicalS2SKernel<dtype>>()                                        \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
+      .SetCreateFn<CclLogicalS2SKernel<dtype>>()                                         \
+      .SetIsMatchedHob(AllToAllCollectiveCommunicationExists()                           \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(InferS2SKernelTmpBufferSize);
@@ -571,12 +632,12 @@ REGISTER_S2S_KERNEL(float16)
 REGISTER_S2S_KERNEL(nv_bfloat16)
 #endif
 
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_all_reduce");
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_reduce_scatter");
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_all_gather");
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_all_gather_noncontinuous");
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_s2s");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_all_reduce");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_reduce_scatter");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_all_gather");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_all_gather_noncontinuous");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_s2s");
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
+#endif  // WITH_CUDA || WITH_NPU

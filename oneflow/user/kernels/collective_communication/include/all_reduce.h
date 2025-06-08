@@ -32,6 +32,9 @@ class AllReduce : public CollectiveCommunication {
 
   virtual void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
                       const std::shared_ptr<CommunicationContext>& communicator) const = 0;
+
+  virtual void Launch(ep::Stream* stream, const void* in, void* out, size_t elem_cnt,
+                      const ccl::CclComm& ccl_comm) const = 0;
 };
 
 inline bool IsAllReduceRegistered(DeviceType device_type) {

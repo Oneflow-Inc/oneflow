@@ -40,6 +40,11 @@ class CpuRecvImpl final : public Recv {
     CHECK_JUST(CpuRecv(out, buffer_size, src));
   }
 
+  void Launch(ep::Stream* stream, void* out, size_t elem_cnt, int64_t src,
+              const ccl::CclComm& ccl_comm) const override {
+    Launch(stream, out, elem_cnt, src);
+  }
+
  private:
   size_t size_of_dtype_;
 };

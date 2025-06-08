@@ -16,6 +16,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/user/kernels/collective_communication/include/recv.h"
 #include "oneflow/user/kernels/collective_communication/cuda/cuda_send_recv_util.h"
+#include "oneflow/user/kernels/collective_communication/cuda/cuda_communication_context.h"
 #include "oneflow/core/device/nccl_util.h"
 
 namespace oneflow {
@@ -35,6 +36,17 @@ class CudaRecv final : public Recv {
     const auto& comm_and_peer_rank = GetNcclCommAndPeerNcclRank(src);
     OF_NCCL_CHECK(ncclRecv(out, elem_cnt, nccl_datatype_, comm_and_peer_rank.second,
                            comm_and_peer_rank.first, stream->As<ep::CudaStream>()->cuda_stream()));
+#else
+    UNIMPLEMENTED() << "GPU recv is only supported when nccl version >= 2.7"
+#endif  // HAS_NCCL_SEND_RECV
+  }
+
+  void Launch(ep::Stream* stream, void* out, size_t elem_cnt, int64_t src,
+              const ccl::CclComm& ccl_comm) const override {
+#if HAS_NCCL_SEND_RECV
+    ncclComm_t* comm = reinterpret_cast<ncclComm_t*>(ccl_comm.getComm());
+    OF_NCCL_CHECK(ncclRecv(out, elem_cnt, nccl_datatype_, src, *comm,
+                           stream->As<ep::CudaStream>()->cuda_stream()));
 #else
     UNIMPLEMENTED() << "GPU recv is only supported when nccl version >= 2.7"
 #endif  // HAS_NCCL_SEND_RECV

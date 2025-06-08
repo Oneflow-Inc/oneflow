@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "collective_communication/include/collective_communication.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/framework.h"
@@ -27,14 +28,15 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/memset.h"
 #include "oneflow/core/ep/include/primitive/add.h"
 #include "oneflow/core/operator/nccl_send_recv_boxing_op_util.h"
+#include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU)
 
 namespace oneflow {
 
-class NcclLogicalSendRecvState final : public user_op::OpKernelState {
+class CclLogicalSendRecvState final : public user_op::OpKernelState {
  public:
-  explicit NcclLogicalSendRecvState(user_op::KernelInitContext* ctx);
+  explicit CclLogicalSendRecvState(user_op::KernelInitContext* ctx);
   const std::vector<std::shared_ptr<TensorSliceCopier>>& in_tensor_slice_copier_vec() const {
     return in_tensor_slice_copier_vec_;
   }
@@ -44,22 +46,23 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
   bool src_nd_sbp_has_no_partial_parallel() const { return src_nd_sbp_no_partial_parallel_; }
   const std::vector<int64_t>& send_elem_cnts() const { return send_elem_cnts_; }
   const std::vector<int64_t>& recv_elem_cnts() const { return recv_elem_cnts_; }
-  ncclComm_t comm() const { return GetOrCreateComm().comm; }
+  ccl::CclComm ccl_comm() const { return GetOrCreateComm().ccl_comm; }
 
  private:
   struct Comm {
-    explicit Comm(ncclComm_t comm) : comm(comm) {}
-    ncclComm_t comm;
+    Comm(ccl::CclComm comm) : ccl_comm(comm) {}
+    ccl::CclComm ccl_comm;
   };
+
   void InitComm() const;
   const Comm& GetOrCreateComm() const {
-    if (!comm_) { InitComm(); }
-    return *comm_;
+    if (!ccl_comm_) { InitComm(); }
+    return *ccl_comm_;
   }
 
   std::string stream_name_;
   std::unique_ptr<ParallelDesc> parallel_desc_;
-  mutable std::unique_ptr<Comm> comm_;
+  mutable std::unique_ptr<Comm> ccl_comm_;
   bool src_nd_sbp_no_partial_parallel_;
   std::vector<std::shared_ptr<TensorSliceCopier>> in_tensor_slice_copier_vec_;
   std::vector<std::shared_ptr<TensorSliceCopier>> out_tensor_slice_copier_vec_;
@@ -67,8 +70,8 @@ class NcclLogicalSendRecvState final : public user_op::OpKernelState {
   std::vector<int64_t> recv_elem_cnts_;
 };
 
-NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* ctx)
-    : stream_name_(EagerNcclCommMgr::kDefaultStreamName) {
+CclLogicalSendRecvState::CclLogicalSendRecvState(user_op::KernelInitContext* ctx)
+    : stream_name_(EagerCclCommMgr::kDefaultCclStreamName) {
   if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   parallel_desc_ = std::make_unique<ParallelDesc>(ctx->parallel_desc());
@@ -122,28 +125,22 @@ NcclLogicalSendRecvState::NcclLogicalSendRecvState(user_op::KernelInitContext* c
   }
 }
 
-void NcclLogicalSendRecvState::InitComm() const {
-  std::set<std::pair<int64_t, int64_t>> device_set;
-  for (int64_t parallel_id = 0; parallel_id < parallel_desc_->parallel_num(); ++parallel_id) {
-    int64_t machine_id = CHECK_JUST(parallel_desc_->MachineId4ParallelId(parallel_id));
-    int64_t device_id = CHECK_JUST(parallel_desc_->DeviceId4ParallelId(parallel_id));
-    device_set.emplace(std::make_pair(machine_id, device_id));
-  }
+void CclLogicalSendRecvState::InitComm() const {
   EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-  ncclComm_t comm = nullptr;
-  comm = comm_mgr->As<EagerNcclCommMgr>()->GetCommForDeviceAndStreamName(device_set, stream_name_);
-  comm_.reset(new Comm(comm));
+  ccl::CclComm ccl_comm =
+      comm_mgr->GetCclCommForParallelDescAndStreamName(*parallel_desc_.get(), stream_name_);
+  ccl_comm_.reset(new Comm(ccl_comm));
 }
 
-class NcclLogicalSendRecv final : public user_op::OpKernel {
+class CclLogicalSendRecv final : public user_op::OpKernel {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NcclLogicalSendRecv);
-  NcclLogicalSendRecv() = default;
-  ~NcclLogicalSendRecv() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(CclLogicalSendRecv);
+  CclLogicalSendRecv() = default;
+  ~CclLogicalSendRecv() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<NcclLogicalSendRecvState>(ctx);
+    return std::make_shared<CclLogicalSendRecvState>(ctx);
   }
 
  private:
@@ -156,15 +153,14 @@ class NcclLogicalSendRecv final : public user_op::OpKernel {
   }
 };
 
-void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
-                                  const user_op::OpKernelCache*) const {
-  auto* kernel_state = dynamic_cast<NcclLogicalSendRecvState*>(state);
+void CclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+                                 const user_op::OpKernelCache*) const {
+  auto* kernel_state = dynamic_cast<CclLogicalSendRecvState*>(state);
   CHECK_NOTNULL(kernel_state);
   const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
   user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
   user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-  ncclComm_t comm = kernel_state->comm();
-  cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+  ccl::CclComm ccl_comm = kernel_state->ccl_comm();
   const std::vector<int64_t>& send_elem_cnts = kernel_state->send_elem_cnts();
   const std::vector<int64_t>& recv_elem_cnts = kernel_state->recv_elem_cnts();
   const int64_t parallel_num = send_elem_cnts.size();
@@ -172,16 +168,21 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
 
   std::vector<void*> send_in_ptr;
   std::vector<void*> recv_out_ptr;
+  std::vector<int64_t> send_offsets;
+  std::vector<int64_t> recv_offsets;
   char* buf_ptr = tmp_buffer->mut_dptr<char>();
-  int64_t offset = 0;
+  uint64_t offset = 0;
   for (int64_t i = 0; i < parallel_num; ++i) {
     void* send_ptr = reinterpret_cast<void*>(buf_ptr + offset);
     send_in_ptr.push_back(send_ptr);
+    send_offsets.push_back(offset);
     offset += send_elem_cnts.at(i) * GetSizeOfDataType(data_type);
   }
+  const uint64_t recv_offset = offset;
   for (int64_t i = 0; i < parallel_num; ++i) {
     void* recv_ptr = reinterpret_cast<void*>(buf_ptr + offset);
     recv_out_ptr.push_back(recv_ptr);
+    recv_offsets.push_back(offset - recv_offset);
     offset += recv_elem_cnts.at(i) * GetSizeOfDataType(data_type);
   }
 
@@ -192,21 +193,15 @@ void NcclLogicalSendRecv::Compute(user_op::KernelComputeContext* ctx, user_op::O
       in_tensor_slice_copier_vec.at(i)->Copy(ctx->stream(), send_in_ptr.at(i), in->dptr());
     }
   }
-  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-  OF_NCCL_CHECK(ncclGroupStart());
-  for (int64_t i = 0; i < parallel_num; ++i) {
-    if (send_elem_cnts.at(i) != 0) {
-      LOG(INFO) << parallel_id << " send " << send_elem_cnts.at(i) << " to " << i;
-      OF_NCCL_CHECK(ncclSend(send_in_ptr.at(i), send_elem_cnts.at(i), GetNcclDataType(data_type), i,
-                             comm, cuda_stream));
-    }
-    if (recv_elem_cnts.at(i) != 0) {
-      LOG(INFO) << parallel_id << " recv " << recv_elem_cnts.at(i) << " from " << i;
-      OF_NCCL_CHECK(ncclRecv(recv_out_ptr.at(i), recv_elem_cnts.at(i), GetNcclDataType(data_type),
-                             i, comm, cuda_stream));
-    }
-  }
-  OF_NCCL_CHECK(ncclGroupEnd());
+
+  std::unique_ptr<ccl::AllToAll> all_to_all = ccl::NewCollectiveCommunication<ccl::AllToAll>(
+      ctx->stream()->device_type(), data_type, data_type, parallel_num);
+  void* send_buf = reinterpret_cast<void*>(buf_ptr);
+  void* recv_buf = reinterpret_cast<void*>(buf_ptr + recv_offset);
+  all_to_all->Launch(ctx->stream(), send_buf, send_elem_cnts.data(), send_offsets.data(), recv_buf,
+                     recv_elem_cnts.data(), recv_offsets.data(), ccl_comm, /*has_input=*/true,
+                     /*has_output=*/true);
+
   const std::vector<std::shared_ptr<TensorSliceCopier>>& out_tensor_slice_copier_vec =
       kernel_state->out_tensor_slice_copier_vec();
 
@@ -289,11 +284,13 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   return buf_count * GetSizeOfDataType(data_type);
 }
 
+// TODO:(zhaoluyang) SetIsMatchedHob support multi devices(not including cpu)
 REGISTER_USER_KERNEL("_nccl_logical_send_recv")
-    .SetCreateFn<NcclLogicalSendRecv>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA)
+    .SetCreateFn<CclLogicalSendRecv>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     || (user_op::HobDeviceType() == DeviceType::kNPU))
     .SetInferTmpSizeFn(InferTmpBufferSize);
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
+#endif  // WITH_CUDA || WITH_NPU

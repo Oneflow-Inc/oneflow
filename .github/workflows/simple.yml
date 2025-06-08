@@ -18,7 +18,7 @@ concurrency:
 jobs:
   static_analysis_with_clang:
     name: Static analysis with clang
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
     steps:
       - name: Check out OneFlow
@@ -77,7 +77,7 @@ jobs:
             os: "macos-10.15"
             make_concurrency: 2
           - test_suite: ubuntu
-            os: "ubuntu-20.04"
+            os: "ubuntu-22.04"
             make_concurrency: 2
         exclude:
           - test_suite: mac
@@ -114,13 +114,13 @@ jobs:
           sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip ninja-build
       - name: Cache pip (Linux)
         if: startsWith(runner.os, 'Linux')
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ matrix.os }}-pip-${{ hashFiles('**/requirements.txt') }}
       - name: Cache pip (macOS)
         if: startsWith(runner.os, 'macOS')
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: ~/Library/Caches/pip
           key: ${{ matrix.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -219,7 +219,7 @@ jobs:
           fi
       - name: Upload logs
         if: always() && contains(github.event.pull_request.labels.*.name, 'need-simple-ci-upload-artifact')
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: logs-${{ matrix.test_suite }}-${{ matrix.cmake_generator }}-${{ matrix.cmake_build_type }}-shared-${{ matrix.build_shared_libs }}
           path: |
@@ -244,7 +244,7 @@ jobs:
           repository: Oneflow-Inc/conda-env
           ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
           path: conda-env
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@ci-test-with-cu118
         name: Build with gcc7
         if: ${{ matrix.build-type == 'gcc7'}}
         with:
@@ -253,7 +253,7 @@ jobs:
           oneflow-build-env: conda
           conda-env-file: conda-env/dev/gcc7/environment-v2.yml
           conda-env-name: oneflow-dev-gcc7-v2
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@ci-test-with-cu118
         name: Build with clang10
         if: ${{ matrix.build-type == 'clang10'}}
         with:

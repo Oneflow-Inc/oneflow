@@ -32,7 +32,7 @@ env:
 jobs:
   source_info:
     name: Collect information about PR and source
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
       - name: Check out OneFlow
@@ -60,7 +60,7 @@ jobs:
 
   mirror_third_party:
     name: Mirror third party dependencies
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
       - uses: actions/checkout@v2
@@ -72,13 +72,13 @@ jobs:
           then
             exit 0
           fi
-          python3 -m pip install -U pip setuptools wheel
-          python3 -m pip install 'cryptography<2.2' oss2
+          python3 -m pip install -U pip "setuptools<=68.2.2" wheel
+          python3 -m pip install 'cryptography<=3.4' oss2
           python3 tools/package_mirror.py -i $PWD
 
   check_license_and_format:
     name: License and format
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v2
@@ -99,11 +99,13 @@ jobs:
       - name: Check C++/CUDA format
         id: cpp_check
         run: |
+          sudo apt install libtinfo5
           python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
       - name: Run C++/CUDA format
         id: cpp_fmt
         if: ${{ failure() }}
         run: |
+          sudo apt install libtinfo5
           python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow --fix
       - name: Check Python format
         id: py_check
@@ -114,6 +116,7 @@ jobs:
         id: py_fmt
         if: ${{ failure() }}
         run: |
+          python3 -m pip install black==19.10b0 --user
           python3 ci/check/run_py_format.py --source_dir $PWD --fix
       - name: Check CMake format
         id: cmake_check
@@ -139,7 +142,7 @@ jobs:
           git push
       - name: Upload patch
         if: ${{ failure() && steps.git_push.outcome == 'failure' }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: license_and_format-${{ github.sha }}.patch
           path: license_and_format.patch
@@ -176,7 +179,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@ci-test-with-cu118
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -188,7 +191,7 @@ jobs:
             builder
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
-            cu116
+            cu118
             cpu
             cpu-asan-ubsan
             cpu-tsan
@@ -223,7 +226,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@ci-test-with-cu118
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -237,7 +240,7 @@ jobs:
         run: |
           echo "::error file=test.yml,line=204,col=10::steps.save-cache.outputs.cache-hit != matrix.cache-hit"
           exit 1
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@ci-test-with-cu118
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu
         if: ${{ matrix.entry =='cpu' && !matrix.cache-hit }}
@@ -259,7 +262,7 @@ jobs:
           python-versions: |
             3.7
             3.8
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@ci-test-with-cu118
         name: Build manylinux ${{ matrix.entry }}
         id: build-cpu-sanitizers
         if: ${{ (matrix.entry == 'cpu-asan-ubsan' || matrix.entry == 'cpu-tsan') && !matrix.cache-hit && false }}
@@ -280,10 +283,10 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.8
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@ci-test-with-cu118
         name: Build manylinux ${{ matrix.entry }}
         id: build-cuda
-        if: ${{ matrix.entry =='cu116' && !matrix.cache-hit }}
+        if: ${{ matrix.entry =='cu118' && !matrix.cache-hit }}
         with:
           cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/cuda.cmake
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc9.sh
@@ -292,7 +295,7 @@ jobs:
           wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
           clear-wheelhouse-dir: true
           self-hosted: ${{ contains(matrix.runs-on, 'self-hosted') }}
-          cuda-version: "11.6"
+          cuda-version: "11.8"
           manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
           docker-run-use-system-http-proxy: false
           docker-run-use-lld: false
@@ -300,7 +303,7 @@ jobs:
           clean-ccache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
           python-versions: |
             3.7
-      - uses: Oneflow-Inc/get-oneflow@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow@ci-test-with-cu118
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry == 'llvm15' && !matrix.cache-hit }}
         with:
@@ -339,7 +342,7 @@ jobs:
             })
       - name: Upload packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm15' && matrix.entry != 'cpu-asan-ubsan' && matrix.entry != 'cpu-tsan' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@whl-skip-nccl
+        uses: Oneflow-Inc/get-oneflow/digest/upload@ci-test-with-cu118
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -350,7 +353,7 @@ jobs:
           dst-dir: cpack
       - name: Upload whl
         if: ${{ !fromJson(matrix.cache-hit) && matrix.entry != 'llvm15' && matrix.entry != 'cpu-asan-ubsan' && matrix.entry != 'cpu-tsan' }}
-        uses: Oneflow-Inc/get-oneflow/digest/upload@whl-skip-nccl
+        uses: Oneflow-Inc/get-oneflow/digest/upload@ci-test-with-cu118
         timeout-minutes: 10
         with:
           digest: ${{ steps.save-cache.outputs.build-digest }}
@@ -375,7 +378,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@ci-test-with-cu118
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -406,7 +409,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@ci-test-with-cu118
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -488,7 +491,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@ci-test-with-cu118
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -504,7 +507,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@whl-skip-nccl
+        uses: Oneflow-Inc/get-oneflow/digest/download@ci-test-with-cu118
         id: download-digest
         timeout-minutes: 10
         with:
@@ -514,7 +517,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Get primary node
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/master-address@whl-skip-nccl
+        uses: Oneflow-Inc/get-oneflow/master-address@ci-test-with-cu118
         id: get-primary-node
         with:
           rank: ${{ matrix.rank }}
@@ -650,7 +653,7 @@ jobs:
       TEST_CONTAINER_NAME: "pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${{ matrix.entry }}-test"
       TEST_MANYLINUX_CONTAINER_NAME: "pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${{ matrix.entry }}-test-manylinux"
       TEST_WITH_TF_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.3.0:2f831e9354298a11447578e869d983959feb046f
-      TEST_MANYLINUX_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/manylinux2014_x86_64_cuda11.6:328e477069c80035adb3cd4db9632997e6284edd
+      TEST_MANYLINUX_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/manylinux2014_x86_64_cuda11.8:6455f9b8154333333e6285fde3747aaac4a92929
       METRICS_DIR: metrics
     steps:
       - name: Set proxy
@@ -718,7 +721,7 @@ jobs:
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker rm -f ${{ env.TEST_MANYLINUX_CONTAINER_NAME }} || true
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@ci-test-with-cu118
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -734,7 +737,7 @@ jobs:
           exit 1
       - name: Download wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@whl-skip-nccl
+        uses: Oneflow-Inc/get-oneflow/digest/download@ci-test-with-cu118
         id: download-digest
         timeout-minutes: 10
         with:
@@ -744,7 +747,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Download ASAN and UBSAN wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' && false }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@whl-skip-nccl
+        uses: Oneflow-Inc/get-oneflow/digest/download@ci-test-with-cu118
         id: asan-ubsan-download-digest
         timeout-minutes: 10
         with:
@@ -754,7 +757,7 @@ jobs:
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
       - name: Download TSAN wheel and packed liboneflow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && matrix.device == 'cpu' && false }}
-        uses: Oneflow-Inc/get-oneflow/digest/download@whl-skip-nccl
+        uses: Oneflow-Inc/get-oneflow/digest/download@ci-test-with-cu118
         id: tsan-download-digest
         timeout-minutes: 10
         with:
@@ -902,7 +905,7 @@ jobs:
         run: |
           ls ${ONEFLOW_WHEEL_PATH}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -U --find-links=${ONEFLOW_WHEEL_PATH} oneflow
       - name: Install downstream libs
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -1080,7 +1083,7 @@ jobs:
       - name: Benchmark Test
         timeout-minutes: 100
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
-        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@whl-skip-nccl
+        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@ci-test-with-cu118
         with:
           collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1132,7 +1135,7 @@ jobs:
 
   static_analysis_with_clang_on_diff:
     name: Static analysis with clang on diff
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
       - name: Check out OneFlow
@@ -1141,7 +1144,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
-      - uses: Oneflow-Inc/get-oneflow/cache-complete@whl-skip-nccl
+      - uses: Oneflow-Inc/get-oneflow/cache-complete@ci-test-with-cu118
         name: Save cache if successful
         id: save-cache
         timeout-minutes: 5
@@ -1162,7 +1165,7 @@ jobs:
           wget https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
           chmod +x oneflow-clang-tidy-16 clang-tidy-diff.py
       - name: Cache third party dir
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         with:
           path: ~/.ccache
@@ -1192,6 +1195,7 @@ jobs:
         # use clang as compiler for correct compiler flags
         if: ${{ !fromJSON(steps.save-cache.outputs.cache-hit) }}
         run: |
+          sudo apt install clang-12 lldb-12 lld-12 libfuse2
           cd build
           rm CMakeCache.txt
           cmake .. -C ../cmake/caches/international/cpu.cmake \

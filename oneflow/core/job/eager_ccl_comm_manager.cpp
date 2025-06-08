@@ -18,6 +18,8 @@ limitations under the License.
 
 namespace oneflow {
 
+const std::string EagerCclCommMgr::kDefaultCclStreamName = "DEFAULT";
+
 EagerCclCommMgrBuilder& EagerCclCommMgrBuilder::Get() {
   static EagerCclCommMgrBuilder mgr;
   return mgr;

@@ -21,27 +21,57 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/user/ops/nccl_logical_util.h"
+#include "oneflow/user/kernels/collective_communication/include/all_reduce.h"
+#include "oneflow/user/kernels/collective_communication/include/all_gather.h"
+#include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
 
-#if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
+#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU)
 
 namespace oneflow {
 
 namespace {
 
-class NcclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
+auto AllReduceCollectiveCommunicationExists() {
+  return hob::make_custom("AllReduceCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsAllReduceRegistered(device_type);
+                          });
+}
+
+auto AllGatherCollectiveCommunicationExists() {
+  return hob::make_custom("AllGatherCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsAllGatherRegistered(device_type);
+                          });
+}
+
+auto AllToAllCollectiveCommunicationExists() {
+  return hob::make_custom("AllToAllCollectiveCommunicationExists",
+                          [=](const user_op::KernelRegContext& ctx) {
+                            DeviceType device_type = ctx.device_type();
+                            return ccl::IsCommunicationContextRegistered(device_type)
+                                   && ccl::IsAllToAllRegistered(device_type);
+                          });
+}
+
+class CclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
  public:
-  explicit NcclLogical2DSameDim0KernelCommState(user_op::KernelInitContext* ctx)
+  explicit CclLogical2DSameDim0KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
+        stream_name_(EagerCclCommMgr::kDefaultCclStreamName),
         parallel_desc_(ctx->parallel_desc()),
         this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
     if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   }
-  ~NcclLogical2DSameDim0KernelCommState() override = default;
+  ~CclLogical2DSameDim0KernelCommState() override = default;
 
-  ncclComm_t comm() {
+  const ccl::CclComm& ccl_comm() {
     if (!is_init_) { Init(); }
-    return comm_;
+    return ccl_comm_;
   }
 
   int64_t num_ranks() {
@@ -54,24 +84,12 @@ class NcclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
  private:
   void Init() {
     CHECK(!is_init_);
-    std::set<std::pair<int64_t, int64_t>> device_set;
     const Shape& hierarchy = *parallel_desc_.hierarchy();
     CHECK_EQ(hierarchy.NumAxes(), 2);
-    const int64_t num_groups = hierarchy.At(0);
     const int64_t group_size = hierarchy.At(1);
-    CHECK_EQ(num_groups * group_size, parallel_desc_.parallel_num());
-    const int64_t this_group_begin_parallel_id = this_parallel_id_ / group_size * group_size;
-    CHECK_EQ(this_group_begin_parallel_id % group_size, 0);
-    CHECK_LE(this_group_begin_parallel_id + group_size, parallel_desc_.parallel_num());
-    for (int64_t id_in_group = 0; id_in_group < group_size; ++id_in_group) {
-      const int64_t parallel_id = this_group_begin_parallel_id + id_in_group;
-      const int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
-      const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
-      device_set.emplace(std::make_pair(machine_id, device_id));
-    }
     EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-    comm_ =
-        comm_mgr->As<EagerNcclCommMgr>()->GetCommForDeviceAndStreamName(device_set, stream_name_);
+    ccl_comm_ = comm_mgr->GetCclCommForParallelDescNdHierarchy(parallel_desc_, stream_name_,
+                                                               this_parallel_id_, "SameDim0");
     num_ranks_ = group_size;
     is_init_ = true;
   }
@@ -81,15 +99,15 @@ class NcclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
   ParallelDesc parallel_desc_;
   int64_t this_parallel_id_;
   int64_t num_ranks_{};
-  ncclComm_t comm_{};
+  ccl::CclComm ccl_comm_{};
 };
 
-class NcclLogical2DSameDim0AllGatherNoncontinuousKernelState
-    : public NcclLogical2DSameDim0KernelCommState {
+class CclLogical2DSameDim0AllGatherNoncontinuousKernelState
+    : public CclLogical2DSameDim0KernelCommState {
  public:
-  explicit NcclLogical2DSameDim0AllGatherNoncontinuousKernelState(user_op::KernelInitContext* ctx)
-      : NcclLogical2DSameDim0KernelCommState(ctx), src_split_axis_(-1) {}
-  ~NcclLogical2DSameDim0AllGatherNoncontinuousKernelState() override = default;
+  explicit CclLogical2DSameDim0AllGatherNoncontinuousKernelState(user_op::KernelInitContext* ctx)
+      : CclLogical2DSameDim0KernelCommState(ctx), src_split_axis_(-1) {}
+  ~CclLogical2DSameDim0AllGatherNoncontinuousKernelState() override = default;
 
   int64_t src_split_axis() const { return src_split_axis_; }
   void set_src_split_axis(int64_t split_axis) { src_split_axis_ = split_axis; }
@@ -98,11 +116,11 @@ class NcclLogical2DSameDim0AllGatherNoncontinuousKernelState
   int64_t src_split_axis_;
 };
 
-class NcclLogical2DSameDim0All2AllKernelState : public NcclLogical2DSameDim0KernelCommState {
+class CclLogical2DSameDim0All2AllKernelState : public CclLogical2DSameDim0KernelCommState {
  public:
-  explicit NcclLogical2DSameDim0All2AllKernelState(user_op::KernelInitContext* ctx)
-      : NcclLogical2DSameDim0KernelCommState(ctx), src_split_axis_(-1), dst_split_axis_(-1) {}
-  ~NcclLogical2DSameDim0All2AllKernelState() override = default;
+  explicit CclLogical2DSameDim0All2AllKernelState(user_op::KernelInitContext* ctx)
+      : CclLogical2DSameDim0KernelCommState(ctx), src_split_axis_(-1), dst_split_axis_(-1) {}
+  ~CclLogical2DSameDim0All2AllKernelState() override = default;
 
   int64_t src_split_axis() const { return src_split_axis_; }
   void set_src_split_axis(int64_t split_axis) { src_split_axis_ = split_axis; }
@@ -114,32 +132,35 @@ class NcclLogical2DSameDim0All2AllKernelState : public NcclLogical2DSameDim0Kern
   int64_t dst_split_axis_;
 };
 
-class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
+class CclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
  public:
-  NcclLogical2DSameDim0AllReduce() = default;
-  ~NcclLogical2DSameDim0AllReduce() override = default;
+  CclLogical2DSameDim0AllReduce() = default;
+  ~CclLogical2DSameDim0AllReduce() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<NcclLogical2DSameDim0KernelCommState>(ctx);
+    return std::make_shared<CclLogical2DSameDim0KernelCommState>(ctx);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* nccl_comm = dynamic_cast<NcclLogical2DSameDim0KernelCommState*>(state);
-    CHECK(nccl_comm != nullptr);
+    auto* comm_state = dynamic_cast<CclLogical2DSameDim0KernelCommState*>(state);
+    CHECK(comm_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape_view(), out->shape_view());
     CHECK_EQ(in->data_type(), out->data_type());
-    VLOG(3) << "[NcclLogical2D][SameDim0AllReduce] " << nccl_comm->stream_name() << " "
+    VLOG(3) << "[NcclLogical2D][SameDim0AllReduce] " << comm_state->stream_name() << " "
             << ctx->op_name() << std::endl;
-    ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
-    if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
-    OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), reduce_type, nccl_comm->comm(),
-                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+    ccl::ReduceType ccl_reduce_type = ccl::ReduceType::kSum;
+    if (in->data_type() == DataType::kBool) { ccl_reduce_type = ccl::ReduceType::kMax; }
+    ccl::CclComm ccl_comm = comm_state->ccl_comm();
+    std::unique_ptr<ccl::AllReduce> ccl_all_reduce =
+        ccl::NewCollectiveCommunication<ccl::AllReduce>(ctx->stream()->device_type(),
+                                                        in->data_type(), ccl_reduce_type);
+    ccl_all_reduce->Launch(ctx->stream(), in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
+                           ccl_comm);
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
@@ -148,31 +169,35 @@ class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
   }
 };
 
-class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
+class CclLogical2DSameDim0AllGather final : public user_op::OpKernel {
  public:
-  NcclLogical2DSameDim0AllGather() = default;
-  ~NcclLogical2DSameDim0AllGather() override = default;
+  CclLogical2DSameDim0AllGather() = default;
+  ~CclLogical2DSameDim0AllGather() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<NcclLogical2DSameDim0KernelCommState>(ctx);
+    return std::make_shared<CclLogical2DSameDim0KernelCommState>(ctx);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* nccl_comm = dynamic_cast<NcclLogical2DSameDim0KernelCommState*>(state);
-    CHECK(nccl_comm != nullptr);
+    auto* comm_state = dynamic_cast<CclLogical2DSameDim0KernelCommState*>(state);
+    CHECK(comm_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->data_type(), out->data_type());
-    const int64_t num_ranks = nccl_comm->num_ranks();
+    const int64_t num_ranks = comm_state->num_ranks();
     CHECK_EQ(in->shape_view().elem_cnt() * num_ranks, out->shape_view().elem_cnt());
-    VLOG(3) << "[NcclLogical2D][SameDim0AllGather] " << nccl_comm->stream_name() << " "
+    VLOG(3) << "[NcclLogical2D][SameDim0AllGather] " << comm_state->stream_name() << " "
             << ctx->op_name() << std::endl;
-    OF_NCCL_CHECK(ncclAllGather(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), nccl_comm->comm(),
-                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+
+    std::unique_ptr<ccl::AllGather> ccl_all_gather =
+        ccl::NewCollectiveCommunication<ccl::AllGather>(ctx->stream()->device_type(),
+                                                        in->data_type());
+    ccl::CclComm ccl_comm = comm_state->ccl_comm();
+    ccl_all_gather->Launch(ctx->stream(), in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
+                           ccl_comm);
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
@@ -182,14 +207,14 @@ class NcclLogical2DSameDim0AllGather final : public user_op::OpKernel {
 };
 
 template<typename T>
-class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKernel {
+class CclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKernel {
  public:
-  NcclLogical2DSameDim0AllGatherNoncontinuous() = default;
-  ~NcclLogical2DSameDim0AllGatherNoncontinuous() override = default;
+  CclLogical2DSameDim0AllGatherNoncontinuous() = default;
+  ~CclLogical2DSameDim0AllGatherNoncontinuous() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    auto state = std::make_shared<NcclLogical2DSameDim0AllGatherNoncontinuousKernelState>(ctx);
+    auto state = std::make_shared<CclLogical2DSameDim0AllGatherNoncontinuousKernelState>(ctx);
     NdSbp src_nd_sbp;
     CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_reduced_nd_sbp", &src_nd_sbp));
     CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
@@ -202,7 +227,7 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
     auto* kernel_state =
-        dynamic_cast<NcclLogical2DSameDim0AllGatherNoncontinuousKernelState*>(state);
+        dynamic_cast<CclLogical2DSameDim0AllGatherNoncontinuousKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -225,9 +250,13 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
 
     // NOTE(chengcheng): Do AllGather
     CHECK_EQ(in->shape_view().elem_cnt() * num_ranks, out->shape_view().elem_cnt());
-    OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), kernel_state->comm(),
-                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+
+    std::unique_ptr<ccl::AllGather> ccl_all_gather =
+        ccl::NewCollectiveCommunication<ccl::AllGather>(ctx->stream()->device_type(),
+                                                        in->data_type());
+    ccl::CclComm ccl_comm = kernel_state->ccl_comm();
+    ccl_all_gather->Launch(ctx->stream(), in->dptr(), unpack_from_ptr, in->shape_view().elem_cnt(),
+                           ccl_comm);
 
     CHECK_GT(in_split_axis, 0);
     // NOTE(chengcheng): Do unpack.
@@ -259,14 +288,14 @@ size_t Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize(user_op::InferCo
 }
 
 template<typename T>
-class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
+class CclLogical2DSameDim0All2All final : public user_op::OpKernel {
  public:
-  NcclLogical2DSameDim0All2All() = default;
-  ~NcclLogical2DSameDim0All2All() override = default;
+  CclLogical2DSameDim0All2All() = default;
+  ~CclLogical2DSameDim0All2All() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    auto state = std::make_shared<NcclLogical2DSameDim0All2AllKernelState>(ctx);
+    auto state = std::make_shared<CclLogical2DSameDim0All2AllKernelState>(ctx);
     NdSbp src_nd_sbp;
     NdSbp dst_nd_sbp;
     CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_reduced_nd_sbp", &src_nd_sbp));
@@ -283,7 +312,7 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<NcclLogical2DSameDim0All2AllKernelState*>(state);
+    auto* kernel_state = dynamic_cast<CclLogical2DSameDim0All2AllKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -342,21 +371,12 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
 
     {
       // NOTE(chengcheng): Do S2S
-      OF_NCCL_CHECK(ncclGroupStart());
       const int64_t elem_per_chunk = elem_cnt / num_ranks;
-      const int64_t chunk_size = elem_per_chunk * dtype_size;
-      for (int64_t j = 0; j < num_ranks; ++j) {
-        OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
-                                   reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
-                               elem_per_chunk, GetNcclDataType(in->data_type()), j,
-                               kernel_state->comm(),
-                               ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-        OF_NCCL_CHECK(ncclRecv(
-            reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
-            elem_per_chunk, GetNcclDataType(in->data_type()), j, kernel_state->comm(),
-            ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-      }
-      OF_NCCL_CHECK(ncclGroupEnd());
+      std::unique_ptr<ccl::AllToAll> all_to_all = ccl::NewCollectiveCommunication<ccl::AllToAll>(
+          ctx->stream()->device_type(), in->data_type(), in->data_type(), num_ranks);
+      ccl::CclComm ccl_comm = kernel_state->ccl_comm();
+      all_to_all->Launch(ctx->stream(), const_cast<char*>(pack_to_ptr), elem_per_chunk,
+                         unpack_from_ptr, elem_per_chunk, ccl_comm);
     }
 
     if (in_split_axis != 0) {
@@ -403,40 +423,27 @@ size_t Infer2DSameDim0All2AllKernelTmpBufferSize(user_op::InferContext* ctx) {
   return ret;
 }
 
-class NcclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState {
+class CclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState {
  public:
-  explicit NcclLogical2DSameDim1KernelCommState(user_op::KernelInitContext* ctx)
+  explicit CclLogical2DSameDim1KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        stream_name_(EagerNcclCommMgr::kDefaultStreamName),
+        stream_name_(EagerCclCommMgr::kDefaultCclStreamName),
         parallel_desc_(ctx->parallel_desc()),
         this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
     if (ctx->op_conf().has_stream_name_hint()) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   }
-  ~NcclLogical2DSameDim1KernelCommState() = default;
+  ~CclLogical2DSameDim1KernelCommState() = default;
 
-  ncclComm_t comm() {
+  const ccl::CclComm& ccl_comm() {
     if (!is_init_) {
-      std::set<std::pair<int64_t, int64_t>> device_set;
       const Shape& hierarchy = *parallel_desc_.hierarchy();
       CHECK_EQ(hierarchy.NumAxes(), 2);
-      const int64_t group_size = hierarchy.At(0);
-      const int64_t num_groups = hierarchy.At(1);
-      CHECK_EQ(num_groups * group_size, parallel_desc_.parallel_num());
-      const int64_t this_group_begin_parallel_id = this_parallel_id_ % num_groups;
-      CHECK_LT(this_group_begin_parallel_id + (group_size - 1) * num_groups,
-               parallel_desc_.parallel_num());
-      for (int64_t id_in_group = 0; id_in_group < group_size; ++id_in_group) {
-        const int64_t parallel_id = this_group_begin_parallel_id + (id_in_group * num_groups);
-        const int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
-        const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
-        device_set.emplace(std::make_pair(machine_id, device_id));
-      }
       EagerCclCommMgr* comm_mgr = CHECK_NOTNULL(Singleton<EagerCclCommMgr>::Get());
-      comm_ =
-          comm_mgr->As<EagerNcclCommMgr>()->GetCommForDeviceAndStreamName(device_set, stream_name_);
+      ccl_comm_ = comm_mgr->GetCclCommForParallelDescNdHierarchy(parallel_desc_, stream_name_,
+                                                                 this_parallel_id_, "SameDim1");
       is_init_ = true;
     }
-    return comm_;
+    return ccl_comm_;
   }
 
   const std::string& stream_name() const { return stream_name_; }
@@ -446,35 +453,39 @@ class NcclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState
   std::string stream_name_;
   ParallelDesc parallel_desc_;
   int64_t this_parallel_id_;
-  ncclComm_t comm_{};
+  ccl::CclComm ccl_comm_{};
 };
 
-class NcclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
+class CclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
  public:
-  NcclLogical2DSameDim1AllReduce() = default;
-  ~NcclLogical2DSameDim1AllReduce() override = default;
+  CclLogical2DSameDim1AllReduce() = default;
+  ~CclLogical2DSameDim1AllReduce() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<NcclLogical2DSameDim1KernelCommState>(ctx);
+    return std::make_shared<CclLogical2DSameDim1KernelCommState>(ctx);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* nccl_comm = dynamic_cast<NcclLogical2DSameDim1KernelCommState*>(state);
-    CHECK(nccl_comm != nullptr);
+    auto* comm_state = dynamic_cast<CclLogical2DSameDim1KernelCommState*>(state);
+    CHECK(comm_state != nullptr);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape_view(), out->shape_view());
     CHECK_EQ(in->data_type(), out->data_type());
-    VLOG(3) << "[NcclLogical2D][SameDim1AllReduce] " << nccl_comm->stream_name() << " "
+    VLOG(3) << "[NcclLogical2D][SameDim1AllReduce] " << comm_state->stream_name() << " "
             << ctx->op_name() << std::endl;
-    ncclRedOp_t reduce_type = ncclRedOp_t::ncclSum;
-    if (in->data_type() == DataType::kBool) { reduce_type = ncclRedOp_t::ncclMax; }
-    OF_NCCL_CHECK(ncclAllReduce(in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
-                                GetNcclDataType(in->data_type()), reduce_type, nccl_comm->comm(),
-                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
+    ccl::ReduceType ccl_reduce_type = ccl::ReduceType::kSum;
+    if (in->data_type() == DataType::kBool) { ccl_reduce_type = ccl::ReduceType::kMax; }
+
+    ccl::CclComm ccl_comm = comm_state->ccl_comm();
+    std::unique_ptr<ccl::AllReduce> ccl_all_reduce =
+        ccl::NewCollectiveCommunication<ccl::AllReduce>(ctx->stream()->device_type(),
+                                                        in->data_type(), ccl_reduce_type);
+    ccl_all_reduce->Launch(ctx->stream(), in->dptr(), out->mut_dptr(), in->shape_view().elem_cnt(),
+                           ccl_comm);
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   bool IsKernelLaunchSynchronized() const override {
@@ -486,17 +497,17 @@ class NcclLogical2DSameDim1AllReduce final : public user_op::OpKernel {
 }  // namespace
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_reduce")
-    .SetCreateFn<NcclLogical2DSameDim0AllReduce>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+    .SetCreateFn<CclLogical2DSameDim0AllReduce>()
+    .SetIsMatchedHob(AllReduceCollectiveCommunicationExists());
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather")
-    .SetCreateFn<NcclLogical2DSameDim0AllGather>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+    .SetCreateFn<CclLogical2DSameDim0AllGather>()
+    .SetIsMatchedHob(AllGatherCollectiveCommunicationExists());
 
 #define REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                      \
   REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")            \
-      .SetCreateFn<NcclLogical2DSameDim0AllGatherNoncontinuous<dtype>>()                 \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
+      .SetCreateFn<CclLogical2DSameDim0AllGatherNoncontinuous<dtype>>()                  \
+      .SetIsMatchedHob(AllGatherCollectiveCommunicationExists()                          \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize);
@@ -514,8 +525,8 @@ REGISTER_2D_SAME_DIM0_ALLGATHER_NONCONTINUOUS_KERNEL(nv_bfloat16)
 
 #define REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(dtype)                                      \
   REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim0_all2all")                             \
-      .SetCreateFn<NcclLogical2DSameDim0All2All<dtype>>()                                \
-      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                   \
+      .SetCreateFn<CclLogical2DSameDim0All2All<dtype>>()                                 \
+      .SetIsMatchedHob(AllToAllCollectiveCommunicationExists()                           \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
                        && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn(Infer2DSameDim0All2AllKernelTmpBufferSize);
@@ -532,15 +543,15 @@ REGISTER_2D_SAME_DIM0_ALL2ALL_KERNEL(nv_bfloat16)
 #endif
 
 REGISTER_USER_KERNEL("_nccl_logical_2D_same_dim1_all_reduce")
-    .SetCreateFn<NcclLogical2DSameDim1AllReduce>()
-    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA);
+    .SetCreateFn<CclLogical2DSameDim1AllReduce>()
+    .SetIsMatchedHob(AllReduceCollectiveCommunicationExists());
 
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_reduce");
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_gather");
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_gather_noncontinuous");
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_2D_same_dim0_all2all");
-REGISTER_USER_KERNEL_UNIFIED_NCCL_COMM_INIT("_nccl_logical_2D_same_dim1_all_reduce");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_reduce");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_gather");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_2D_same_dim0_all_gather_noncontinuous");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_2D_same_dim0_all2all");
+REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_2D_same_dim1_all_reduce");
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA && NCCL_VERSION_CODE > 2700
+#endif  // WITH_CUDA || WITH_NPU
