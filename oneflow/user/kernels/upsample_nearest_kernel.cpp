@@ -227,7 +227,7 @@ class UpsampleNearest2DCPUKernel final : public user_op::OpKernel {
     const int64_t out_height = y_tensor->shape_view().At(2);
     const int64_t out_width = y_tensor->shape_view().At(3);
     const int64_t elem_cnt = y_tensor->shape_view().elem_cnt();
-    if (!output_size.empty() || ctx->Tensor4ArgNameAndIndex("like", 0)) {
+    if (!output_size.empty()) {
       height_scale = static_cast<double>(out_height) / static_cast<double>(in_height);
       width_scale = static_cast<double>(out_width) / static_cast<double>(in_width);
     }
