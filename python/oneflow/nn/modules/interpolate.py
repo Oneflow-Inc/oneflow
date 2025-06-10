@@ -380,9 +380,7 @@ def interpolate_like(
 
     """
     return Interpolate(
-        size=like.shape[2:],
-        mode=mode,
-        align_corners=align_corners,
+        size=like.shape[2:], mode=mode, align_corners=align_corners,
     ).forward(input)
 
 
