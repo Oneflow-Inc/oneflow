@@ -49,9 +49,8 @@ def _np_zero_pad2d_grad(src, dest, padding):
         (n, c, i, j) = (coords[0], coords[c_idx], coords[h_idx], coords[w_idx])
         ip_x = ip_y = 0
         if (
-            j >= pad_left
-            and j < dx_width + pad_left
-            and (i >= pad_top)
+            pad_left <= j < dx_width + pad_left
+                and (i >= pad_top)
             and (i < dx_height + pad_top)
         ):
             ip_x = j - pad_left
