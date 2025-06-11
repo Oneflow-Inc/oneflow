@@ -190,7 +190,9 @@ namespace {
 Maybe<void> MetaInfoConsistencyCheckUtil(const Symbol<ParallelDesc>& placement,
                                          const Optional<Symbol<NdSbp>>& nd_sbp,
                                          const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
-  const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
+  const auto& rank_group = JUST(RankGroup::New(placement));
+  if (!rank_group->ContainingCurrentRank()) return Maybe<void>::Ok();
+
   const auto& transport_token =
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckRankGroupConsistency));
   const auto& ctx = std::make_shared<CheckMetaInfoConsistencyAsyncTransportCtx>(
