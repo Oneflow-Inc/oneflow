@@ -2064,6 +2064,10 @@
   signature: "Tensor (Tensor x, Tensor dy, Double beta=1.0, Double threshold=20.0) => SoftplusGrad"
   bind_python: False
 
+- name: "softplus_grad_grad"
+  signature: "Tensor (Tensor x, Tensor dydx, Double beta=1.0, Double threshold=20.0) => SoftplusGradGrad"
+  bind_python: False
+
 - name: "softshrink"
   signature: "Tensor (Tensor x, *, Double alpha=0.5, Bool inplace=False) => SoftShrink"
   bind_python: True
