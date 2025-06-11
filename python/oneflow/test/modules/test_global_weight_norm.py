@@ -22,7 +22,10 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@autotest(n=1, check_graph=False)
+# Not check graph because of one reason:
+# Reason 1, Graph's build input nn.modules.linear.Linear type is not supported.
+# Please refer to issue: https://github.com/Oneflow-Inc/oneflow/issues/7466
+@autotest(n=1, check_graph="ValidatedFalse")
 def _test_global_weight_norm_with_random_data(test_case, placement, sbp):
     dim = random(-2, 2).to(int).value()
     liner_model_torch = torch.nn.Linear(8, 16).to_global(placement, sbp)

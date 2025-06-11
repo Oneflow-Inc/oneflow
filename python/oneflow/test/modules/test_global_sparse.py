@@ -20,7 +20,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_embedding(test_case, ndim, placement, sbp):
     emb_size = random() * 8
     emb_dim = random() * 8
