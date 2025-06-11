@@ -92,11 +92,11 @@ void ProfilerStop() {
 #endif  // OF_ENABLE_PROFILER
 }
 
-void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes, bool record_attrs,
-                    bool record_bandwidth) {
+void EnableProfiler(bool use_cpu, bool use_cuda, bool use_npu, bool record_shapes,
+                    bool record_attrs, bool record_bandwidth) {
   CHECK_JUST(vm::ClusterSync());
   if (Singleton<ProfileManager>::Get() == nullptr) {
-    Singleton<ProfileManager>::New(use_cpu, use_cuda, record_shapes, record_attrs,
+    Singleton<ProfileManager>::New(use_cpu, use_cuda, use_npu, record_shapes, record_attrs,
                                    record_bandwidth);
   }
 }
@@ -107,6 +107,9 @@ Maybe<std::string> DisableProfilerAndReturnResult() {
 #if defined(WITH_CUDA)
   OF_CUDA_CHECK(cudaDeviceSynchronize());
 #endif  // WITH_CUDA
+#if defined(WITH_NPU)
+  aclrtSynchronizeDevice();
+#endif  // WITH_NPU
   auto* pmgr = JUST(SingletonMaybe<ProfileManager>());
   std::string results = pmgr->DumpResultsJson();
   Singleton<ProfileManager>::Delete();
