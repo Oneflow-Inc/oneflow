@@ -181,7 +181,7 @@ std::shared_ptr<AutoCastMeta> MakeAutoCastMeta(
   // autocast only supports the following device type(s) and low precision type(s):
   //   - device type: CUDA
   //   - low precision type: half, bfloat16
-  static std::vector<DeviceType> autocast_device_types{kCUDA};
+  static std::vector<DeviceType> autocast_device_types{kCUDA, kMLU, kNPU};
   static std::vector<Symbol<DType>> autocast_dtypes{DType::Float16(), DType::BFloat16()};
 
   if (autocast_meta->autocast_color() != kBlack) {
