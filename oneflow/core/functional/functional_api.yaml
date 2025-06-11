@@ -1355,7 +1355,7 @@
   bind_python: True
 
 - name: "nll_grad"
-  signature: "Tensor(Tensor out_grad, Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index) => NLLGrad"
+  signature: 'Tensor(Tensor out_grad, Tensor reduced_out_grad, Tensor input, Tensor target, Tensor total_weight, Tensor weight=None, Int64 ignore_index, String reduction="none") => NLLGrad'
   bind_python: False
 
 - name: "binary_cross_entropy_loss"
