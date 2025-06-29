@@ -28,7 +28,7 @@ limitations under the License.
 #include "collective_communication/include/all_to_all.h"
 #include "collective_communication/include/reduce_scatter.h"
 
-#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU)
+#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU) || defined(WITH_XPU)
 
 namespace oneflow {
 
@@ -703,6 +703,7 @@ size_t InferNcclLogicalFusionKernelTmpBufferSize(user_op::InferContext* ctx) {
 REGISTER_USER_KERNEL("_nccl_logical_fusion")
     .SetCreateFn<CclLogicalFusionKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     || (user_op::HobDeviceType() == DeviceType::kXPU)
                      || (user_op::HobDeviceType() == DeviceType::kNPU))
     .SetInferTmpSizeFn(InferNcclLogicalFusionKernelTmpBufferSize);
 
@@ -711,4 +712,4 @@ REGISTER_USER_KERNEL("_nccl_logical_fusion")
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA || WITH_NPU
+#endif  // WITH_CUDA || WITH_NPU || WITH_XPU

@@ -581,7 +581,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
     return Maybe<void>::Ok();
   }
 
-#if defined(WITH_CUDA) || defined(WITH_NPU)
+#if defined(WITH_CUDA) || defined(WITH_NPU) || defined(WITH_XPU)
   // Use a general basic communication if no P in the consumer
   if (((Singleton<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
         && producer_parallel_desc == consumer_parallel_desc)
@@ -600,7 +600,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
     // Otherwise, one-step transfer
     return Maybe<void>::Ok();
   }
-#endif  // WITH_CUDA || WITH_NPU
+#endif  // WITH_CUDA || WITH_NPU || defined(WITH_XPU)
 
   if (JUST(ComputeLazyCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc,
                                            producer_parallel_desc, consumer_parallel_desc,

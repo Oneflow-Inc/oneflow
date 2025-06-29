@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/operator/nccl_send_recv_boxing_op_util.h"
 #include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
 
-#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU)
+#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU) || defined(WITH_XPU)
 
 namespace oneflow {
 
@@ -254,4 +254,4 @@ REGISTER_SYSTEM_OP_KERNEL_UNIFIED_CCL_COMM_INIT(OperatorConf::kNcclSendRecvBoxin
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA || WITH_NPU
+#endif  // WITH_CUDA || WITH_NPU || WITH_XPU

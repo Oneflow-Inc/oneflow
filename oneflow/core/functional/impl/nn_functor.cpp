@@ -2238,7 +2238,7 @@ class SparseSoftmaxCrossEntropyFunctor {
                                const std::shared_ptr<one::Tensor>& label) const {
     if (!(logits->is_global() && label->is_global())) { return false; }
     // npu-implementation not support ms version yet
-#ifdef WITH_NPU
+#ifdef WITH_NPU || defined(WITH_XPU)
     return false;
 #endif
 

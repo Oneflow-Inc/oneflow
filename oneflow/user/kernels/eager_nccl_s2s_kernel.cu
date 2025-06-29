@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
 
-#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU)
+#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU) || defined(WITH_XPU)
 
 namespace oneflow {
 
@@ -191,4 +191,4 @@ REGISTER_EAGER_CCL_S2S_KERNEL(float16)
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA || WITH_NPU
+#endif  // WITH_CUDA || WITH_NPU || WITH_XPU

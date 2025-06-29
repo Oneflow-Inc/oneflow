@@ -30,7 +30,7 @@ limitations under the License.
 #include "oneflow/core/operator/nccl_send_recv_boxing_op_util.h"
 #include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
 
-#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU)
+#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU) || defined(WITH_XPU)
 
 namespace oneflow {
 
@@ -288,9 +288,10 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
 REGISTER_USER_KERNEL("_nccl_logical_send_recv")
     .SetCreateFn<CclLogicalSendRecv>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     || (user_op::HobDeviceType() == DeviceType::kXPU)
                      || (user_op::HobDeviceType() == DeviceType::kNPU))
     .SetInferTmpSizeFn(InferTmpBufferSize);
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA || WITH_NPU
+#endif  // WITH_CUDA || WITH_NPU || WITH_XPU

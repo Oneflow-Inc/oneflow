@@ -353,6 +353,11 @@ if(BUILD_CUDA)
                               PROPERTIES COMPILE_FLAGS "-DCUDA_REAL_ARCHS=\"${CUDA_REAL_ARCHS}\"")
 endif()
 
+if(BUILD_XPU)
+  add_definitions(-DWITH_XPU)
+endif()
+message(STATUS "BUILD_XPU: ${BUILD_XPU}")
+
 if(BUILD_NPU)
   add_definitions(-DWITH_NPU)
 endif()
