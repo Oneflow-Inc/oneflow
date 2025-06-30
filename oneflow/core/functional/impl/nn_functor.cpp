@@ -930,9 +930,9 @@ class SkipLayerNormFunctor {
                 std::tuple<bool, bool, bool, bool>(has_skip, has_gamma, has_beta, has_bias),
                 op_expr));
           }  // has_bias
-        }    // has_beta
-      }      // has_gamma
-    }        // has_skip
+        }  // has_beta
+      }  // has_gamma
+    }  // has_skip
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -1170,8 +1170,8 @@ class SkipRMSNormFunctor {
           ops_.insert(std::pair<std::tuple<bool, bool, bool>, std::shared_ptr<OpExpr>>(
               std::tuple<bool, bool, bool>(has_weight, has_skip, has_bias), op_expr));
         }  // has_bias
-      }    // has_skip
-    }      // has_weight
+      }  // has_skip
+    }  // has_weight
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -1477,7 +1477,7 @@ class MaxUnpoolNDFunctor {
                            .Input("x")
                            .Input("indices")
                            .Output("y")
-                           .Build())){};
+                           .Build())) {};
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& indices,
                            const std::vector<int32_t>& kernel_size,
@@ -2238,7 +2238,7 @@ class SparseSoftmaxCrossEntropyFunctor {
                                const std::shared_ptr<one::Tensor>& label) const {
     if (!(logits->is_global() && label->is_global())) { return false; }
     // npu-implementation not support ms version yet
-#if defined(WITH_NPU) || defined(WITH_MLU)
+#if defined(WITH_NPU) || defined(WITH_MLU) || defined(WITH_XPU)
     return false;
 #endif
 

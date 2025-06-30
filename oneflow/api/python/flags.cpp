@@ -37,6 +37,14 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
 #endif  // WITH_NPU
   });
 
+  m.def("with_xpu", []() {
+#ifdef WITH_XPU
+    return true;
+#else
+    return false;
+#endif  // WITH_XPU
+  });
+
   m.def("with_mlu", []() {
 #ifdef WITH_MLU
     return true;

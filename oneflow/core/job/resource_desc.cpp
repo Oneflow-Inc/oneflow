@@ -77,6 +77,8 @@ bool ResourceDesc::nccl_use_compute_stream() const {
   return resource_.nccl_use_compute_stream();
 #elif defined(WITH_MLU)
   return resource_.nccl_use_compute_stream();
+#elif defined(WITH_XPU)
+  return resource_.nccl_use_compute_stream();
 #else
   return false;
 #endif

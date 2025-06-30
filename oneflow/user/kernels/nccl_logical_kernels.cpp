@@ -28,7 +28,8 @@ limitations under the License.
 #include "oneflow/user/kernels/collective_communication/include/broadcast.h"
 #include "oneflow/user/kernels/collective_communication/include/reduce.h"
 
-#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU) || defined(WITH_MLU)
+#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU) || defined(WITH_MLU) \
+    || defined(WITH_XPU)
 
 namespace oneflow {
 
@@ -640,4 +641,4 @@ REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_s2s");
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA || WITH_NPU || WITH_MLU
+#endif  // WITH_CUDA || WITH_NPU || WITH_MLU || WITH_XPU

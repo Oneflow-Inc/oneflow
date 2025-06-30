@@ -28,7 +28,8 @@ limitations under the License.
 #include "collective_communication/include/all_to_all.h"
 #include "collective_communication/include/reduce_scatter.h"
 
-#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU) || defined(WITH_MLU)
+#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU) || defined(WITH_MLU) \
+    || defined(WITH_MLU)
 
 namespace oneflow {
 
@@ -712,4 +713,4 @@ REGISTER_USER_KERNEL("_nccl_logical_fusion")
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA || WITH_NPU || WITH_MLU
+#endif  // WITH_CUDA || WITH_NPU || WITH_MLU || WITH_XPU
