@@ -73,12 +73,20 @@ CollectiveBoxingConf ResourceDesc::collective_boxing_conf() const {
 bool ResourceDesc::nccl_use_compute_stream() const {
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
   return resource_.nccl_use_compute_stream();
-#elif defined(WITH_NPU)
+#else
+  return false;
+#endif
+
+#if defined(WITH_DEVICES)
+#if defined(WITH_NPU)
   return resource_.nccl_use_compute_stream();
 #elif defined(WITH_MLU)
   return resource_.nccl_use_compute_stream();
+#elif defined(WITH_XPU)
+  return resource_.nccl_use_compute_stream();
 #else
   return false;
+#endif
 #endif
 }
 

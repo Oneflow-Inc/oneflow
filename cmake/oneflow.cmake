@@ -353,15 +353,37 @@ if(BUILD_CUDA)
                               PROPERTIES COMPILE_FLAGS "-DCUDA_REAL_ARCHS=\"${CUDA_REAL_ARCHS}\"")
 endif()
 
+# init flag of devices
+set(DEVICES_ENABLED FALSE)
+
 if(BUILD_NPU)
   add_definitions(-DWITH_NPU)
+  set(DEVICES_ENABLED TRUE)
 endif()
-message(STATUS "BUILD_NPU: ${BUILD_NPU}")
+message(STATUS "NPU support enabled.")
 
 if(BUILD_MLU)
   add_definitions(-DWITH_MLU)
+  set(DEVICES_ENABLED TRUE)
 endif()
+message(STATUS "MLU support enabled.")
+
+if(DEVICES_ENABLED)
+  # check WITH_DEVICES defined or not
+  get_directory_property(EXISTING_DEFS COMPILE_DEFINITIONS)
+  
+  if(NOT "WITH_DEVICES" IN_LIST EXISTING_DEFS)
+    add_definitions(-DWITH_DEVICES)
+    message(STATUS "Added generic device support definition")
+  else()
+    message(STATUS "Generic device support already defined")
+  endif()
+endif()
+
+# show all devices status
 message(STATUS "BUILD_MLU: ${BUILD_MLU}")
+message(STATUS "BUILD_NPU: ${BUILD_NPU}")
+message(STATUS "Generic device support: ${DEVICE_ENABLED}")
 
 if(BUILD_CUDA AND WITH_CUTLASS)
   if(CUDA_VERSION VERSION_GREATER_EQUAL "10.1")
