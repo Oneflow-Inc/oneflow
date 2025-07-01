@@ -371,7 +371,7 @@ message(STATUS "MLU support enabled.")
 if(DEVICES_ENABLED)
   # check WITH_DEVICES defined or not
   get_directory_property(EXISTING_DEFS COMPILE_DEFINITIONS)
-  
+
   if(NOT "WITH_DEVICES" IN_LIST EXISTING_DEFS)
     add_definitions(-DWITH_DEVICES)
     message(STATUS "Added generic device support definition")
