@@ -102,7 +102,7 @@ class NDNcclSendRecvBoxingSubTskGphBuilder final : public HierarchicalSubTskGphB
     if (in_parallel_desc.device_type() == out_parallel_desc.device_type()
         && in_parallel_desc.device_type() != DeviceType::kCPU
         && !NdSbpHasPartialParallel(out_nd_sbp)) {
-#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_DEVICES)
+#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU) || defined(WITH_MLU)
       ParallelConf merged_parallel_conf;
       MergeParallelConf(in_parallel_desc.parallel_conf(), out_parallel_desc.parallel_conf(),
                         &merged_parallel_conf);

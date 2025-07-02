@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/auto_memory.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#if defined(WITH_CUDA) || defined(WITH_DEVICES)
+#if defined(WITH_CUDA) || defined(WITH_NPU) || defined(WITH_MLU)
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -883,4 +883,4 @@ REGISTER_JOB_PASS("InsertNcclLogicalOpPass", InsertNcclLogicalOpPass);
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA || WITH_DEVICES
+#endif  // WITH_CUDA || WITH_NPU || defined(WITH_MLU)

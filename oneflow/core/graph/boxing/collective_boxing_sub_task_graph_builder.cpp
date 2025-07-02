@@ -35,18 +35,12 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
   if (collective_boxing_conf.nccl_enable_all_to_all()) {
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
     builders.emplace_back(new CclAll2AllSubTskGphBuilder(DeviceType::kCUDA));
-#else
-    LOG(WARNING) << "nccl_enable_all_to_all is unavailable unless NCCL_VERSION > 2.7.0";
-#endif
-
-#if defined(WITH_DEVICES)
-#if defined(WITH_NPU)
+#elif defined(WITH_NPU)
     builders.emplace_back(new CclAll2AllSubTskGphBuilder(DeviceType::kNPU));
 #elif defined(WITH_MLU)
     builders.emplace_back(new CclAll2AllSubTskGphBuilder(DeviceType::kMLU));
-#elif defined(WITH_XPU)
-    builders.emplace_back(new CclAll2AllSubTskGphBuilder(DeviceType::kXPU));
-#endif
+#else
+    LOG(WARNING) << "nccl_enable_all_to_all is unavailable unless NCCL_VERSION > 2.7.0";
 #endif
   }
   chain_builder_.reset(new ChainSubTskGphBuilder(builders));
