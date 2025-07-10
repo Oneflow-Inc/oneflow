@@ -13,7 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+from .torchvision import _cuda_version,nms
 
 def load_library(path):
-    raise ImportError("load_library is not implemented")
+    print("\nload_library: %s >>> do nothing. \n"%(path))
+    # raise ImportError("load_library is not implemented")
