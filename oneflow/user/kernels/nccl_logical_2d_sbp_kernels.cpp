@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/user/kernels/collective_communication/include/all_gather.h"
 #include "oneflow/user/kernels/collective_communication/include/all_to_all.h"
 
-#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU) || defined(WITH_MLU)
+#if (defined(WITH_CUDA) && (NCCL_VERSION_CODE > 2700)) || defined(WITH_NPU) || defined(WITH_MLU) || defined(WITH_XPU)
 
 namespace oneflow {
 

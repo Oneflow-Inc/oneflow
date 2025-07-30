@@ -71,6 +71,8 @@ class PackKernel final : public user_op::OpKernel {
 OF_PP_FOR_EACH_TUPLE(REGISTER_PACK_KERNEL, DEVICE_TYPE_SEQ)
 #if defined(WITH_MLU)
 REGISTER_PACK_KERNEL(DeviceType::kMLU)
+#elif defined(WITH_XPU)
+REGISTER_PACK_KERNEL(DeviceType::kXPU)
 #endif
 #undef REGISTER_PACK_KERNEL
 

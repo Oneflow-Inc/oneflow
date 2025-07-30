@@ -70,7 +70,7 @@ Runtime::Runtime(
     Singleton<RuntimeJobDescs>::Get()->AddPlan(plan);
     collective_boxing_scheduler_plan_token_ =
         Singleton<boxing::collective::Scheduler>::Get()->AddPlan(plan);
-#if defined(WITH_CUDA) || defined(WITH_NPU) || defined(WITH_MLU)
+#if defined(WITH_CUDA) || defined(WITH_NPU) || defined(WITH_MLU) || defined(WITH_XPU)
     const auto& vaild_ccl_comm_mgr_device_types =
         EagerCclCommMgrBuilder::Get().vaild_ccl_comm_mgr_device_types();
     if (!vaild_ccl_comm_mgr_device_types.empty() && !Singleton<EagerCclCommMgr>::Get()) {

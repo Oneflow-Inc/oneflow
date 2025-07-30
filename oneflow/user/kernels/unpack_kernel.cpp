@@ -64,6 +64,8 @@ class UnpackKernel final : public user_op::OpKernel {
 OF_PP_FOR_EACH_TUPLE(REGISTER_UNPACK_KERNEL, DEVICE_TYPE_SEQ)
 #if defined(WITH_MLU)
 REGISTER_UNPACK_KERNEL(DeviceType::kMLU)
+#elif defined(WITH_XPU)
+REGISTER_UNPACK_KERNEL(DeviceType::kXPU)
 #endif
 #undef REGISTER_UNPACK_KERNEL
 

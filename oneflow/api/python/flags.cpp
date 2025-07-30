@@ -45,6 +45,14 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
 #endif  // WITH_MLU
   });
 
+  m.def("with_xpu", []() {
+#ifdef WITH_XPU
+    return true;
+#else
+    return false;
+#endif  // WITH_XPU
+  });
+
   m.def("cuda_version", []() {
 #ifdef WITH_CUDA
     return CUDA_VERSION;
