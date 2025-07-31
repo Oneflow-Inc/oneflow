@@ -62,7 +62,9 @@ class UnpackKernel final : public user_op::OpKernel {
       (user_op::HobDeviceType() == device));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_UNPACK_KERNEL, DEVICE_TYPE_SEQ)
-
+#if defined(WITH_MLU)
+REGISTER_UNPACK_KERNEL(DeviceType::kMLU)
+#endif
 #undef REGISTER_UNPACK_KERNEL
 
 }  // namespace

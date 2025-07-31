@@ -68,7 +68,8 @@ struct AutoRegistrationFactory {
   bool has_creators() const { return creators_.get() != nullptr; }
 
   const HashMap<Key, Creator>& creators() const {
-    CHECK(has_creators()) << "Unregistered key type: " << typeid(Key).name();
+    CHECK(has_creators()) << "Unregistered key type: " << typeid(Key).name()
+                          << "Base type name:" << typeid(Base).name();
     return *creators_.get();
   }
 
