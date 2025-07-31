@@ -70,16 +70,18 @@ Maybe<void> InferGeluGradTensorDesc(user_op::InferContext* ctx) {
   const Shape& x_shape = ctx->InputShape("x", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   CHECK_OR_RETURN(dy_shape == x_shape)
-      << "InferTensorDesc failed (" << ctx->op_name() << "). Expected x shape "
-      << x_shape.ToString() << " to be equal to dy shape " << dy_shape.ToString();
+  << Error::RuntimeError()
+  << "InferTensorDesc failed (" << ctx->op_name() << "). Expected x shape "
+  << x_shape.ToString() << " to be equal to dy shape " << dy_shape.ToString();
   ctx->SetOutputShape("dx", 0, dy_shape);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferGeluGradDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0))
-      << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("dy", 0))
-      << ", but got " << DataType_Name(ctx->InputDType("x", 0));
+  << Error::TypeError()
+  << "InferDataType Failed. Expected " << DataType_Name(ctx->InputDType("dy", 0))
+  << ", but got " << DataType_Name(ctx->InputDType("x", 0));
   ctx->SetOutputDType("dx", 0, ctx->InputDType("x", 0));
   return Maybe<void>::Ok();
 }
@@ -133,7 +135,8 @@ Maybe<void> GetGeluGradSbp(user_op::SbpContext* ctx) {
   const Shape& in_shape = ctx->InputShape("in", 0);
   const Shape& m_shape = ctx->InputShape("multiplier", 0);
   CHECK_OR_RETURN(ctx->InputShape("multiplier", 0) == in_shape)
-      << "Expected multiplier shape " << in_shape.ToString() << ", but got " << m_shape.ToString();
+  << Error::RuntimeError()
+  << "Expected multiplier shape " << in_shape.ToString() << ", but got " << m_shape.ToString();
   ctx->SetOutputShape("out", 0, in_shape);
   return Maybe<void>::Ok();
 }
@@ -146,8 +149,9 @@ Maybe<void> GetGeluGradSbp(user_op::SbpContext* ctx) {
   const DataType in_dtype = ctx->InputDType("in", 0);
   const DataType m_dtype = ctx->InputDType("multiplier", 0);
   CHECK_EQ_OR_RETURN(m_dtype, in_dtype)
-      << "Expected multiplier data type " << DataType_Name(in_dtype) << ", but got "
-      << DataType_Name(m_dtype);
+  << Error::TypeError()
+  << "Expected multiplier data type " << DataType_Name(in_dtype) << ", but got "
+  << DataType_Name(m_dtype);
   ctx->SetOutputDType("out", 0, in_dtype);
   return Maybe<void>::Ok();
 }
