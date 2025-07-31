@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_replication_pad2d_impl(test_case, padding, placement, sbp):
     m = torch.nn.ReplicationPad2d(padding=padding)
     dims = [random(2, 4) * 8 for _ in range(4)]
