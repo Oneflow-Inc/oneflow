@@ -72,21 +72,25 @@ void MemcpyOffset(void* dst, size_t dst_off, const void* src, size_t src_off, si
 void InitOrCheckMetaValue(const std::string& pathname, int64_t expected, bool init) {
   bool exists = PosixFile::FileExists(pathname);
   if (init) {
-    CHECK(!exists) << pathname;
+    CHECK(!exists) << pathname << " has been existed. ";
     std::ofstream ofs(pathname);
     ofs << expected << std::endl;
   } else {
-    CHECK(exists);
+    CHECK(exists) << pathname << " not exist. ";
     std::ifstream ifs(pathname);
     int64_t value = 0;
     ifs >> value;
-    if (value != expected) { LOG(FATAL) << "Check failed: " << pathname; }
+    if (value != expected) {
+      LOG(FATAL) << "Check failed: " << pathname
+                 << ". Try to clean up your persistent_path directory. ";
+    }
   }
 }
 
 std::string GetChunkName(uint64_t chunk_id) {
   const std::string chunk_name_wo_leading_zero = std::to_string(chunk_id);
-  CHECK_LE(chunk_name_wo_leading_zero.size(), kChunkNameSuffixLength);
+  CHECK_LE(chunk_name_wo_leading_zero.size(), kChunkNameSuffixLength)
+      << "chunk name length should be less equal than " << kChunkNameSuffixLength << ". ";
   return std::string(kChunkNameSuffixLength - chunk_name_wo_leading_zero.size(), '0')
          + chunk_name_wo_leading_zero;
 }
@@ -364,7 +368,8 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
     lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
   }
   const uint64_t target_chunk_size = options.target_chunk_size_mb * 1024 * 1024;
-  CHECK_GE(target_chunk_size, logical_block_size_);
+  CHECK_GE(target_chunk_size, logical_block_size_)
+      << "target_chunk_size should be greater equal than logical_block_size. ";
   num_logical_blocks_per_chunk_ = target_chunk_size / logical_block_size_,
   num_values_per_block_ = logical_block_size_ / value_size_;
   num_values_per_chunk_ = num_values_per_block_ * num_logical_blocks_per_chunk_;
@@ -505,7 +510,8 @@ void PersistentTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* 
                    (batch_chunk_id + 1) * num_logical_blocks_per_chunk_ - batch_start_block_id);
       const uint64_t values_bytes = blocks_to_write * logical_block_size_;
       const uint64_t values_offset_in_file = block_id_in_chunk * logical_block_size_;
-      CHECK_LE(value_file.Size(), values_offset_in_file);
+      CHECK_LE(value_file.Size(), values_offset_in_file)
+          << "value_file size should be less equal than " << values_offset_in_file << ". ";
       value_file.Truncate(values_offset_in_file + values_bytes);
       PCHECK(pwrite(value_file.fd(), BytesOffset(blocks, written_blocks * logical_block_size_),
                     values_bytes, values_offset_in_file)
@@ -591,7 +597,7 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshotImpl(const std::string& name)
     const uint64_t chunk_id = GetChunkId(index_filename, kIndexFileNamePrefix);
     PosixFile index_file(PosixFile::JoinPath(snapshot_base, index_filename), O_RDONLY, 0644);
     const size_t index_file_size = index_file.Size();
-    CHECK_EQ(index_file_size % sizeof(uint64_t), 0);
+    CHECK_EQ(index_file_size % sizeof(uint64_t), 0) << "index_file_size should be divided by 8. ";
     if (index_file_size == 0) { return; }
     const size_t n_entries = index_file_size / sizeof(uint64_t);
     PosixMappedFile mapped_index(std::move(index_file), index_file_size, PROT_READ);
@@ -672,7 +678,7 @@ void PersistentTableImpl<Key, Engine>::LoadSnapshot(
     const uint64_t chunk_id = GetChunkId(index_filename, kIndexFileNamePrefix);
     PosixFile index_file(PosixFile::JoinPath(snapshot_base, index_filename), O_RDONLY, 0644);
     const size_t index_file_size = index_file.Size();
-    CHECK_EQ(index_file_size % sizeof(uint64_t), 0);
+    CHECK_EQ(index_file_size % sizeof(uint64_t), 0) << "index_file_size should be divided by 8. ";
     if (index_file_size == 0) { return; }
     const size_t n_entries = index_file_size / sizeof(uint64_t);
     PosixMappedFile mapped_index(std::move(index_file), index_file_size, PROT_READ, mmap_flags);
@@ -758,7 +764,8 @@ class SnapshotIteratorImpl : public PersistentTable::Iterator {
         PosixFile index_file(PosixFile::JoinPath(snapshot_base, indices_names_[current_chunk_]),
                              O_RDONLY, 0644);
         const size_t index_file_size = index_file.Size();
-        CHECK_EQ(index_file_size % sizeof(uint64_t), 0);
+        CHECK_EQ(index_file_size % sizeof(uint64_t), 0)
+            << "index_file_size should be divided by 8. ";
         if (index_file_size == 0) {
           current_chunk_ += 1;
           continue;
