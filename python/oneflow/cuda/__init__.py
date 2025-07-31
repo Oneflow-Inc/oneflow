@@ -179,20 +179,7 @@ def synchronize(device: Union[flow.device, str, int, None] = None) -> None:
         flow._oneflow_internal.CudaSynchronize(device_idx)
 
 
-def empty_cache() -> None:
-    r"""
-    
-    Releases all unoccupied cached memory currently held by the caching 
-    allocators of all OneFlow streams so those can be re-allocated in OneFlow streams 
-    or other GPU application and visible in `nvidia-smi`.
-    
-    Note:
-            :func:`~flow.cuda.empty_cache` may enable one stream to release memory 
-            and then freed memory can be used by another stream. It may also help reduce 
-            fragmentation of GPU memory in certain cases.
-
-    """
-    return flow._oneflow_internal.EmptyCache()
+from .memory import *  # noqa: F403
 
 
 def mem_get_info(device: Any = None) -> Tuple[int, int]:
