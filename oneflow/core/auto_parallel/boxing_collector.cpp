@@ -600,7 +600,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
     // Otherwise, one-step transfer
     return Maybe<void>::Ok();
   }
-#endif  // WITH_CUDA || WITH_NPU || defined(WITH_MLU)
+#endif  // WITH_CUDA || WITH_NPU || WITH_MLU || WITH_XPU
 
   if (JUST(ComputeLazyCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc,
                                            producer_parallel_desc, consumer_parallel_desc,

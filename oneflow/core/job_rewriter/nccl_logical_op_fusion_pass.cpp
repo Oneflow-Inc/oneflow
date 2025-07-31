@@ -293,4 +293,4 @@ REGISTER_JOB_PASS("NcclLogicalOpFusionPass", NcclLogicalOpFusionPass);
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA || WITH_NPU || WITH_MLU
+#endif  // WITH_CUDA || WITH_NPU || WITH_MLU || WITH_XPU

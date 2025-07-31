@@ -254,4 +254,4 @@ REGISTER_SYSTEM_OP_KERNEL_UNIFIED_CCL_COMM_INIT(OperatorConf::kNcclSendRecvBoxin
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA || WITH_NPU || WITH_MLU
+#endif  // WITH_CUDA || WITH_NPU || WITH_MLU || WITH_XPU

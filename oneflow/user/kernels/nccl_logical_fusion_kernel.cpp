@@ -704,6 +704,7 @@ REGISTER_USER_KERNEL("_nccl_logical_fusion")
     .SetCreateFn<CclLogicalFusionKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
                      || (user_op::HobDeviceType() == DeviceType::kNPU)
+                     || (user_op::HobDeviceType() == DeviceType::kXPU)
                      || (user_op::HobDeviceType() == DeviceType::kMLU))
     .SetInferTmpSizeFn(InferNcclLogicalFusionKernelTmpBufferSize);
 
@@ -712,4 +713,4 @@ REGISTER_USER_KERNEL("_nccl_logical_fusion")
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA || WITH_NPU || WITH_MLU
+#endif  // WITH_CUDA || WITH_NPU || WITH_MLU || WITH_XPU

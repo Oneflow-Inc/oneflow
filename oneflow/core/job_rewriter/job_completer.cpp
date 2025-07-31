@@ -169,7 +169,7 @@ Maybe<void> JobCompleter::Complete(Job* job) {
     JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
     compile_tc->Count("[GraphCompile]" + job_name + " DumpBlobParallelConfPass", 1, true);
   }
-#endif  // WITH_CUDA || WITH_NPU || WITH_MLU
+#endif  // WITH_CUDA || WITH_NPU || WITH_MLU || WITH_XPU
   JUST(JobPass4Name("LogicalChainPass")(job, &job_pass_ctx));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
 

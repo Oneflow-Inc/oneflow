@@ -554,4 +554,4 @@ REGISTER_USER_KERNEL_UNIFIED_CCL_COMM_INIT("_nccl_logical_2D_same_dim1_all_reduc
 
 }  // namespace oneflow
 
-#endif  // WITH_CUDA || WITH_NPU || WITH_MLU
+#endif  // WITH_CUDA || WITH_NPU || WITH_MLU || WITH_XPU

@@ -78,7 +78,7 @@ Runtime::Runtime(
           EagerCclCommMgrBuilder::Get().NewCclCommMgr(vaild_ccl_comm_mgr_device_types.front()));
     }
     Singleton<EagerCclCommMgr>::Get()->CreateCommFromPlan(plan);
-#endif  // defined(WITH_CUDA) || defined(WITH_NPU) || defined(WITH_MLU)
+#endif  // defined(WITH_CUDA) || defined(WITH_NPU) || defined(WITH_MLU) || defined(WITH_XPU)
   }
   std::vector<const TaskProto*> source_tasks;
   source_tasks.reserve(plan.task().size());
