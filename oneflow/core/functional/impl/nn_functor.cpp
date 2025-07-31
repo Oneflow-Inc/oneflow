@@ -930,9 +930,9 @@ class SkipLayerNormFunctor {
                 std::tuple<bool, bool, bool, bool>(has_skip, has_gamma, has_beta, has_bias),
                 op_expr));
           }  // has_bias
-        }    // has_beta
-      }      // has_gamma
-    }        // has_skip
+        }  // has_beta
+      }  // has_gamma
+    }  // has_skip
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -1170,8 +1170,8 @@ class SkipRMSNormFunctor {
           ops_.insert(std::pair<std::tuple<bool, bool, bool>, std::shared_ptr<OpExpr>>(
               std::tuple<bool, bool, bool>(has_weight, has_skip, has_bias), op_expr));
         }  // has_bias
-      }    // has_skip
-    }      // has_weight
+      }  // has_skip
+    }  // has_weight
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -1477,7 +1477,7 @@ class MaxUnpoolNDFunctor {
                            .Input("x")
                            .Input("indices")
                            .Output("y")
-                           .Build())){};
+                           .Build())) {};
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& indices,
                            const std::vector<int32_t>& kernel_size,
@@ -3456,6 +3456,37 @@ class L2NormalizeFunctor {
     auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("epsilon", "axis");
     attrs.SetAllAttrs(epsilon, final_dim);
 
+    auto device_type = DeviceType::kCPU;
+#ifdef WITH_NPU
+    if (input->is_global()) {
+      device_type = JUST(input->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(input->device())->enum_type();
+    }
+    if (device_type == DeviceType::kNPU) {
+      auto cpu_input = JUST(one::functional::To(input, "cpu"));
+      if (axis_ == final_dim) {
+        auto cpu_output = OpInterpUtil::Dispatch<Tensor>(*op_, {cpu_input}, attrs);
+        return one::functional::To(JUST(cpu_output), "npu");
+        // if (input->is_global()) {
+        //   return one::functional::To(JUST(cpu_output), input->parallel_desc());
+        // } else {
+        //   return one::functional::To(JUST(cpu_output), input->device());
+        // }
+      } else {
+        std::vector<int> input_perm(input->shape()->dim_vec().size(), 0);
+        for (size_t i = 0; i < input_perm.size(); ++i) { input_perm[i] = static_cast<int>(i); }
+        std::swap(input_perm[final_dim], input_perm[static_cast<size_t>(axis_)]);
+
+        const auto cpu_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+            *op_, {JUST(functional::Transpose(cpu_input, input_perm))}, attrs));
+        auto cpu_output = functional::Transpose((*cpu_result)[0], input_perm);
+        return one::functional::To(JUST(cpu_output), "npu");
+      }
+    }
+
+#endif
+
     if (axis_ == final_dim) { return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs); }
 
     std::vector<int> input_perm(input->shape()->dim_vec().size(), 0);
@@ -3476,7 +3507,7 @@ class NormalizeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const float& p,
                            const int32_t& dim, const float& eps,
                            const bool& use_l2_norm_kernel) const {
-    if (use_l2_norm_kernel && (std::fabs(p - 2.0f) < std::numeric_limits<float>::min())) {
+    if ((std::fabs(p - 2.0f) < std::numeric_limits<float>::min())) {
       return functional::L2Normalize(input, dim, eps);
     }
     return SequenceFunction<Maybe<Tensor>(const std::shared_ptr<Tensor>&, const float&,
