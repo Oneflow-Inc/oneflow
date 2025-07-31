@@ -567,7 +567,8 @@ Maybe<void> UnifyInputAndIndicesOnDevice(const std::shared_ptr<Tensor>& x,
         LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
         tensor_indices[i] = JUST(ToGlobal(tensor_index, placement,
                                           std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
-                                          grad_sbp_tuple, /*check_meta=*/false, /*copy=*/false));
+                                          grad_sbp_tuple, /*check_meta=*/false, /*sync_data*/ true,
+                                          /*copy=*/false));
       }
     }
   }
