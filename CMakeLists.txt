@@ -116,6 +116,7 @@ list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
 
 include(threading)
 include(util)
+include(CPM)
 include(proto2cpp)
 
 if(NOT DEFINED USE_CXX11_ABI)
