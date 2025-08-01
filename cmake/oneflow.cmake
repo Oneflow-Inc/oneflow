@@ -358,6 +358,11 @@ if(BUILD_NPU)
 endif()
 message(STATUS "BUILD_NPU: ${BUILD_NPU}")
 
+if(BUILD_MLU)
+  add_definitions(-DWITH_MLU)
+endif()
+message(STATUS "BUILD_MLU: ${BUILD_MLU}")
+
 if(BUILD_CUDA AND WITH_CUTLASS)
   if(CUDA_VERSION VERSION_GREATER_EQUAL "10.1")
     add_definitions(-DCUTLASS_ENABLE_TENSOR_CORE_MMA=1)

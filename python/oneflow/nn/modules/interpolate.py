@@ -310,6 +310,80 @@ def interpolate(
     ).forward(input)
 
 
+def interpolate_like(
+    input, like, mode="nearest", align_corners=None,
+):
+    """The interface is consistent with PyTorch.
+
+    The documentation is referenced from: https://pytorch.org/docs/1.10/_modules/torch/nn/functional.html#interpolate.
+
+
+    Down/up samples the input to the same shape as the `like` tensor.
+
+    The algorithm used for interpolation is determined by :attr:`mode`.
+
+    Currently temporal, spatial and volumetric sampling are supported, i.e.
+    expected inputs are 3-D, 4-D or 5-D in shape.
+
+    The input dimensions are interpreted in the form:
+    `mini-batch x channels x [optional depth] x [optional height] x width`.
+
+    The modes available for resizing are: `nearest`, `linear` (3D-only),
+    `bilinear`, `bicubic` (4D-only), `trilinear` (5D-only), `area`
+
+    Args:
+        input (Tensor): the input tensor
+        like (Tensor): the like tensor
+        mode (str): algorithm used for upsampling:
+            ``'nearest'`` | ``'linear'`` | ``'bilinear'`` | ``'bicubic'`` |
+            ``'trilinear'`` | ``'area'``. Default: ``'nearest'``
+        align_corners (bool, optional): Geometrically, we consider the pixels of the
+            input and output as squares rather than points.
+            If set to ``True``, the input and output tensors are aligned by the
+            center points of their corner pixels, preserving the values at the corner pixels.
+            If set to ``False``, the input and output tensors are aligned by the corner
+            points of their corner pixels, and the interpolation uses edge value padding
+            for out-of-boundary values. This only has an effect when :attr:`mode`
+            is ``'linear'``, ``'bilinear'``, ``'bicubic'`` or ``'trilinear'``.
+            Default: ``False``
+
+    .. note::
+        With ``mode='bicubic'``, it's possible to cause overshoot, in other words it can produce
+        negative values or values greater than 255 for images.
+        Explicitly call ``result.clamp(min=0, max=255)`` if you want to reduce the overshoot
+        when displaying the image.
+
+    .. warning::
+        With ``align_corners = True``, the linearly interpolating modes
+        (`linear`, `bilinear`, and `trilinear`) don't proportionally align the
+        output and input pixels, and thus the output values can depend on the
+        input size. This was the default behavior for these modes up to version
+        0.3.1. Since then, the default behavior is ``align_corners = False``.
+        See :class:`~torch.nn.Upsample` for concrete examples on how this
+        affects the outputs.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        >>> like = flow.randn(1, 1, 4, 4)
+        >>> output = flow.nn.functional.interpolate_like(input, like, mode="nearest")
+        >>> output
+        tensor([[[[1., 1., 2., 2.],
+                  [1., 1., 2., 2.],
+                  [3., 3., 4., 4.],
+                  [3., 3., 4., 4.]]]], dtype=oneflow.float32)
+
+    """
+    return Interpolate(
+        size=like.shape[2:], mode=mode, align_corners=align_corners,
+    ).forward(input)
+
+
 if __name__ == "__main__":
     import doctest
 

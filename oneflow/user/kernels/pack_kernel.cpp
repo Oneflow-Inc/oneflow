@@ -69,7 +69,9 @@ class PackKernel final : public user_op::OpKernel {
       (user_op::HobDeviceType() == device));
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_PACK_KERNEL, DEVICE_TYPE_SEQ)
-
+#if defined(WITH_MLU)
+REGISTER_PACK_KERNEL(DeviceType::kMLU)
+#endif
 #undef REGISTER_PACK_KERNEL
 
 }  // namespace

@@ -37,6 +37,8 @@ CollectiveBoxingSubTskGphBuilder::CollectiveBoxingSubTskGphBuilder() {
     builders.emplace_back(new CclAll2AllSubTskGphBuilder(DeviceType::kCUDA));
 #elif defined(WITH_NPU)
     builders.emplace_back(new CclAll2AllSubTskGphBuilder(DeviceType::kNPU));
+#elif defined(WITH_MLU)
+    builders.emplace_back(new CclAll2AllSubTskGphBuilder(DeviceType::kMLU));
 #else
     LOG(WARNING) << "nccl_enable_all_to_all is unavailable unless NCCL_VERSION > 2.7.0";
 #endif
