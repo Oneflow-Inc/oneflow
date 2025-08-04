@@ -6361,7 +6361,8 @@ def OneFlow_MultinomialWithReplacementOp : OneFlow_BaseOp<"multinomial_with_repl
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$seed,
-    DefaultValuedAttr<SI32Attr, "1">:$num_samples
+    DefaultValuedAttr<SI32Attr, "1">:$num_samples,
+    DefaultValuedAttr<BoolAttr, "true">:$replacement
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

@@ -801,6 +801,8 @@ class MultinomialFunctor {
                              .Input("prefix_sum")
                              .Output("out")
                              .Build());
+    op_npu_ =
+        CHECK_JUST(one::OpBuilder("multinomial_with_replacement").Input("x").Output("out").Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int& num_samples,
@@ -823,10 +825,17 @@ class MultinomialFunctor {
     CHECK_OR_RETURN(num_categories <= FLOAT32_MAX_CONSECUTIVE_INT)
         << "number of categories cannot exceed 2^24";
 
+    DeviceType input_device = DeviceType::kCPU;
+    if (x->is_global()) {
+      JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc())));
+      input_device = JUST(x->parallel_desc())->device_type();
+    } else {
+      input_device = JUST(x->device())->enum_type();
+    }
     // Fast-path for no replacement.
     // Reference:
     // https://github.com/pytorch/pytorch/issues/11931#issuecomment-625882503
-    if (!replacement) {
+    if (!replacement || input_device != DeviceType::kNPU) {
       // The algorithm is from gumbel softmax.
       // s = argmax( logp - log(-log(eps)) ) where eps ~ U(0, 1)
       // Here we can apply exp to the formula which will not affect result of
@@ -847,6 +856,7 @@ class MultinomialFunctor {
       std::shared_ptr<Tensor> result;
       if (num_samples == 1) {
         result = JUST(functional::ArgMax(q, -1, true, JUST(DType::Get(DataType::kInt64))));
+      } else if (input_device == DeviceType::kNPU){
       } else {
         std::shared_ptr<TensorTuple> temp =
             JUST(functional::TopK(q, num_samples, -1,
@@ -856,23 +866,18 @@ class MultinomialFunctor {
       return result;
     }
 
-    DeviceType input_device = DeviceType::kCPU;
-    if (x->is_global()) {
-      JUST(CheckDeviceIdsIsValid(JUST(x->parallel_desc())));
-      input_device = JUST(x->parallel_desc())->device_type();
-    } else {
-      input_device = JUST(x->device())->enum_type();
-    }
     auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     gen = JUST(GetGeneratorForLazyOrGlobal(gen, LazyMode::is_enabled(), x));
-    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("seed", "num_samples");
-    attrs.SetAllAttrs(static_cast<int64_t>(gen->current_seed()), num_samples);
+    auto& attrs = THREAD_CACHED_MUTABLE_ATTR_MAP("seed", "num_samples", "replacement");
+    attrs.SetAllAttrs(static_cast<int64_t>(gen->current_seed()), num_samples, replacement);
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, distribution_state);
 
     if (input_device == DeviceType::kCPU) {
       return OpInterpUtil::Dispatch<Tensor>(*op_cpu_, {x}, ctx);
+    } else if (input_device == DeviceType::kNPU) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_npu_, {x}, ctx);
     } else {
       std::shared_ptr<Tensor> sum_last_dim = JUST(functional::ReduceSum(x, {-1}, true, NullOpt));
       std::shared_ptr<Tensor> norm_dist = JUST(functional::Div(x, sum_last_dim));
@@ -884,6 +889,7 @@ class MultinomialFunctor {
  private:
   std::shared_ptr<OpExpr> op_cpu_;
   std::shared_ptr<OpExpr> op_gpu_;
+  std::shared_ptr<OpExpr> op_npu_;
 };
 
 }  // namespace impl
