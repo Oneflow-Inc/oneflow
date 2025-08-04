@@ -835,7 +835,7 @@ class MultinomialFunctor {
     // Fast-path for no replacement.
     // Reference:
     // https://github.com/pytorch/pytorch/issues/11931#issuecomment-625882503
-    if (!replacement || input_device != DeviceType::kNPU) {
+    if (!replacement && input_device != DeviceType::kNPU) {
       // The algorithm is from gumbel softmax.
       // s = argmax( logp - log(-log(eps)) ) where eps ~ U(0, 1)
       // Here we can apply exp to the formula which will not affect result of
