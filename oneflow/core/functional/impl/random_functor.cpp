@@ -856,7 +856,7 @@ class MultinomialFunctor {
       std::shared_ptr<Tensor> result;
       if (num_samples == 1) {
         result = JUST(functional::ArgMax(q, -1, true, JUST(DType::Get(DataType::kInt64))));
-      } else if (input_device == DeviceType::kNPU){
+      } else if (input_device == DeviceType::kNPU) {
       } else {
         std::shared_ptr<TensorTuple> temp =
             JUST(functional::TopK(q, num_samples, -1,
