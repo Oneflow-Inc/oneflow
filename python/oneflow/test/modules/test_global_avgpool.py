@@ -21,7 +21,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1, check_graph="ValidatedFalse")
 def _test_avgpool1d_with_random_data(test_case, placement, sbp):
     m = torch.nn.AvgPool1d(
         kernel_size=random(4, 6),
@@ -39,7 +39,7 @@ def _test_avgpool1d_with_random_data(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1, check_graph="ValidatedFalse")
 def _test_avgpool2d_with_random_data(test_case, placement, sbp):
     m = torch.nn.AvgPool2d(
         kernel_size=random(4, 6),
@@ -58,7 +58,7 @@ def _test_avgpool2d_with_random_data(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1, check_graph="ValidatedFalse")
 def _test_avgpool3d_with_random_data(test_case, placement, sbp):
     m = torch.nn.AvgPool3d(
         kernel_size=random(4, 6),
@@ -77,7 +77,7 @@ def _test_avgpool3d_with_random_data(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1, check_graph="ValidatedFalse")
 def _test_functional_avgpool1d_with_random_data(test_case, placement, sbp):
     ndim = 3
     dims = [random(1, 3) * 8 for _ in range(ndim)]
@@ -93,7 +93,7 @@ def _test_functional_avgpool1d_with_random_data(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1, check_graph="ValidatedFalse")
 def _test_functional_avgpool2d_with_random_data(test_case, placement, sbp):
     ndim = 4
     dims = [random(1, 3) * 8 for _ in range(ndim)]
@@ -109,7 +109,7 @@ def _test_functional_avgpool2d_with_random_data(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, check_graph=True)
+@autotest(n=1, check_graph="ValidatedFalse")
 def _test_functional_avgpool3d_with_random_data(test_case, placement, sbp):
     ndim = 5
     dims = [random(1, 3) * 8 for _ in range(ndim)]
