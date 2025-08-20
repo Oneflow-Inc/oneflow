@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/global_mode.h"
 #include "oneflow/core/kernel/kernel_util.h"
@@ -129,8 +130,10 @@ Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor) {
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                       const Optional<Symbol<Device>>& device,
                                       const bool requires_grad, const bool pin_memory) {
+  auto device_ = device.value_or(GetDefaultDevice());
   bool is_bfloat16_dtype = dtype ? JUST(dtype)->data_type() == DataType::kBFloat16 : false;
-  bool is_cuda_device = device ? JUST(device)->enum_type() == DeviceType::kCUDA : false;
+  bool is_cuda_device = (device_->enum_type() == DeviceType::kCUDA);
+
   if (is_bfloat16_dtype && is_cuda_device) {
 #if CUDA_VERSION < 11000
     return Error::RuntimeError()
@@ -168,12 +171,6 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   const Shape shape(DimVector(dims_ptr, dims_ptr + PyArray_NDIM(np_arr)));
   DataType np_data_type = JUST(numpy::GetOFDataTypeFromNpArray(np_arr));
 
-  Symbol<Device> device_;
-  if (device) {
-    device_ = JUST(device);
-  } else {
-    device_ = JUST(Device::New("cpu"));
-  }
   std::shared_ptr<Tensor> tensor =
       JUST(functional::Empty(shape, JUST(DType::Get(np_data_type)), device_,
                              /*requires_grad=*/false, /*pin_memory=*/pin_memory));

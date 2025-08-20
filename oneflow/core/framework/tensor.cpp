@@ -37,6 +37,27 @@ namespace oneflow {
 
 namespace one {
 
+namespace {
+
+std::mutex default_device_mutex;
+Symbol<Device>* GetMutDefaultDeviceSymbol() {
+  static Symbol<Device> default_device = CHECK_JUST(Device::New("cpu"));
+  return &default_device;
+}
+
+}  // namespace
+
+Symbol<Device> GetDefaultDevice() {
+  std::lock_guard<std::mutex> locker(default_device_mutex);
+  return *GetMutDefaultDeviceSymbol();
+}
+
+Maybe<void> SetDefaultDevice(const Symbol<Device>& device) {
+  std::lock_guard<std::mutex> locker(default_device_mutex);
+  *GetMutDefaultDeviceSymbol() = device;
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> Tensor::BorrowTensorName(const Tensor* other) const {
   CHECK_OR_RETURN(other->is_lazy())
       << Error::RuntimeError() << "can not borrow tensor name from an eager tensor";
