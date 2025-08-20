@@ -342,12 +342,13 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
       JUST(ShapeAndDataTypeConsistencyCheck(parallel_desc, *logical_shape, *dtype));
     }
   }
-  if (JUST(RankGroup::New(parallel_desc)) != JUST(RankGroupScope::CurrentRankGroup())) {
-    const auto& flat_shape_dtype =
-        JUST(BroadcastShapeAndDtype(*logical_shape, *dtype, parallel_desc));
-    *logical_shape = *JUST(flat_shape_dtype->ToShape());
-    *dtype = flat_shape_dtype->dtype();
-  }
+  // TODO: move global to global(e.g. from [0,1] to [2,3])
+  // if (JUST(RankGroup::New(parallel_desc)) != JUST(RankGroupScope::CurrentRankGroup())) {
+  //   const auto& flat_shape_dtype =
+  //       JUST(BroadcastShapeAndDtype(*logical_shape, *dtype, parallel_desc));
+  //   *logical_shape = *JUST(flat_shape_dtype->ToShape());
+  //   *dtype = flat_shape_dtype->dtype();
+  // }
   return Maybe<void>::Ok();
 }
 
