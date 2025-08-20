@@ -104,17 +104,20 @@ class ProxyModule(Proxy):
             return
         assert isinstance(origin, Module)
         for (n, m) in origin._modules.items():
-            self.__setattr__(
-                n,
-                get_proxy_cls(m)(
-                    m,
-                    self.to(GraphModule)._name_prefix
-                    + self.to(GraphModule)._name
-                    + ".",
+            if m is None:
+                self.__setattr__(n, None)
+            else:
+                self.__setattr__(
                     n,
-                    self.to(GraphModule)._belonged_graph,
-                ),
-            )
+                    get_proxy_cls(m)(
+                        m,
+                        self.to(GraphModule)._name_prefix
+                        + self.to(GraphModule)._name
+                        + ".",
+                        n,
+                        self.to(GraphModule)._belonged_graph,
+                    ),
+                )
         for (n, p) in list(origin.named_parameters("", False)):
             self.__setattr__(
                 n,
