@@ -1279,6 +1279,10 @@
   signature: 'Tensor (Tensor x, *, Tensor cos=None, Tensor sin=None, Tensor position_ids=None, String x_layout="BHMK", String output_layout=None, String mode="plane", Int64 tensor_index=None, Int64 k_size=None, Float base=1e4, Int64 rotary_size=None) => FusedApplyRotaryEmb'
   bind_python: True
 
+- name: "fused_apply_rotary_emb_grad"
+  signature: 'Tensor (Tensor x, Tensor dy, Tensor cos=None, Tensor sin=None, Tensor position_ids=None, String x_layout="BHMK", String output_layout=None, String mode="plane", Int64 tensor_index=None, Int64 k_size=None, Float base=1e4, Int64 rotary_size=None) => FusedApplyRotaryEmbGrad'
+  bind_python: False
+  
 - name: "fused_relu_dropout_grad"
   signature: "Tensor (Tensor dy, Tensor mask, Float scale) => FusedReluDropoutGrad"
   bind_python: False
