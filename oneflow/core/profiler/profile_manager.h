@@ -20,7 +20,12 @@ limitations under the License.
 #include <queue>
 #include <set>
 #include <unordered_map>
+#include <glog/logging.h>
 #include "oneflow/core/profiler/kineto_shim.h"
+
+#if defined(WITH_NPU)
+#include "oneflow/core/profiler/acl_profiler.h"
+#endif
 
 namespace oneflow {
 namespace profiler {
@@ -32,10 +37,11 @@ class ProfileManager {
  public:
   friend class EventRecorder;
 
-  ProfileManager(bool use_cpu, bool use_cuda, bool record_shapes, bool record_attrs,
+  ProfileManager(bool use_cpu, bool use_cuda, bool use_npu, bool record_shapes, bool record_attrs,
                  bool record_bandwidth)
       : use_cpu_(use_cpu),
         use_cuda_(use_cuda),
+        use_npu_(use_npu),
         record_shapes_(record_shapes),
         record_attrs_(record_attrs),
         record_bandwidth_(record_bandwidth) {
@@ -46,6 +52,19 @@ class ProfileManager {
     PrepareTrace(/*cpuOnly*/ false, activities);
     StartTrace();
 #endif  // WITH_CUDA
+#if defined(WITH_NPU)
+    profConfig_ = AclPrepareTrace();
+    if (profConfig_ == nullptr) {
+      LOG(ERROR) << "ProfileManager npu AclProfilingCreateConfig() failed: "
+                 << "Create Prof Config failed.";
+    }
+    auto ret = AclStartTrace(profConfig_);
+    if (ret != ACL_ERROR_NONE) {
+      LOG(ERROR) << "ProfileManager npu AclProfilingStart() failed: "
+                 << "Profiling start failed, error code:" << ret;
+    }
+
+#endif  // WITH_NPU
   }
 
   std::string RegisterEventRecorder(const std::shared_ptr<EventRecorder>& event_recorder,
@@ -56,17 +75,23 @@ class ProfileManager {
  private:
   bool use_cpu_;
   bool use_cuda_;
+  bool use_npu_;
   bool record_shapes_;
   bool record_attrs_;
   bool record_bandwidth_;
 
   std::queue<std::shared_ptr<IEvent>> events_;
+  std::vector<std::shared_ptr<IEvent>> events_result_;
   std::unordered_map<std::string, std::shared_ptr<EventRecorder>> event_recorders_;
   // To prevent releasing EventRecorders of the same name.
   std::unordered_map<std::string, int64_t> event_recorders_last_id_;
 
   std::string GetNextEventRecorderKey(const std::string& name);
-  std::vector<std::shared_ptr<IEvent>> ExportEvents();
+  void ProcessRawEvents();
+
+#if defined(WITH_NPU)
+  aclprofConfig* profConfig_;
+#endif
 };
 
 }  // namespace profiler

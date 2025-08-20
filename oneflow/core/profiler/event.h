@@ -34,9 +34,10 @@ enum class EventType {
   kOneflowKernel  // OneFlow cpu/cuda kernel
 };
 enum class CustomEventType {
-  kDefault,     // for record_function
-  kCudaKernel,  // cuda kernel
-  kCudaRuntime  // something like cudaLaunchKernel
+  kDefault,      // for record_function
+  kCudaKernel,   // cuda kernel
+  kCudaRuntime,  // something like cudaLaunchKernel
+  kNpuKernel     // huawei ascend npu kernel
 };
 enum class EventTimeUnit { kNS, kUS };
 
@@ -125,7 +126,12 @@ class CustomEvent final : public IEvent {
   CustomEventType type_;
   CustomEvent(const std::string& custom_name, CustomEventType type)
       : IEvent(custom_name,
-               type == CustomEventType::kDefault ? EventTimeUnit::kNS : EventTimeUnit::kUS),
+               [type]() {
+                 if (type == CustomEventType::kDefault || type == CustomEventType::kNpuKernel) {
+                   return EventTimeUnit::kNS;
+                 }
+                 return EventTimeUnit::kUS;
+               }()),
         type_(type) {}
 };
 
@@ -138,8 +144,10 @@ class KernelEvent final : public IEvent {
   static std::shared_ptr<KernelEvent> Create(const std::string& name,
                                              const Description& description);
 
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_NPU)
+#ifdef WITH_CUDA
   void SetMemorySize(int64_t memory_size) { memory_size_ = memory_size; }
+#endif  // WITH_CUDA
   void AddChildEvent(const std::shared_ptr<IEvent>& e) { children_.emplace(e); }
   bool AddChildEventIfSo(const std::shared_ptr<IEvent>& e) {
     if (e->IsChildOf(dynamic_cast<IEvent*>(this))) {
@@ -152,17 +160,18 @@ class KernelEvent final : public IEvent {
   void WalkAmongChildren(const std::function<void(const std::shared_ptr<IEvent>& e)>& f) const {
     for (const auto& x : children_) { f(x); }
   }
-#endif  // WITH_CUDA
+#endif  // WITH_CUDA || WITH_NPU
 
  private:
   KernelEvent(const std::string& kernel_name, const Description& description)
       : IEvent(kernel_name, EventTimeUnit::kNS), description_(description) {}
 
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_NPU)
+#ifdef WITH_CUDA
   int64_t memory_size_ = -1;
-  std::set<std::shared_ptr<IEvent>> children_;
 #endif  // WITH_CUDA
-
+  std::set<std::shared_ptr<IEvent>> children_;
+#endif  // WITH_CUDA || WITH_NPU
   const Description description_;
 };
 

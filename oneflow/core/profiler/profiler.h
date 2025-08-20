@@ -17,6 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_PROFILER_PROFILER_H_
 
 #include "oneflow/core/common/util.h"
+#if defined(WITH_NPU)
+#include "acl/acl.h"
+#endif
 
 namespace oneflow {
 
@@ -63,8 +66,8 @@ class RangeGuard final {
 #define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name)
 #endif
 
-void EnableProfiler(bool use_cpu, bool use_cuda, bool record_shapes, bool record_attrs,
-                    bool record_bandwidth);
+void EnableProfiler(bool use_cpu, bool use_cuda, bool use_npu, bool record_shapes,
+                    bool record_attrs, bool record_bandwidth);
 
 // DisableProfilerAndReturnResult will return a json of profile results.
 Maybe<std::string> DisableProfilerAndReturnResult();
