@@ -1367,7 +1367,7 @@ class Module(object):
             Module: self
 
         Example::
-    
+
             >>> import oneflow as flow
             >>> import oneflow.nn as nn
             >>> @flow.no_grad()

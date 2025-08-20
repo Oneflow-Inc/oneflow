@@ -164,6 +164,15 @@ inline Maybe<void> CopyBetweenLocalTensorAndNumpy(
   return Maybe<void>::Ok();
 }
 
+inline int64_t utils_unpackLong(PyObject* obj) {
+  // NOLINTNEXTLINE(cppcoreguidelines-init-variables)
+  int overflow;
+  long long value = PyLong_AsLongLongAndOverflow(obj, &overflow);
+  if (value == -1 && PyErr_Occurred()) { throw py::value_error(); }
+  if (overflow != 0) { throw std::runtime_error("Overflow when unpacking long"); }
+  return (int64_t)value;
+}
+
 Maybe<std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>>>
 MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t);
 

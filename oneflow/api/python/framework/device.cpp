@@ -15,8 +15,10 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
+#include "oneflow/api/python/utils/tensor_utils.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -25,6 +27,59 @@ limitations under the License.
 namespace py = pybind11;
 
 namespace oneflow {
+
+namespace one {
+
+static py::object Device_memoryStats(int device) {
+  // THPUtils_assert(
+  //     THPUtils_checkLong(arg), "invalid argument to memory_allocated");
+  // const int device = (int) utils_unpackLong(device_id);
+
+  using oneflow::CUDACachingAllocator::DeviceStats;
+  using oneflow::CUDACachingAllocator::Stat;
+  using oneflow::CUDACachingAllocator::StatArray;
+  using oneflow::CUDACachingAllocator::StatType;
+
+  const auto statToDict = [](const Stat& stat) {
+    py::dict dict;
+
+    dict["current"] = stat.current;
+    dict["peak"] = stat.peak;
+    dict["allocated"] = stat.allocated;
+    dict["freed"] = stat.freed;
+    return dict;
+  };
+
+  const auto statArrayToDict = [=](const StatArray& statArray) {
+    const std::array<const char*, static_cast<size_t>(StatType::NUM_TYPES)> statTypeNames = {
+        "all", "small_pool", "large_pool"};
+    py::dict dict;
+    std::vector<int32_t> stat_len(statTypeNames.size());
+    std::iota(stat_len.begin(), stat_len.end(), 0);
+    for (const auto i : stat_len) { dict[statTypeNames[i]] = statToDict(statArray[i]); }
+    return dict;
+  };
+
+  const DeviceStats stats = oneflow::CUDACachingAllocator::GetCUDADeviceStatus(device);
+
+  py::dict result;
+  result["num_alloc_retries"] = stats.num_alloc_retries;
+  result["num_ooms"] = stats.num_ooms;
+  result["max_split_size"] = stats.max_split_size;
+  result["allocation"] = statArrayToDict(stats.allocation);
+  result["segment"] = statArrayToDict(stats.segment);
+  result["active"] = statArrayToDict(stats.active);
+  result["inactive_split"] = statArrayToDict(stats.inactive_split);
+  result["allocated_bytes"] = statArrayToDict(stats.allocated_bytes);
+  result["reserved_bytes"] = statArrayToDict(stats.reserved_bytes);
+  result["active_bytes"] = statArrayToDict(stats.active_bytes);
+  result["inactive_split_bytes"] = statArrayToDict(stats.inactive_split_bytes);
+  result["oversize_allocations"] = statToDict(stats.oversize_allocations);
+  result["oversize_segments"] = statToDict(stats.oversize_segments);
+  return result;
+}
+
+}  // namespace one
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Symbol<Device>, std::shared_ptr<Symbol<Device>>>(m, "device")
@@ -47,6 +102,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def(
       "max_alignment_size", []() { return ep::kMaxAlignmentRequirement; },
       py::return_value_policy::copy);
+  m.def("_cuda_memoryStat", &one::Device_memoryStats);
 }
 
 }  // namespace oneflow
