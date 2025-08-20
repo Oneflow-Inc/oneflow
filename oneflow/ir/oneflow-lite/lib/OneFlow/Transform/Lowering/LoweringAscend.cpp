@@ -37,7 +37,7 @@ limitations under the License.
 // huawei ascend sdk headers
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
-#include "op_proto/built-in/inc/all_ops.h"
+#include "built-in/op_proto/inc/all_ops.h"
 #pragma GCC diagnostic pop
 
 namespace mlir {
@@ -168,7 +168,7 @@ void AscendCompiler::addInputs(llvm::SmallVector<Value, 4>& operands) {
 }
 
 void AscendCompiler::lowerOp(VariableOp op, StringRef checkpointDir) {
-  auto ascendType = convertAscendType(op.data_typeAttr(), op.shapeAttr());
+  auto ascendType = convertAscendType(op.getDataTypeAttr(), op.getShapeAttr());
   llvm::SmallString<128> inputFilename;
   llvm::sys::path::native(checkpointDir + "/" + op.getOpName() + "/out", inputFilename);
   std::string errorMessage;
@@ -191,11 +191,11 @@ void AscendCompiler::lowerOp(VariableOp op, StringRef checkpointDir) {
 
 void AscendCompiler::lowerOp(Conv2DOp op) {
   auto conv2DOp = createOp<ge::op::Conv2D>(op.getOpName());
-  conv2DOp->set_attr_pads(convertPaddings(op.padding_before()));
+  conv2DOp->set_attr_pads(convertPaddings(op.getPaddingBefore()));
   conv2DOp->set_attr_dilations(convertDilations(op.getDilationRate()));
   conv2DOp->set_attr_strides(convertStrides(op.getStrides()));
   conv2DOp->set_attr_groups(op.getGroups());
-  conv2DOp->set_attr_data_format(convertDataFormat(op.data_format()).data());
+  conv2DOp->set_attr_data_format(convertDataFormat(op.getDataFormat()).data());
 
   SET_INPUT(conv2DOp, x, getValue(op.getIn()));
   SET_INPUT(conv2DOp, filter, getValue(op.getWeight()));
@@ -205,10 +205,10 @@ void AscendCompiler::lowerOp(Conv2DOp op) {
 
   auto output = AscendValue(conv2DOp, outType, "y");
 
-  if (op._add_to_output()) {
+  if (op.get_addToOutput()) {
     auto addOp = createOp<ge::op::AddV2>(op.getOpName() + "_add_to_output");
     SET_INPUT(addOp, x1, output);
-    SET_INPUT(addOp, x2, getValue(op._add_to_output()));
+    SET_INPUT(addOp, x2, getValue(op.get_addToOutput()));
     addOp->update_output_desc_y(outType);
     output = AscendValue(addOp, outType, "y");
   }
@@ -229,10 +229,10 @@ void AscendCompiler::lowerOp(NormalizationInferenceOp op) {
   batchNormOp->update_output_desc_y(outType);
 
   auto output = AscendValue(batchNormOp, outType, "y");
-  if (op._add_to_output()) {
+  if (op.get_addToOutput()) {
     auto addOp = createOp<ge::op::AddV2>(op.getOpName() + "_add_to_output");
     SET_INPUT(addOp, x1, output);
-    SET_INPUT(addOp, x2, getValue(op._add_to_output()));
+    SET_INPUT(addOp, x2, getValue(op.get_addToOutput()));
     addOp->update_output_desc_y(outType);
     output = AscendValue(addOp, outType, "y");
   }
@@ -252,7 +252,7 @@ void AscendCompiler::lowerOp(MaxPool2DOp op) {
   maxPoolOp->set_attr_ksize(convertKernelSize(op.getKernelSize()));
   maxPoolOp->set_attr_pads(convertPaddings(op.getPadding()));
   maxPoolOp->set_attr_strides(convertStrides(op.getStride()));
-  maxPoolOp->set_attr_ceil_mode(op.ceil_mode());
+  maxPoolOp->set_attr_ceil_mode(op.getCeilMode());
   maxPoolOp->set_attr_padding_mode("CALCULATED");
   maxPoolOp->set_attr_global_pooling(false);
 
@@ -267,10 +267,10 @@ void AscendCompiler::lowerOp(AvgPool2DOp op) {
   avgPoolOp->set_attr_ksize(convertKernelSize(op.getKernelSize()));
   avgPoolOp->set_attr_pads(convertPaddings(op.getPadding()));
   avgPoolOp->set_attr_strides(convertStrides(op.getStride()));
-  avgPoolOp->set_attr_ceil_mode(op.ceil_mode());
+  avgPoolOp->set_attr_ceil_mode(op.getCeilMode());
   avgPoolOp->set_attr_padding_mode("CALCULATED");
   avgPoolOp->set_attr_global_pooling(false);
-  avgPoolOp->set_attr_exclusive(!op.count_include_pad());
+  avgPoolOp->set_attr_exclusive(!op.getCountIncludePad());
 
   SET_INPUT(avgPoolOp, x, getValue(op.getX()));
   auto outType = convertAscendType(op.getY().getType());
@@ -289,7 +289,7 @@ void AscendCompiler::lowerOp(Add2Op op) {
 
 void AscendCompiler::lowerOp(AdaptiveAvgPool2DOp op) {
   auto adaptiveAvgPoolOp = createOp<ge::op::AdaptiveAvgPool2d>(op.getOpName());
-  ArrayAttr output_size = op.output_size();
+  ArrayAttr output_size = op.getOutputSize();
   assert(output_size.size() == 2);
   int64_t s0 = output_size[0].dyn_cast<IntegerAttr>().getSInt();
   int64_t s1 = output_size[1].dyn_cast<IntegerAttr>().getSInt();
@@ -311,10 +311,10 @@ void AscendCompiler::lowerOp(MatmulOp op) {
   matmulOp->update_output_desc_y(outType);
 
   auto output = AscendValue(matmulOp, outType, "y");
-  if (op._add_to_output()) {
+  if (op.get_addToOutput()) {
     auto addOp = createOp<ge::op::AddV2>(op.getOpName() + "_add_to_output");
     SET_INPUT(addOp, x1, output);
-    SET_INPUT(addOp, x2, getValue(op._add_to_output()));
+    SET_INPUT(addOp, x2, getValue(op.get_addToOutput()));
     addOp->update_output_desc_y(outType);
     output = AscendValue(addOp, outType, "y");
   }
