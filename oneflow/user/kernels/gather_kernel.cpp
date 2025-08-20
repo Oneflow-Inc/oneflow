@@ -17,12 +17,21 @@ limitations under the License.
 #include "oneflow/user/kernels/gather_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/job/nd_sbp_util.h"
+#include "oneflow/core/ep/include/primitive/gather.h"
 
 namespace oneflow {
 
 namespace user_op {
 
 namespace {
+
+template<typename Context>
+std::unique_ptr<ep::primitive::Gather> NewGatherPrimitive(Context* ctx) {
+  DataType data_type = ctx->TensorDesc4ArgNameAndIndex("in", 0)->data_type();
+  DataType indice_type = ctx->TensorDesc4ArgNameAndIndex("indices", 0)->data_type();
+  return ep::primitive::NewPrimitive<ep::primitive::GatherFactory>(ctx->device_type(), data_type,
+                                                                   indice_type);
+}
 
 Shape GetFlatShape(ShapeView shape, int64_t axis) {
   return Shape({shape.Count(0, axis), shape.At(axis), shape.Count(axis + 1)});
@@ -101,10 +110,13 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
       CHECK_EQ(in_shape.At(axis), gather_cache->upper() - gather_cache->lower());
       offset = gather_cache->lower();
     }
+    const auto flatted_shape = GetFlatShape(in_shape, axis);
 
-    GatherKernelUtilImpl<device_type, T, K>::Forward(ctx->stream(), indices->dptr<K>(), num_indices,
-                                                     in->dptr<T>(), GetFlatShape(in_shape, axis),
-                                                     out->mut_dptr<T>(), offset);
+    std::unique_ptr<ep::primitive::Gather> primitive = NewGatherPrimitive(ctx);
+    CHECK(primitive);
+    primitive->Launch(ctx->stream(), /*batch_size=*/1, flatted_shape.At(0), flatted_shape.At(1),
+                      flatted_shape.At(2), in->dptr<T>(), num_indices, indices->dptr<K>(), offset,
+                      out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
