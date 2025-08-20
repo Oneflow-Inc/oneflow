@@ -31,6 +31,34 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+namespace {
+
+class DummyGradFunction : public OpExprGradFunction<AutoGradCaptureState> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DummyGradFunction);
+  explicit DummyGradFunction(const std::string& op_type_name) : op_type_name_(op_type_name) {}
+  ~DummyGradFunction() = default;
+
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(AutoGradCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    return Error::UnimplementedError() << "The gradient function for op " << op_type_name_
+                                       << " is not found. Please check whether it has been "
+                                          "implemented and registered correctly.";
+  }
+
+ private:
+  std::string op_type_name_;
+};
+
+}  // namespace
+
 Maybe<autocast::AutoCastMeta> OpExpr::GetOrCreateAutoCastMeta() const {
   static auto autocast_meta = std::make_shared<autocast::AutoCastMeta>();
   return autocast_meta;
@@ -146,10 +174,11 @@ Maybe<bool> BuiltinOpExprImpl<UserOpConf>::SupportNonContiguous() const {
 template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    CHECK_OR_RETURN((IsClassRegistered<std::string, OpExprGradFunctionIf>(proto().op_type_name())))
-        << "The gradient function for op " << proto().op_type_name()
-        << " is not found. Please check whether it has been implemented and registered correctly.";
-    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>(proto().op_type_name()));
+    if (IsClassRegistered<std::string, OpExprGradFunctionIf>(proto().op_type_name())) {
+      op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>(proto().op_type_name()));
+    } else {
+      op_grad_func_.reset(new DummyGradFunction(proto().op_type_name()));
+    }
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
