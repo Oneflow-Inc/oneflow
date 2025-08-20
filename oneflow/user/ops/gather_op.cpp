@@ -20,11 +20,18 @@ namespace oneflow {
 
 /*static*/ auto GatherOp::InferLogicalTensorDesc(user_op::InferContext* ctx) -> Maybe<void> {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-  CHECK_GT_OR_RETURN(in.shape().NumAxes(), 0);
+  CHECK_GT_OR_RETURN(in.shape().NumAxes(), 0)
+  << Error::RuntimeError()
+  << "The dimension of the input tensor should be greater than zero, "
+  << "but got " << in.shape().NumAxes();
   const int64_t axis = ctx->Attr<int64_t>("axis");
   const user_op::TensorDesc& indices = ctx->InputTensorDesc("indices", 0);
   // For 0-dim Tensor
-  CHECK_GE_OR_RETURN(indices.shape().NumAxes(), 0);  // NOLINT
+  CHECK_GE_OR_RETURN(indices.shape().NumAxes(), 0)
+  << Error::RuntimeError()
+  << "The dimension of the indices tensor should be greater or equal to zero, "
+  << "but got " << indices.shape().NumAxes();
+
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
 
   DimVector dim_vec;
@@ -44,7 +51,7 @@ namespace oneflow {
 /*static*/ auto GatherOp::ModifyInputArg(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                          const user_op::UserOpConfWrapper&) -> Maybe<void> {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-  CHECK_OR_RETURN(indices_modifier != nullptr);
+  CHECK_OR_RETURN(indices_modifier != nullptr); // NOLINT(maybe-need-error-msg)
   indices_modifier->set_requires_grad(false);
   return Maybe<void>::Ok();
 }
@@ -54,8 +61,12 @@ namespace oneflow {
   const int64_t indices_num_axes =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0).shape().NumAxes();
   const int64_t gather_axis = ctx->Attr<int64_t>("axis");
-  CHECK_GE_OR_RETURN(gather_axis, 0);
-  CHECK_LT_OR_RETURN(gather_axis, in_num_axes);
+  CHECK_GE_OR_RETURN(gather_axis, 0) // NOLINT(maybe-need-error-msg)
+  CHECK_LT_OR_RETURN(gather_axis, in_num_axes)
+  << Error::RuntimeError()
+  << "The gather axis should be less or equal to input tensor's axis, "
+  << "but found that the input tensor's axis is " << in_num_axes
+  << ", and the gather axis is " << gather_axis;
   FOR_RANGE(int64_t, i, 0, indices_num_axes) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("indices", 0), i)
@@ -84,7 +95,10 @@ namespace oneflow {
   const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
   const user_op::TensorDesc& indices = ctx->InputTensorDesc("indices", 0);
   user_op::TensorDesc* out = ctx->MutOutputTensorDesc("out", 0);
-  CHECK_OR_RETURN(IsIndexDataType(indices.data_type()));
+  CHECK_OR_RETURN(IsIndexDataType(indices.data_type()))
+  << Error::TypeError() 
+  << "The dtype of the indices tensor must be int32 or int64";
+
   out->set_data_type(in.data_type());
   return Maybe<void>::Ok();
 }
