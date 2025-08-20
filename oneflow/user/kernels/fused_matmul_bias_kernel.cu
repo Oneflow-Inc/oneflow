@@ -23,6 +23,184 @@ namespace oneflow {
 
 namespace {
 
+class FusedMatmulBiasAlgoCache {
+  public:
+    static FusedMatmulBiasAlgoCache* CreateCache() {
+      if (FusedMatmulBiasAlgoCache::cache == nullptr) {
+        FusedMatmulBiasAlgoCache::cache = new FusedMatmulBiasAlgoCache();
+      }
+      return FusedMatmulBiasAlgoCache::cache;
+    }
+    ~FusedMatmulBiasAlgoCache() = default;
+    const cublasLtMatmulAlgo_t* SelectAlgo(const ep::CudaStream* cuda_stream, const CublasFusedMLPKernelCache* matmul_cache, 
+      CublasScalarParameter alpha, CublasScalarParameter beta, const user_op::Tensor* weight, 
+      const user_op::Tensor* x, const user_op::Tensor* add_to_output, void* y_ptr) {
+      auto matmul_desc = matmul_cache->operation_desc;
+      auto a_desc = matmul_cache->cublas_a_desc;
+      auto b_desc = matmul_cache->cublas_b_desc;
+      auto c_desc = matmul_cache->cublas_c_desc;
+
+      int64_t seed = 0;
+      std::hash<int64_t> hash_fn;
+
+      HashMatmulDesc_(matmul_desc, &seed, hash_fn);
+      HashMatrixLayoutDesc_(a_desc, &seed, hash_fn);
+      HashMatrixLayoutDesc_(b_desc, &seed, hash_fn);
+      HashMatrixLayoutDesc_(c_desc, &seed, hash_fn);
+
+      auto it = map_.find(seed);
+      if (it != map_.end()) {
+        return &(it->second.algo);
+      }
+
+      int64_t row, col;
+      size_t size_to_write;
+      cublasLtMatrixLayoutGetAttribute(
+          c_desc, CUBLASLT_MATRIX_LAYOUT_ROWS, &row, sizeof(row), &size_to_write);
+      cublasLtMatrixLayoutGetAttribute(
+          c_desc, CUBLASLT_MATRIX_LAYOUT_COLS, &col, sizeof(col), &size_to_write);
+
+      cublasLtMatmulPreference_t preference = nullptr;
+      size_t workspace_size = cuda_stream->cublas_workspace_size();
+      OF_CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&preference));
+      OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(preference,
+                                                          CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
+                                                          &workspace_size, sizeof(workspace_size)));
+      int returned_results = 0;
+      cublasLtMatmulHeuristicResult_t heuristic_result[4];
+      OF_CUBLAS_CHECK(cublasLtMatmulAlgoGetHeuristic(
+          cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, matmul_cache->cublas_a_desc,
+          matmul_cache->cublas_b_desc, matmul_cache->cublas_c_desc, matmul_cache->cublas_c_desc,
+          preference, 4, heuristic_result, &returned_results)); //TODO: magic number 4
+      CHECK_GT(returned_results, 0);
+      cublasLtMatmulPreferenceDestroy(preference);    
+
+      cudaEvent_t st, ed;
+      float ms;
+      cudaEventCreate(&st);
+      cudaEventCreate(&ed);
+      std::vector<std::pair<int, float>> sorted_algos;
+
+      for (int i = 0; i < returned_results; i++) {
+        for (int j = 0; j < 128; j++) { //TODO: magic number 128
+          OF_CUBLAS_CHECK(cublasLtMatmul(
+          cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &alpha, weight->dptr(),
+          matmul_cache->cublas_a_desc, x->dptr(), matmul_cache->cublas_b_desc, &beta,
+          (add_to_output == nullptr) ? y_ptr : add_to_output->dptr(), matmul_cache->cublas_c_desc,
+          y_ptr, matmul_cache->cublas_c_desc, &heuristic_result[i].algo, cuda_stream->cublas_workspace(),
+          cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
+        }
+
+        cudaEventRecord(st);
+        for (int j = 0; j < 128; j++) { //TODO: magic number 128
+          OF_CUBLAS_CHECK(cublasLtMatmul(
+          cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &alpha, weight->dptr(),
+          matmul_cache->cublas_a_desc, x->dptr(), matmul_cache->cublas_b_desc, &beta,
+          (add_to_output == nullptr) ? y_ptr : add_to_output->dptr(), matmul_cache->cublas_c_desc,
+          y_ptr, matmul_cache->cublas_c_desc, &heuristic_result[i].algo, cuda_stream->cublas_workspace(),
+          cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
+        }
+        cudaEventRecord(ed);
+        cudaEventSynchronize(ed);
+        cudaEventElapsedTime(&ms, st, ed);
+
+        sorted_algos.push_back(std::pair<int, float>(i, ms));
+      }
+
+      std::sort(sorted_algos.begin(), sorted_algos.end(), [](auto pair1, auto pair2) {return pair1.second < pair2.second;});
+
+      int fastest_result_id = sorted_algos[0].first;
+      map_[seed] = heuristic_result[fastest_result_id];
+
+      return &(map_[seed].algo);
+    }
+  
+  private:
+    void HashMatmulDesc_(cublasLtMatmulDesc_t desc,
+                       int64_t* seed,
+                       const std::hash<int64_t>& hash_fn) {
+      size_t size_to_write;
+      int trans_a, trans_b;
+      uint32_t epilogue;
+
+      cublasLtMatmulDescGetAttribute(desc,
+                                      CUBLASLT_MATMUL_DESC_TRANSA,
+                                      &trans_a,
+                                      sizeof(trans_a),
+                                      &size_to_write);
+      HashValue_(seed, hash_fn, static_cast<int64_t>(trans_a));
+
+      cublasLtMatmulDescGetAttribute(desc,
+                                      CUBLASLT_MATMUL_DESC_TRANSB,
+                                      &trans_b,
+                                      sizeof(trans_b),
+                                      &size_to_write);
+      HashValue_(seed, hash_fn, static_cast<int64_t>(trans_b));
+
+      cublasLtMatmulDescGetAttribute(desc,
+                                      CUBLASLT_MATMUL_DESC_EPILOGUE,
+                                      &epilogue,
+                                      sizeof(epilogue),
+                                      &size_to_write);
+      HashValue_(seed, hash_fn, static_cast<int64_t>(epilogue));
+    }
+
+      void HashMatrixLayoutDesc_(cublasLtMatrixLayout_t desc,
+                             int64_t* seed,
+                             const std::hash<int64_t>& hash_fn) {
+      size_t size_to_write;
+      uint32_t dtype;
+      int32_t batch;
+      uint64_t row, col;
+      int64_t ld, batch_offset;
+
+      cublasLtMatrixLayoutGetAttribute(desc,
+                                        CUBLASLT_MATRIX_LAYOUT_TYPE,
+                                        &dtype,
+                                        sizeof(dtype),
+                                        &size_to_write);
+      HashValue_(seed, hash_fn, static_cast<int64_t>(dtype));
+
+      cublasLtMatrixLayoutGetAttribute(
+          desc,
+          CUBLASLT_MATRIX_LAYOUT_BATCH_COUNT,
+          &batch,
+          sizeof(batch),
+          &size_to_write);
+      HashValue_(seed, hash_fn, static_cast<int64_t>(batch));
+
+      cublasLtMatrixLayoutGetAttribute(
+          desc, CUBLASLT_MATRIX_LAYOUT_ROWS, &row, sizeof(row), &size_to_write);
+      HashValue_(seed, hash_fn, static_cast<int64_t>(row));
+
+      cublasLtMatrixLayoutGetAttribute(
+          desc, CUBLASLT_MATRIX_LAYOUT_COLS, &col, sizeof(col), &size_to_write);
+      HashValue_(seed, hash_fn, static_cast<int64_t>(col));
+
+      cublasLtMatrixLayoutGetAttribute(
+          desc, CUBLASLT_MATRIX_LAYOUT_LD, &ld, sizeof(ld), &size_to_write);
+      HashValue_(seed, hash_fn, static_cast<int64_t>(ld));
+
+      cublasLtMatrixLayoutGetAttribute(
+          desc,
+          CUBLASLT_MATRIX_LAYOUT_STRIDED_BATCH_OFFSET,
+          &batch_offset,
+          sizeof(batch_offset),
+          &size_to_write);
+      HashValue_(seed, hash_fn, static_cast<int64_t>(batch_offset));
+    }
+
+    void HashValue_(int64_t* seed,
+                    const std::hash<int64_t>& hash_fn,
+                    int64_t value) {
+      *seed ^= hash_fn(value) + 0x9e3779b9 + (*seed << 6) + (*seed >> 2);
+    }
+
+    FusedMatmulBiasAlgoCache() = default;
+    std::map<int64_t, cublasLtMatmulHeuristicResult_t> map_;
+    inline static FusedMatmulBiasAlgoCache* cache = nullptr;
+};
+
 class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   FusedMatmulBiasKernel() = default;
@@ -80,26 +258,15 @@ class FusedMatmulBiasKernel final : public user_op::OpKernel, public user_op::Cu
                   /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                   /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue, bias->dptr(),
                   nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+    
+    FusedMatmulBiasAlgoCache* algo_cache = FusedMatmulBiasAlgoCache::CreateCache();
+    const cublasLtMatmulAlgo_t* algo = algo_cache->SelectAlgo(cuda_stream, matmul_cache, sp_alpha, sp_beta, weight, x, _add_to_output, y_ptr);
 
-    cublasLtMatmulPreference_t preference = nullptr;
-    size_t workspace_size = cuda_stream->cublas_workspace_size();
-    OF_CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&preference));
-    OF_CUBLAS_CHECK(cublasLtMatmulPreferenceSetAttribute(preference,
-                                                         CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
-                                                         &workspace_size, sizeof(workspace_size)));
-    int returned_results = 0;
-    cublasLtMatmulHeuristicResult_t heuristic_result;
-    OF_CUBLAS_CHECK(cublasLtMatmulAlgoGetHeuristic(
-        cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, matmul_cache->cublas_a_desc,
-        matmul_cache->cublas_b_desc, matmul_cache->cublas_c_desc, matmul_cache->cublas_c_desc,
-        preference, 1, &heuristic_result, &returned_results));
-    CHECK_EQ(returned_results, 1);
-    cublasLtMatmulPreferenceDestroy(preference);
     OF_CUBLAS_CHECK(cublasLtMatmul(
         cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha, weight->dptr(),
         matmul_cache->cublas_a_desc, x->dptr(), matmul_cache->cublas_b_desc, &sp_beta,
         (_add_to_output == nullptr) ? y_ptr : _add_to_output->dptr(), matmul_cache->cublas_c_desc,
-        y_ptr, matmul_cache->cublas_c_desc, &heuristic_result.algo, cuda_stream->cublas_workspace(),
+        y_ptr, matmul_cache->cublas_c_desc, algo, cuda_stream->cublas_workspace(),
         cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
   }
 
