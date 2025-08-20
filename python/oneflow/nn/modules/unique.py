@@ -66,16 +66,30 @@ def unique_op(
         tensor([3, 1, 2, 0, 2], dtype=oneflow.int64)
 
     """
-    if not return_inverse and not return_counts:
-        return flow._C.unique(input, sorted, dtype=dtype)
+    device = input.device
+    if device == flow.device("npu"):
+        cpu_input = input.to("cpu")
+        if not return_inverse and not return_counts:
+            return flow._C.unique(cpu_input, sorted, dtype=dtype).to(device=device)
+        else:
+            return flow._C.unique(
+                input,
+                sorted,
+                return_inverse=return_inverse,
+                return_counts=return_counts,
+                dtype=dtype,
+            ).to(device=device)
     else:
-        return flow._C.unique(
-            input,
-            sorted,
-            return_inverse=return_inverse,
-            return_counts=return_counts,
-            dtype=dtype,
-        )
+        if not return_inverse and not return_counts:
+            return flow._C.unique(input, sorted, dtype=dtype)
+        else:
+            return flow._C.unique(
+                input,
+                sorted,
+                return_inverse=return_inverse,
+                return_counts=return_counts,
+                dtype=dtype,
+            )
 
 
 if __name__ == "__main__":
