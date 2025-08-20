@@ -146,7 +146,7 @@ class GlobalTensorConstantFunctor {
       const auto& fixed_sbp_tuple = JUST(NdSbpReplacePartialByBroadcast(sbp_tuple));
       const auto& tensor = JUST(dispatch_constant(*fixed_sbp_tuple));
       return functional::ToGlobal(tensor, placement, sbp_tuple, {}, /* check_meta */ false,
-                                  /*copy*/ false);
+                                  /* sync_data */ true, /*copy*/ false);
     } else {
       return dispatch_constant(sbp_tuple);
     }
@@ -237,7 +237,7 @@ class GlobalConstantFunctor {
       const auto& fixed_sbp_tuple = JUST(NdSbpReplacePartialByBroadcast(sbp_tuple));
       const auto& tensor = JUST(dispatch_constant(*fixed_sbp_tuple));
       return functional::ToGlobal(tensor, placement, sbp_tuple, {}, /* check_meta */ false,
-                                  /*copy*/ false);
+                                  /* sync_data */ true, /*copy*/ false);
     } else {
       return dispatch_constant(sbp_tuple);
     }

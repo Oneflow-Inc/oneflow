@@ -94,7 +94,7 @@ Maybe<void> GetItemInScalarTensor(const std::shared_ptr<Tensor>& scalar_tensor, 
       }
       const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
       tensor = JUST(functional::ToGlobal(tensor, parallel_desc, {broadcast_sbp}, /*grad_sbp=*/{},
-                                         /*check_meta=*/false, /*copy=*/false));
+                                         /*check_meta=*/false, /*sync_data=*/true, /*copy=*/false));
       tensor = JUST(functional::GlobalToLocal(tensor, /*copy=*/false));
     }
     local_tensor = JUST(tensor->AsLocalTensor());
