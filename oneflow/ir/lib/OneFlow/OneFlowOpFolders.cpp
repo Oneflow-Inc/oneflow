@@ -30,6 +30,8 @@ limitations under the License.
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/variable_tensor_mgr.h"
+#include "oneflow/api/common/folder_rule_table.h"
+
 
 namespace mlir {
 namespace oneflow {
@@ -42,6 +44,21 @@ using MaybeTensor = ::oneflow::Maybe<::oneflow::one::Tensor>;
 StringAttr GenNewVariableOpName(MLIRContext* ctx, const std::string& key = "") {
   if (key == "") { return StringAttr::get(ctx, "variable_" + ::oneflow::NewUniqueId()); }
   return StringAttr::get(ctx, "variable_" + key + "_" + ::oneflow::NewUniqueId());
+}
+
+StringAttr GenNewUnaryVariableOpName(MLIRContext* ctx, const std::string& operand_name,
+                                     const std::string& oprator_name) {
+  std::string infix_rule = oprator_name + " ( " + operand_name + " )";
+  ::oneflow::AppendRuleToFolderRuleTable(infix_rule);
+  return StringAttr::get(ctx, infix_rule);
+}
+
+StringAttr GenNewBinaryVariableOpName(MLIRContext* ctx, const std::string& lhs_operand_name,
+                                      const std::string& rhs_operand_name,
+                                      const std::string& oprator_name) {
+  std::string infix_rule = "( " + lhs_operand_name + " ) " + oprator_name + " ( " + rhs_operand_name + " )";
+  ::oneflow::AppendRuleToFolderRuleTable(infix_rule);
+  return StringAttr::get(ctx, infix_rule);
 }
 
 bool MLIRDataTypesAreSame(const std::vector<DataType>& data_types) {
@@ -63,6 +80,7 @@ bool DictionaryAttrsHaveSameDataType(const std::vector<mlir::DictionaryAttr>& at
 }
 
 OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
+                       const std::string& operator_name,
                        const std::function<MaybeTensor(const TensorPtr&)>& f) {
   ::oneflow::LazyMode::Guard guard{false};
   if (!operands.front()) { return {}; }  // Important!
@@ -74,7 +92,9 @@ OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
       attr_dict.get(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr()));
   const auto result = f(tensor).GetPtrOrThrow();
   attrs.set("value", support::TensorToDenseElementsAttr(result, ctx));
-  attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), GenNewVariableOpName(ctx));
+  auto operand_name = attr_dict.get("op_name").cast<mlir::StringAttr>().getValue().str();
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+            GenNewUnaryVariableOpName(ctx, operand_name, operator_name));
   attrs.set(OpTrait::TensorSource<void>::getDataTypeAttrName(),
             attr_dict.get(OpTrait::TensorSource<void>::getDataTypeAttrName()));
 
@@ -82,6 +102,7 @@ OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
 }
 
 OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
+                        const std::string& operator_name,
                         const std::function<MaybeTensor(const TensorPtr&, const TensorPtr&)>& f) {
   ::oneflow::LazyMode::Guard guard{false};
   if (!(operands.front() && operands.back())) { return {}; }  // Important!
@@ -107,7 +128,10 @@ OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
   const auto result = f(lhs_tensor, rhs_tensor).GetPtrOrThrow();
 
   attrs.set("value", support::TensorToDenseElementsAttr(result, ctx));
-  attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), GenNewVariableOpName(ctx));
+  auto lhs_operand_name = lhs_attr_dict.get("op_name").cast<mlir::StringAttr>().getValue().str();
+  auto rhs_operand_name = rhs_attr_dict.get("op_name").cast<mlir::StringAttr>().getValue().str();
+  attrs.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(), 
+            GenNewBinaryVariableOpName(ctx, lhs_operand_name, rhs_operand_name, operator_name));
   attrs.set(OpTrait::TensorSource<void>::getDataTypeAttrName(),
             lhs_attr_dict.get(OpTrait::TensorSource<void>::getDataTypeAttrName()));
 
@@ -129,22 +153,33 @@ OpFoldResult FrozenVariableOp::fold(FoldAdaptor adaptor) {
   return DictionaryAttr::get(getContext(), attrs);
 }
 
+template<typename T>
+std::string VectorToString(const std::vector<T>& vec) {
+    std::stringstream ss;
+    ss << "[";
+    for (const auto& elem : vec) {
+        ss << elem << ",";
+    }
+    ss << "]";
+    return ss.str();
+}
+
 OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
   auto operands = adaptor.getOperands();
-  return UnaryFold(getContext(), operands, [this](const auto& tensor) {
-    std::vector<int32_t> perm_;
-    for (auto& x : getPerm().getValue()) { perm_.emplace_back(x.cast<IntegerAttr>().getSInt()); }
+  std::vector<int32_t> perm_;
+  for (auto& x : getPerm().getValue()) { perm_.emplace_back(x.cast<IntegerAttr>().getSInt()); }
+  return UnaryFold(getContext(), operands, "Transpose("+VectorToString(perm_)+")", [this, &perm_](const auto& tensor) {
     return functional::Transpose(tensor, perm_);
   });
 }
 
 OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   auto operands = adaptor.getOperands();
-  return UnaryFold(getContext(), operands, [this](const auto& tensor) {
-    std::vector<int64_t> shape_vec;
-    for (auto& x : getShape().getValue()) {
-      shape_vec.emplace_back(x.cast<mlir::IntegerAttr>().getValue().getSExtValue());
-    }
+  std::vector<int64_t> shape_vec;
+  for (auto& x : getShape().getValue()) {
+    shape_vec.emplace_back(x.cast<mlir::IntegerAttr>().getValue().getSExtValue());
+  }
+  return UnaryFold(getContext(), operands, "Reshape("+VectorToString(shape_vec)+")", [this, &shape_vec](const auto& tensor) {
     return functional::Reshape(
         tensor, ::oneflow::Shape(::oneflow::DimVector(shape_vec.begin(), shape_vec.end())));
   });
@@ -152,7 +187,7 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult ScalarAddOp::fold(FoldAdaptor adaptor) {
   auto operands = adaptor.getOperands();
-  return UnaryFold(getContext(), operands, [this](const auto& tensor) -> MaybeTensor {
+  return UnaryFold(getContext(), operands, "ScalarAdd("+std::to_string(getIntOperand())+")", [this](const auto& tensor) -> MaybeTensor {
     if (getHasIntOperand()) { return functional::ScalarAdd(tensor, getIntOperand(), 1, false); }
     if (getHasFloatOperand()) {
       return functional::ScalarAdd(tensor, getFloatOperand().convertToDouble(), 1, false);
@@ -164,24 +199,25 @@ OpFoldResult ScalarAddOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult SqrtOp::fold(FoldAdaptor adaptor) {
   auto operands = adaptor.getOperands();
-  return UnaryFold(getContext(), operands, functional::Sqrt);
+  return UnaryFold(getContext(), operands, "Sqrt", functional::Sqrt);
 }
 
 OpFoldResult BroadcastMulOp::fold(FoldAdaptor adaptor) {
   auto operands = adaptor.getOperands();
-  return BinaryFold(getContext(), operands, functional::Mul);
+  return BinaryFold(getContext(), operands, "BroadcastMul", functional::Mul);
 }
 
 OpFoldResult BroadcastDivOp::fold(FoldAdaptor adaptor) {
   auto operands = adaptor.getOperands();
-  return BinaryFold(getContext(), operands, functional::Div);
+  return BinaryFold(getContext(), operands, "BroadcastDiv", functional::Div);
 }
 
 OpFoldResult BroadcastSubOp::fold(FoldAdaptor adaptor) {
   auto operands = adaptor.getOperands();
-  return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> MaybeTensor {
-    return functional::Sub(lhs, rhs, /*alpha=*/1.0, false);
-  });
+  return BinaryFold(getContext(), operands, "BroadcastSub",
+                    [](const auto& lhs, const auto& rhs) -> MaybeTensor {
+                      return functional::Sub(lhs, rhs, /*alpha=*/1.0, false);
+                    });
 }
 
 }  // namespace oneflow
