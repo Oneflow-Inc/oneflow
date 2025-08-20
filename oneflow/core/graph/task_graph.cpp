@@ -557,6 +557,11 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
       return src_node;
     } else if (dst_mem_zone_id.device_type() == DeviceType::kCPU) {
       if (src_mem_zone_id.rank() == dst_mem_zone_id.rank()) {
+        if (ParseBooleanFromEnv("ONEFLOW_DISABLE_HD_COPY_STREAM", false)) {
+          // D2H Copy nodes have been added at running lazy_op_interpreter
+          proxy2node[key] = src_node;
+          return src_node;
+        }
         // on the same node, not on the same device
         // src must be not on the cpu mem zone, copy d2h first
         CHECK(IsMemcpyDtoHSupported(src_mem_zone_id.device_type()));
@@ -577,6 +582,11 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
         return copy_comm_net_task;
       }
     } else {
+      if (ParseBooleanFromEnv("ONEFLOW_DISABLE_HD_COPY_STREAM", false)) {
+        // H2D Copy nodes have been added at running lazy_op_interpreter
+        proxy2node[key] = src_node;
+        return src_node;
+      }
       TaskNode* proxy_on_dst_host =
           GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(dst_mem_zone_id.rank()));
       CHECK(IsMemcpyHtoDSupported(dst_mem_zone_id.device_type()));
