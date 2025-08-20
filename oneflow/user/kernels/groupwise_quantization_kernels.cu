@@ -86,6 +86,360 @@ struct Cast<int8_t, Dst, pack_size> {
   }
 };
 
+template<typename Src, typename Dst, size_t pack_size, size_t bits, typename S = void>
+struct LoadCast;
+
+template<typename Dst, size_t pack_size>
+struct LoadCast<
+    uint8_t, Dst, pack_size, 8
+#if __CUDA_ARCH__ >= 530
+    ,
+    typename std::enable_if<pack_size % 4 != 0 || !std::is_same<Dst, half>::value, void>::type
+#endif
+    > {
+  using LoadType = AlignedArray<uint8_t, pack_size>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<Dst, pack_size>* dst) {
+#pragma unroll
+    for (int i = 0; i < pack_size; ++i) { dst->elem[i] = static_cast<Dst>(src.elem[i]); }
+  }
+};
+
+#if __CUDA_ARCH__ >= 530
+template<size_t pack_size>
+struct LoadCast<uint8_t, half, pack_size, 8,
+                typename std::enable_if<pack_size % 4 == 0, void>::type> {
+  using LoadType = AlignedArray<uint32_t, pack_size / 4>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<half, pack_size>* dst) {
+    AlignedArray<half2, pack_size / 2>* dst_h2 =
+        reinterpret_cast<AlignedArray<half2, pack_size / 2>*>(dst);
+    for (int i = 0; i < pack_size / 4; ++i) {
+      union {
+        uint32_t u32;
+        half2 h2;
+      } u32_h2[2];
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(u32_h2[0].u32)
+                   : "r"(src.elem[i]), "n"(0x64), "n"(0x4140));
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(u32_h2[1].u32)
+                   : "r"(src.elem[i]), "n"(0x64), "n"(0x4342));
+      half2 h2_1024 = __float2half2_rn(1024);
+      u32_h2[0].h2 = __hsub2(u32_h2[0].h2, h2_1024);
+      u32_h2[1].h2 = __hsub2(u32_h2[1].h2, h2_1024);
+      dst_h2->elem[i * 2] = u32_h2[0].h2;
+      dst_h2->elem[i * 2 + 1] = u32_h2[1].h2;
+    }
+  }
+};
+#endif
+
+template<typename Dst, size_t pack_size>
+struct LoadCast<
+    uint8_t, Dst, pack_size, 4
+#if __CUDA_ARCH__ >= 530
+    ,
+    typename std::enable_if<pack_size % 8 != 0 || !std::is_same<Dst, half>::value, void>::type
+#endif
+    > {
+  using LoadType = AlignedArray<uint8_t, pack_size / 2>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<Dst, pack_size>* dst) {
+#pragma unroll
+    for (int i = 0; i < pack_size / 2; ++i) {
+      const uint8_t q = src.elem[i];
+      const uint8_t hi = (q >> 4);
+      const uint8_t lo = (q & 0xF);
+      dst->elem[i * 2 + 0] = static_cast<Dst>(hi);
+      dst->elem[i * 2 + 1] = static_cast<Dst>(lo);
+    }
+  }
+};
+
+#if __CUDA_ARCH__ >= 530
+template<size_t pack_size>
+struct LoadCast<uint8_t, half, pack_size, 4,
+                typename std::enable_if<pack_size % 8 == 0, void>::type> {
+  using LoadType = AlignedArray<uint32_t, pack_size / 8>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<half, pack_size>* dst) {
+    static constexpr uint32_t immLut = (0xf0 & 0xcc) | 0xaa;
+    static constexpr uint32_t BOTTOM_MASK = 0x000f000f;
+    static constexpr uint32_t TOP_MASK = 0x00f000f0;
+    static constexpr uint32_t I4s_TO_F16s_MAGIC_NUM = 0x64006400;
+
+    AlignedArray<half2, pack_size / 2>* dst_h2 =
+        reinterpret_cast<AlignedArray<half2, pack_size / 2>*>(dst);
+#pragma unroll
+    for (int i = 0; i < pack_size / 8; ++i) {
+      union {
+        uint32_t u32;
+        half2 h2;
+      } u32_h2[4];
+
+      const uint32_t lsb0_4 = src.elem[i];
+      const uint32_t lsb8_12 = src.elem[i] >> 8;
+
+      // Extract elt_04 (lsb0_4 & 0x000f000f) | 0x64006400
+      asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
+                   : "=r"(u32_h2[0].u32)
+                   : "r"(lsb0_4), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+      // Extract elt_15 (lsb0_4 & 0x00f000f0) | 0x64006400
+      asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
+                   : "=r"(u32_h2[1].u32)
+                   : "r"(lsb0_4), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+      // Extract elt_26 (lsb8_12 & 0x000f000f) | 0x64006400
+      asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
+                   : "=r"(u32_h2[2].u32)
+                   : "r"(lsb8_12), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+      // Extract elt_37 (lsb8_12 & 0x00f000f0) | 0x64006400
+      asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
+                   : "=r"(u32_h2[3].u32)
+                   : "r"(lsb8_12), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+
+      // This is the half2 {1024, 1024} represented as an integer.
+      static constexpr uint32_t FP16_BOTTOM_MAGIC_NUM = 0x64006400;
+      // This is the half2 {1 / 16, 1 / 16} represented as an integer.
+      static constexpr uint32_t ONE_SIXTEENTH = 0x2c002c00;
+      // This is the half2 {-64, -64} represented as an integer.
+      static constexpr uint32_t NEG_64 = 0xd400d400;
+
+      // Convert elt_04
+      asm volatile("sub.f16x2 %0, %1, %2;\n"
+                   : "=r"(u32_h2[0].u32)
+                   : "r"(u32_h2[0].u32), "r"(FP16_BOTTOM_MAGIC_NUM));
+      // Convert elt_15
+      asm volatile("fma.rn.f16x2 %0, %1, %2, %3;\n"
+                   : "=r"(u32_h2[1].u32)
+                   : "r"(u32_h2[1].u32), "r"(ONE_SIXTEENTH), "r"(NEG_64));
+      // Convert elt_26
+      asm volatile("sub.f16x2 %0, %1, %2;\n"
+                   : "=r"(u32_h2[2].u32)
+                   : "r"(u32_h2[2].u32), "r"(FP16_BOTTOM_MAGIC_NUM));
+      // Convert elt_37
+      asm volatile("fma.rn.f16x2 %0, %1, %2, %3;\n"
+                   : "=r"(u32_h2[3].u32)
+                   : "r"(u32_h2[3].u32), "r"(ONE_SIXTEENTH), "r"(NEG_64));
+
+      union {
+        uint32_t u32;
+        half2 h2;
+      } t;
+
+      // Get elt_01 from elt_04 and elt_15
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(t.u32)
+                   : "r"(u32_h2[0].u32), "r"(u32_h2[1].u32), "n"(0x1054));
+      dst_h2->elem[4 * i] = t.h2;
+      // Get elt_23 from elt_26 and elt_37
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(t.u32)
+                   : "r"(u32_h2[2].u32), "r"(u32_h2[3].u32), "n"(0x1054));
+      dst_h2->elem[4 * i + 1] = t.h2;
+      // Get elt_45 from elt_04 and elt_15
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(t.u32)
+                   : "r"(u32_h2[0].u32), "r"(u32_h2[1].u32), "n"(0x3276));
+      dst_h2->elem[4 * i + 2] = t.h2;
+      // Get elt_67 from elt_26 and elt_37
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(t.u32)
+                   : "r"(u32_h2[2].u32), "r"(u32_h2[3].u32), "n"(0x3276));
+      dst_h2->elem[4 * i + 3] = t.h2;
+    }
+  }
+};
+#endif
+
+template<typename Dst, size_t pack_size>
+struct LoadCast<
+    int8_t, Dst, pack_size, 8
+#if __CUDA_ARCH__ >= 530
+    ,
+    typename std::enable_if<pack_size % 4 != 0 || !std::is_same<Dst, half>::value, void>::type
+#endif
+    > {
+  using LoadType = AlignedArray<int8_t, pack_size>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<Dst, pack_size>* dst) {
+#pragma unroll
+    for (int i = 0; i < pack_size; ++i) { dst->elem[i] = static_cast<Dst>(src.elem[i]); }
+  }
+};
+
+#if __CUDA_ARCH__ >= 530
+template<size_t pack_size>
+struct LoadCast<int8_t, half, pack_size, 8,
+                typename std::enable_if<pack_size % 4 == 0, void>::type> {
+  using LoadType = AlignedArray<uint32_t, pack_size / 4>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<half, pack_size>* dst) {
+    AlignedArray<half2, pack_size / 2>* dst_h2 =
+        reinterpret_cast<AlignedArray<half2, pack_size / 2>*>(dst);
+
+    for (int i = 0; i < pack_size / 4; ++i) {
+      union {
+        uint32_t u32;
+        half2 h2;
+      } u32_h2[2];
+
+      uint32_t elem = src.elem[i];
+
+      //把有符号数转化为无符号数，等价于翻转符号位
+      asm volatile("xor.b32 %0,%1,%2;\n" : "=r"(elem) : "r"(elem), "n"(0x80808080));
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(u32_h2[0].u32)
+                   : "r"(elem), "n"(0x64), "n"(0x4140));
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(u32_h2[1].u32)
+                   : "r"(elem), "n"(0x64), "n"(0x4342));
+      half2 h2_1152 = __float2half2_rn(1152);
+      u32_h2[0].h2 = __hsub2(u32_h2[0].h2, h2_1152);
+      u32_h2[1].h2 = __hsub2(u32_h2[1].h2, h2_1152);
+      dst_h2->elem[i * 2] = u32_h2[0].h2;
+      dst_h2->elem[i * 2 + 1] = u32_h2[1].h2;
+    }
+  }
+};
+#endif
+
+template<typename Dst, size_t pack_size>
+struct LoadCast<
+    int8_t, Dst, pack_size, 4
+#if __CUDA_ARCH__ >= 530
+    ,
+    typename std::enable_if<pack_size % 8 != 0 || !std::is_same<Dst, half>::value, void>::type
+#endif
+    > {
+  using LoadType = AlignedArray<int8_t, pack_size / 2>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<Dst, pack_size>* dst) {
+#pragma unroll
+    for (int i = 0; i < pack_size / 2; ++i) {
+      const int8_t q = src.elem[i];
+      const int8_t hi = (q >> 4);
+      int8_t lo = (q << 4);
+      lo = (lo >> 4);
+      dst->elem[i * 2 + 0] = static_cast<Dst>(hi);
+      dst->elem[i * 2 + 1] = static_cast<Dst>(lo);
+    }
+  }
+};
+
+#if __CUDA_ARCH__ >= 530
+template<typename Dst, size_t pack_size>
+struct LoadCast<int8_t, Dst, pack_size, 4,
+                typename std::enable_if<pack_size % 8 == 0, void>::type> {
+  using LoadType = AlignedArray<uint32_t, pack_size / 8>;
+  __device__ void Load(const void* src, LoadType* dst) {
+    *dst = *reinterpret_cast<const LoadType*>(src);
+  }
+  __device__ void Cast(const LoadType& src, AlignedArray<Dst, pack_size>* dst) {
+    static constexpr uint32_t immLut = (0xf0 & 0xcc) | 0xaa;
+    static constexpr uint32_t BOTTOM_MASK = 0x000f000f;
+    static constexpr uint32_t TOP_MASK = 0x00f000f0;
+    static constexpr uint32_t I4s_TO_F16s_MAGIC_NUM = 0x64006400;
+    static constexpr uint32_t FLIP_TO_UNSIGNED_MASK = 0x88888888;
+
+    AlignedArray<half2, pack_size / 2>* dst_h2 =
+        reinterpret_cast<AlignedArray<half2, pack_size / 2>*>(dst);
+#pragma unroll
+    for (int i = 0; i < pack_size / 8; ++i) {
+      union {
+        uint32_t u32;
+        half2 h2;
+      } u32_h2[4];
+
+      uint32_t elem = src.elem[i];
+
+      //把有符号数转化为无符号数，等价于翻转符号位
+      asm volatile("xor.b32 %0,%1,%2;\n" : "=r"(elem) : "r"(elem), "n"(FLIP_TO_UNSIGNED_MASK));
+
+      const uint32_t lsb0_4 = elem;
+      const uint32_t lsb8_12 = elem >> 8;
+
+      // Extract elt_04 (lsb0_4 & 0x000f000f) | 0x64006400
+      asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
+                   : "=r"(u32_h2[0].u32)
+                   : "r"(lsb0_4), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+      // Extract elt_15 (lsb4_8 & 0x000f000f) | 0x64006400
+      asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
+                   : "=r"(u32_h2[1].u32)
+                   : "r"(lsb0_4), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+      // Extract elt_26 (lsb8_12 & 0x000f000f) | 0x64006400
+      asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
+                   : "=r"(u32_h2[2].u32)
+                   : "r"(lsb8_12), "n"(BOTTOM_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+      // Extract elt_37 (lsb12_16 & 0x000f000f) | 0x64006400
+      asm volatile("lop3.b32 %0, %1, %2, %3, %4;\n"
+                   : "=r"(u32_h2[3].u32)
+                   : "r"(lsb8_12), "n"(TOP_MASK), "n"(I4s_TO_F16s_MAGIC_NUM), "n"(immLut));
+
+      // This is the half2 {1032, 1032} represented as an integer.
+      static constexpr uint32_t FP16_BOTTOM_MAGIC_NUM = 0x64086408;
+      // This is the half2 {1 / 16, 1 / 16} represented as an integer.
+      static constexpr uint32_t ONE_SIXTEENTH = 0x2c002c00;
+      // This is the half2 {-72, -72} represented as an integer.
+      static constexpr uint32_t NEG_72 = 0xd480d480;
+
+      asm volatile("sub.f16x2 %0, %1, %2;\n"
+                   : "=r"(u32_h2[0].u32)
+                   : "r"(u32_h2[0].u32), "r"(FP16_BOTTOM_MAGIC_NUM));
+      asm volatile("fma.rn.f16x2 %0, %1, %2, %3;\n"
+                   : "=r"(u32_h2[1].u32)
+                   : "r"(u32_h2[1].u32), "r"(ONE_SIXTEENTH), "r"(NEG_72));
+      asm volatile("sub.f16x2 %0, %1, %2;\n"
+                   : "=r"(u32_h2[2].u32)
+                   : "r"(u32_h2[2].u32), "r"(FP16_BOTTOM_MAGIC_NUM));
+      asm volatile("fma.rn.f16x2 %0, %1, %2, %3;\n"
+                   : "=r"(u32_h2[3].u32)
+                   : "r"(u32_h2[3].u32), "r"(ONE_SIXTEENTH), "r"(NEG_72));
+
+      union {
+        uint32_t u32;
+        half2 h2;
+      } t;
+
+      // Get elt_01 from elt_04 and elt_15
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(t.u32)
+                   : "r"(u32_h2[0].u32), "r"(u32_h2[1].u32), "n"(0x1054));
+      dst_h2->elem[4 * i] = t.h2;
+      // Get elt_23 from elt_26 and elt_37
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(t.u32)
+                   : "r"(u32_h2[2].u32), "r"(u32_h2[3].u32), "n"(0x1054));
+      dst_h2->elem[4 * i + 1] = t.h2;
+      // Get elt_45 from elt_04 and elt_15
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(t.u32)
+                   : "r"(u32_h2[0].u32), "r"(u32_h2[1].u32), "n"(0x3276));
+      dst_h2->elem[4 * i + 2] = t.h2;
+      // Get elt_67 from elt_26 and elt_37
+      asm volatile("prmt.b32 %0,%1,%2,%3;\n"
+                   : "=r"(t.u32)
+                   : "r"(u32_h2[2].u32), "r"(u32_h2[3].u32), "n"(0x3276));
+      dst_h2->elem[4 * i + 3] = t.h2;
+    }
+  }
+};
+#endif
+
 template<typename C, size_t pack_size>
 struct InplaceAddScalar {
   __device__ void operator()(AlignedArray<C, pack_size>* array, C scalar) {
@@ -195,8 +549,9 @@ __global__ void Dequantize3D(Index packed_elem_cnt, Index group_size, Index pack
       group_zero = zero[scale_offset];
     }
     AlignedArray<T, d_pack_size> values;
-    const AlignedArray<U, q_pack_size> q = quantized[i];
-    Cast<U, T, q_pack_size>()(q, &values);
+    typename LoadCast<U, T, d_pack_size, bits>::LoadType qs;
+    LoadCast<U, T, d_pack_size, bits>().Load(quantized + i, &qs);
+    LoadCast<U, T, d_pack_size, bits>().Cast(qs, &values);
     InplaceFma<T, d_pack_size>()(&values, group_scale, group_zero);
     out[i] = values;
   }
@@ -291,8 +646,9 @@ __global__ void DequantizeInnerSize1(Index packed_elem_cnt, Index packed_group_s
       group_zero = zero[group_id];
     }
     AlignedArray<T, d_pack_size> values;
-    AlignedArray<U, q_pack_size> q = quantized[i];
-    Cast<U, T, q_pack_size>()(q, &values);
+    typename LoadCast<U, T, d_pack_size, bits>::LoadType qs;
+    LoadCast<U, T, d_pack_size, bits>().Load(quantized + i, &qs);
+    LoadCast<U, T, d_pack_size, bits>().Cast(qs, &values);
     InplaceFmaScalar<T, d_pack_size>()(&values, group_scale, group_zero);
     out[i] = values;
   }
@@ -480,7 +836,6 @@ __global__ void QuantizedMatmulBiasGroupN(int32_t M, int32_t N, int32_t K, int32
       const auto* zero_n = symmetric ? nullptr : zero + group_id * K;
       for (int32_t k = threadIdx.x; k < K; k += block_size) {
         auto xs = x_m[k];
-        auto ws = w_n[k];
         auto scale_k = scale_n[k];
         AlignedArray<T, d_pack_size> zero_k;
         if (symmetric) {
@@ -494,7 +849,9 @@ __global__ void QuantizedMatmulBiasGroupN(int32_t M, int32_t N, int32_t K, int32
           zero_k = zero_n[k];
         }
         AlignedArray<T, d_pack_size> weights;
-        Cast<U, T, q_pack_size>()(ws, &weights);
+        typename LoadCast<U, T, d_pack_size, bits>::LoadType ws;
+        LoadCast<U, T, d_pack_size, bits>().Load(w_n + k, &ws);
+        LoadCast<U, T, d_pack_size, bits>().Cast(ws, &weights);
         InplaceFma<T, d_pack_size>()(&weights, scale_k, zero_k);
         MultiplyAccumulate<T, C, d_pack_size>()(xs, weights, &t_sum);
       }
@@ -579,17 +936,23 @@ void DispatchMatmulBiasGroupNPackSize(ep::CudaStream* stream, int64_t m, int64_t
   }
 }
 
+constexpr int32_t kWarpSize = 32;
+
 template<typename T, typename C, typename U, int block_size, size_t d_pack_size, size_t q_pack_size,
-         int bits, bool symmetric, bool single_group>
+         int bits, bool symmetric, bool single_group, size_t unroll_k>
 __global__ void QuantizedMatmulBiasGroupK(int32_t M, int32_t N, int32_t K, int32_t group_size,
                                           int32_t num_groups_per_n,
                                           const AlignedArray<T, d_pack_size>* __restrict__ x,
                                           const AlignedArray<U, q_pack_size>* __restrict__ w,
                                           const T* __restrict__ scale, const T* __restrict__ zero,
                                           const T* __restrict__ bias, T* __restrict__ out) {
+  const int32_t tid = threadIdx.x + blockIdx.x * blockDim.x;
+  constexpr int32_t num_warp = block_size / kWarpSize;
+  const int32_t warp_id = threadIdx.x / kWarpSize;
+  const int32_t lane_id = threadIdx.x % kWarpSize;
   for (int32_t m = blockIdx.x; m < M; m += gridDim.x) {
     const auto* x_m = x + m * K;
-    for (int32_t n = blockIdx.y; n < N; n += gridDim.y) {
+    for (int32_t n = blockIdx.y * num_warp + warp_id; n < N; n += gridDim.y * num_warp) {
       C t_sum = 0;
       const auto* w_n = w + n * K;
       const auto* scale_n = scale + n * num_groups_per_n;
@@ -607,9 +970,22 @@ __global__ void QuantizedMatmulBiasGroupK(int32_t M, int32_t N, int32_t K, int32
         } else {
           group_zero = zero_n[0];
         }
-      }
-      for (int32_t k = threadIdx.x; k < K; k += block_size) {
-        if (!single_group) {
+        for (int32_t k = lane_id; k < K; k += kWarpSize * unroll_k) {
+          AlignedArray<T, d_pack_size> xs[unroll_k];
+          typename LoadCast<U, T, d_pack_size, bits>::LoadType ws[unroll_k];
+          for (int i = 0; i < unroll_k; ++i) {
+            xs[i] = x_m[k + i * kWarpSize];
+            LoadCast<U, T, d_pack_size, bits>().Load(w_n + k + i * kWarpSize, &ws[i]);
+          }
+          AlignedArray<T, d_pack_size> w;
+          for (int i = 0; i < unroll_k; ++i) {
+            LoadCast<U, T, d_pack_size, bits>().Cast(ws[i], &w);
+            InplaceFmaScalar<T, d_pack_size>()(&w, group_scale, group_zero);
+            MultiplyAccumulate<T, C, d_pack_size>()(xs[i], w, &t_sum);
+          }
+        }
+      } else {
+        for (int32_t k = lane_id; k < K; k += kWarpSize) {
           auto group_id = k / group_size;
           group_scale = static_cast<T>(scale_n[group_id]);
           if (symmetric) {
@@ -621,18 +997,19 @@ __global__ void QuantizedMatmulBiasGroupK(int32_t M, int32_t N, int32_t K, int32
           } else {
             group_zero = zero_n[group_id];
           }
+          auto xs = x_m[k];
+          AlignedArray<T, d_pack_size> weights;
+          typename LoadCast<U, T, d_pack_size, bits>::LoadType loaded;
+          LoadCast<U, T, d_pack_size, bits>().Load(w_n + k, &loaded);
+          LoadCast<U, T, d_pack_size, bits>().Cast(loaded, &weights);
+          InplaceFmaScalar<T, d_pack_size>()(&weights, group_scale, group_zero);
+          MultiplyAccumulate<T, C, d_pack_size>()(xs, weights, &t_sum);
         }
-        auto xs = x_m[k];
-        auto ws = w_n[k];
-        AlignedArray<T, d_pack_size> weights;
-        Cast<U, T, q_pack_size>()(ws, &weights);
-        InplaceFmaScalar<T, d_pack_size>()(&weights, group_scale, group_zero);
-        MultiplyAccumulate<T, C, d_pack_size>()(xs, weights, &t_sum);
       }
-      using BlockReduce = cub::BlockReduce<C, block_size>;
-      __shared__ typename BlockReduce::TempStorage temp_storage;
-      C sum = BlockReduce(temp_storage).Sum(t_sum);
-      if (threadIdx.x == 0) {
+      using WarpReduce = cub::WarpReduce<C>;
+      __shared__ typename WarpReduce::TempStorage temp_storage[num_warp];
+      C sum = WarpReduce(temp_storage[warp_id]).Sum(t_sum);
+      if (lane_id == 0) {
         if (bias != nullptr) { sum += static_cast<C>(bias[n]); }
         out[m * N + n] = static_cast<T>(sum);
       }
@@ -654,13 +1031,24 @@ void LaunchMatmulBiasGroupK(ep::CudaStream* stream, int64_t m, int64_t n, int64_
     UNIMPLEMENTED();
   }
   if constexpr (sizeof(T) * d_pack_size <= 16 && q_pack_size > 0) {
-    QuantizedMatmulBiasGroupK<T, C, U, block_size, d_pack_size, q_pack_size, num_bits, symmetric,
-                              single_group>
-        <<<dim3(std::min<int64_t>(m, max_grid_size), std::min<int64_t>(n, max_grid_size)),
-           block_size, 0, stream->cuda_stream()>>>(
-            m, n, k / d_pack_size, group_size / d_pack_size, k / group_size,
-            reinterpret_cast<const AlignedArray<T, d_pack_size>*>(x),
-            reinterpret_cast<const AlignedArray<U, q_pack_size>*>(w), scale, zero, bias, out);
+    if ((k / d_pack_size) % (2 * block_size) == 0) {
+      QuantizedMatmulBiasGroupK<T, C, U, block_size, d_pack_size, q_pack_size, num_bits, symmetric,
+                                single_group, 2>
+          <<<dim3(std::min<int64_t>(m, max_grid_size), std::min<int64_t>(n, max_grid_size)),
+             block_size, 0, stream->cuda_stream()>>>(
+              m, n, k / d_pack_size, group_size / d_pack_size, k / group_size,
+              reinterpret_cast<const AlignedArray<T, d_pack_size>*>(x),
+              reinterpret_cast<const AlignedArray<U, q_pack_size>*>(w), scale, zero, bias, out);
+
+    } else {
+      QuantizedMatmulBiasGroupK<T, C, U, block_size, d_pack_size, q_pack_size, num_bits, symmetric,
+                                single_group, 1>
+          <<<dim3(std::min<int64_t>(m, max_grid_size), std::min<int64_t>(n, max_grid_size)),
+             block_size, 0, stream->cuda_stream()>>>(
+              m, n, k / d_pack_size, group_size / d_pack_size, k / group_size,
+              reinterpret_cast<const AlignedArray<T, d_pack_size>*>(x),
+              reinterpret_cast<const AlignedArray<U, q_pack_size>*>(w), scale, zero, bias, out);
+    }
   } else {
     UNIMPLEMENTED();
   }
