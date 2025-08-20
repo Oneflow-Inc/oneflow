@@ -2864,52 +2864,8 @@
   signature: "Tensor (Tensor input, Tensor y, Tensor x, Int64 dim) => CumprodGrad"
   bind_python: False
 
-- name: "one_embedding_id_shuffle"
-  signature: "TensorTuple (Tensor ids, Tensor table_ids=None, Int32 num_tables=1, String embedding_name) => OneEmbeddingIdShuffle"
-  bind_python: True
-
-- name: "one_embedding_embedding_shuffle"
-  signature: "Tensor (Tensor cur_rank_embeddings, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partition_indices, String embedding_name) => OneEmbeddingEmbeddingShuffle"
-  bind_python: True
-
-- name: "one_embedding_embedding_gradient_shuffle"
-  signature: "Tensor (Tensor embedding_grad, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partition_indices, String embedding_name) => OneEmbeddingEmbeddingGradientShuffle"
-  bind_python: True
-
-- name: "one_embedding_lookup"
-  signature: "Tensor (Tensor num_unique_ids, Tensor unique_ids, Tensor table_ids, DataType dtype, DataType embedding_dtype, Int64 line_size, Int64 embedding_size, String embedding_name, String embedding_tables, String state_initializer, Int64 seed=0) => OneEmbeddingLookup"
-  bind_python: True
-
-- name: "one_embedding_fused_lookup"
-  signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, String embedding_name, Int64 line_size, Int64 embedding_size, Bool is_full_cache, Int32 num_tables, String embedding_tables, Int64 padding_idx=None, Int64 seed=0) => OneEmbeddingFusedLookup"
-  bind_python: True
-
 - name: "one_embedding_fused_lookup_grad"
   signature: "Void (Tensor ids, Tensor embedding_grad, String embedding_name, Int64 line_size, Int64 embedding_size) => OneEmbeddingFusedLookupGrad"
-  bind_python: True
-
-- name: "one_embedding_unique_key_value_pair"
-  signature: "TensorTuple (Tensor keys, Tensor values=None, Int32 num_tables, String embedding_name) => OneEmbeddingUniqueKeyValuePair"
-  bind_python: True
-
-- name: "one_embedding_embedding_put"
-  signature: "Void (Tensor num_unique_ids, Tensor unique_ids, Tensor unique_embeddings, String embedding_name, Int64 line_size) => OneEmbeddingEmbeddingPut"
-  bind_python: True
-
-- name: "one_embedding_sgd_update"
-  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate=None, Tensor down_scale_by_tensor=None, Tensor skip_if=None, Float learning_rate_val, Double scale, Float weight_decay, Float momentum, Int64 line_size, Int64 embedding_size, String embedding_name) => OneEmbeddingSgdUpdate"
-  bind_python: True
-
-- name: "one_embedding_adam_update"
-  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate=None, Tensor down_scale_by_tensor=None, Tensor skip_if=None, Tensor bias_correction1=None, Tensor bias_correction2=None, Float learning_rate_val, Double scale, Float weight_decay, Float beta1, Float beta2, Float bias_correction1_val, Float bias_correction2_val, Float epsilon, Bool do_bias_correction, Int64 line_size, Int64 embedding_size, String embedding_name) => OneEmbeddingAdamUpdate"
-  bind_python: True
-
-- name: "one_embedding_adagrad_update"
-  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate=None, Tensor down_scale_by_tensor=None, Tensor skip_if=None, Tensor train_step=None, Int64 train_step_val, Float learning_rate_val, Double scale, Float weight_decay, Float lr_decay, Float epsilon, Int64 line_size, Int64 embedding_size, String embedding_name) => OneEmbeddingAdagradUpdate"
-  bind_python: True
-
-- name: "one_embedding_ftrl_update"
-  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate=None, Tensor down_scale_by_tensor=None, Tensor skip_if=None, Float learning_rate_val, Double scale, Float weight_decay, Float lr_power, Float lambda1, Float lambda2, Float beta, Int64 line_size, Int64 embedding_size, String embedding_name) => OneEmbeddingFtrlUpdate"
   bind_python: True
 
 - name: "einsum"
