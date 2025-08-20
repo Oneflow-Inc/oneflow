@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
 namespace one {
@@ -366,6 +367,57 @@ class Softplus : public OpExprGradFunction<SoftplusCaptureState> {
   AttrMap base_attrs_;
 };
 
+
+struct SoftplusGradCaptureState : public AutoGradCaptureState {
+  bool x_requires_grad = false;
+  bool grad_requires_grad = false;
+  double beta = 1.0;
+  double threshold = 20.0;
+};
+
+class SoftplusGrad : public OpExprGradFunction<SoftplusGradCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(SoftplusGradCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->beta = JUST(composed_attrs.GetAttr<double>("beta"));
+    ctx->threshold = JUST(composed_attrs.GetAttr<double>("threshold"));
+    ctx->x_requires_grad = inputs[0]->requires_grad();
+    ctx->grad_requires_grad = inputs[1]->requires_grad();
+    ctx->SaveTensorForBackward(inputs[0]);
+    if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs[1]); }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const SoftplusGradCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    in_grads->resize(2);
+    const auto& x = ctx->SavedTensors()[0];
+    if (ctx->x_requires_grad) {
+      const auto& grad = ctx->SavedTensors()[1];
+      (*in_grads)[0] = 
+          JUST(functional::Mul(JUST(functional::SoftplusGradGrad(x, grad, ctx->beta, ctx->threshold)), out_grads[0]));
+    }
+    if (ctx->grad_requires_grad) {
+      (*in_grads)[1] = JUST(functional::SoftplusGrad(x, out_grads[0], ctx->beta, ctx->threshold)); 
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
+
 struct HardTanhCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   double min_val;
@@ -665,6 +717,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("celu", Celu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("prelu", PReLU);
 REGISTER_OP_EXPR_GRAD_FUNCTION("threshold", Threshold);
 REGISTER_OP_EXPR_GRAD_FUNCTION("softplus", Softplus);
+REGISTER_OP_EXPR_GRAD_FUNCTION("softplus_grad", SoftplusGrad);
 REGISTER_OP_EXPR_GRAD_FUNCTION("softshrink", SoftShrink);
 REGISTER_OP_EXPR_GRAD_FUNCTION("fast_gelu", FastGeLU);
 REGISTER_OP_EXPR_GRAD_FUNCTION("quick_gelu", QuickGeLU);
