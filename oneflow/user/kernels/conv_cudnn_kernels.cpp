@@ -103,6 +103,7 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
     CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
         << "op (" << ctx.op_name()
         << ") find algorithm perference failed. algo: " << algo_perf.algo;
+    // TODO workspace size limit will lead to dismatch result with pytorch for large tensor
     CHECK_LE(algo_perf.memory, workspace_size)
         << "op (" << ctx.op_name() << ") find algorithm " << algo_perf.algo << ", need memory "
         << algo_perf.memory << ", but cudnn_buf_limit_byte is " << workspace_size;
@@ -252,6 +253,109 @@ REGISTER_CONV_KERNEL(conv1d, 1);
 REGISTER_CONV_KERNEL(conv2d, 2);
 REGISTER_CONV_KERNEL(conv3d, 3);
 
+template<size_t NDims>
+class ConvGpuKernelV8 final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  ConvGpuKernelV8() = default;
+  ~ConvGpuKernelV8() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+  std::shared_ptr<ConvCudnnOpKernelCache> CreateConvCudnnOpKernelCache(
+      user_op::KernelCacheContext* ctx) const {
+    const auto& data_format = ctx->Attr<std::string>("data_format");
+    int32_t filters = ctx->Attr<int32_t>("filters");
+
+    std::shared_ptr<ConvCudnnOpKernelCache> state(new ConvCudnnOpKernelCache());
+
+    const user_op::TensorDesc* bias = ctx->TensorDesc4ArgNameAndIndex("bias", 0);
+    if (bias != nullptr) {
+      state->bias_desc.reset(
+          GetBiasCudnnTensorDesc<NDims>(data_format, filters, bias->data_type()));
+    }
+
+    return state;
+  }
+
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateConvCudnnOpKernelCache(ctx);
+  }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
+    // process context data
+    auto input = ctx->Tensor4ArgNameAndIndex("in", 0);
+    auto output = ctx->Tensor4ArgNameAndIndex("out", 0);
+    auto weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
+    auto buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+
+    if (input->shape_view().elem_cnt() == 0) return;
+
+    CudnnConvArgsV8 args(*ctx, input, output, weight);
+    // process add_to_output
+    if (ctx->has_input("_add_to_output", 0)) {
+      auto add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      Memcpy<DeviceType::kCUDA>(
+          ctx->stream(), output->mut_dptr(), add_to_output->dptr(),
+          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+      args.beta = 1.0f;
+    }
+
+    // trigger conv compute
+    auto handle = ctx->stream()->As<ep::CudaStream>()->cudnn_handle();
+    CudnnFrontendRunConv(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_FORWARD_DESCRIPTOR, input,
+                         output, weight, buffer, args);
+
+    // process bias
+    auto bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
+    if (bias != nullptr) {
+      auto conv_cache = dynamic_cast<const ConvCudnnOpKernelCache*>(cache);
+      CHECK_NOTNULL(conv_cache);
+      const auto& data_format = ctx->Attr<std::string>("data_format");
+      CudnnTensorDesc output_desc(output->data_type(), output->shape_view(), data_format);
+      OF_CUDNN_CHECK(cudnnAddTensor(ctx->stream()->As<ep::CudaStream>()->cudnn_handle(),
+                                    CudnnSPOnePtr(input->data_type()), conv_cache->bias_desc->Get(),
+                                    bias->dptr(), CudnnSPOnePtr(input->data_type()),
+                                    output_desc.Get(), output->mut_dptr()));
+    }
+  }
+
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
+    return Singleton<ResourceDesc, ForSession>::Get()
+        ->resource()
+        .cudnn_conf()
+        .cudnn_conv_heuristic_search_algo();
+  }
+};
+
+#define REGISTER_CONV_KERNEL_V8(op_name, ndims)                                         \
+  REGISTER_USER_KERNEL(#op_name)                                                        \
+      .SetCreateFn<ConvGpuKernelV8<ndims>>()                                            \
+      .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA                    \
+                       && user_op::HobEnvBool("ONEFLOW_KERNEL_ENABLE_CUDNN_V8", false)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                     \
+        auto& input = ctx->InputTensorDesc("in", 0);                                    \
+        auto& output = ctx->InputTensorDesc("out", 0);                                  \
+        auto& weight = ctx->InputTensorDesc("weight", 0);                               \
+        CudnnConvArgsV8 args(*ctx, input, output, weight);                              \
+        auto handle = Singleton<CudnnHandlePool>::Get()->Get();                         \
+        std::string tag;                                                                \
+        auto configs = CudnnFrontendGetConfigs(                                         \
+            handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_FORWARD_DESCRIPTOR, args.xdesc, \
+            args.ydesc, args.wdesc, args.cdesc, args.beta, tag);                        \
+        size_t workspace_size = GetCudnnConvWorkspaceSizeV8(handle, configs, tag);      \
+        Singleton<CudnnHandlePool>::Get()->Put(handle);                                 \
+        return workspace_size;                                                          \
+      })                                                                                \
+      .SetPriority(user_op::kKernelPriorityOptimized);
+
+REGISTER_CONV_KERNEL_V8(conv1d, 1);
+REGISTER_CONV_KERNEL_V8(conv2d, 2);
+REGISTER_CONV_KERNEL_V8(conv3d, 3);
+
 class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvDataGradGpuKernel);
@@ -325,6 +429,75 @@ REGISTER_USER_KERNEL("conv_data_grad")
       return Maybe<void>::Ok();
     });
 
+class ConvDataGradGpuKernelV8 final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvDataGradGpuKernelV8);
+  ConvDataGradGpuKernelV8() = default;
+  ~ConvDataGradGpuKernelV8() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    auto input_diff = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    auto output_diff = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    auto weight = ctx->Tensor4ArgNameAndIndex("filter", 0);
+    auto buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+
+    if (output_diff->shape_view().elem_cnt() == 0) return;
+
+    CudnnConvArgsV8 args(*ctx, input_diff, output_diff, weight);
+    // process add_to_output
+    if (ctx->has_input("_add_to_output", 0)) {
+      auto add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      Memcpy<DeviceType::kCUDA>(
+          ctx->stream(), input_diff->mut_dptr(), add_to_output->dptr(),
+          add_to_output->shape_view().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+      args.beta = 1.0f;
+    }
+
+    // trigger conv compute
+    auto handle = ctx->stream()->As<ep::CudaStream>()->cudnn_handle();
+    CudnnFrontendRunConv(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_DATA_DESCRIPTOR,
+                         input_diff, output_diff, weight, buffer, args);
+  }
+
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
+    return Singleton<ResourceDesc, ForSession>::Get()
+        ->resource()
+        .cudnn_conf()
+        .cudnn_conv_heuristic_search_algo();
+  }
+};
+
+REGISTER_USER_KERNEL("conv_data_grad")
+    .SetCreateFn<ConvDataGradGpuKernelV8>()
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA
+                     && user_op::HobEnvBool("ONEFLOW_KERNEL_ENABLE_CUDNN_V8", false))
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {
+      auto& input_diff = ctx->InputTensorDesc("dx", 0);
+      auto& output_diff = ctx->InputTensorDesc("dy", 0);
+      auto& weight = ctx->InputTensorDesc("filter", 0);
+      CudnnConvArgsV8 args(*ctx, input_diff, output_diff, weight);
+      auto handle = Singleton<CudnnHandlePool>::Get()->Get();
+      std::string tag;
+      auto configs = CudnnFrontendGetConfigs(
+          handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_DATA_DESCRIPTOR, args.xdesc,
+          args.ydesc, args.wdesc, args.cdesc, args.beta, tag);
+      size_t workspace_size = GetCudnnConvWorkspaceSizeV8(handle, configs, tag);
+      Singleton<CudnnHandlePool>::Get()->Put(handle);
+      return workspace_size;
+    })
+    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
+      if (ctx.has_input("_add_to_output", 0)) {
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "_add_to_output", 0, true));
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetPriority(user_op::kKernelPriorityOptimized);
+
 class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvFilterGradGpuKernel);
@@ -383,6 +556,65 @@ REGISTER_USER_KERNEL("conv_filter_grad")
           &x, &filter_diff, &dy, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_filter_algo(),
           cudnn_conf.cudnn_conv_force_bwd_filter_algo());
     });
+
+class ConvFilterGradGpuKernelV8 final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvFilterGradGpuKernelV8);
+  ConvFilterGradGpuKernelV8() = default;
+  ~ConvFilterGradGpuKernelV8() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    auto input = ctx->Tensor4ArgNameAndIndex("x", 0);
+    auto output_diff = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    auto weight_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
+    auto buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+
+    if (input->shape_view().elem_cnt() == 0) {
+      Memset<DeviceType::kCUDA>(
+          ctx->stream(), weight_diff->mut_dptr(), 0,
+          weight_diff->shape_view().elem_cnt() * GetSizeOfDataType(weight_diff->data_type()));
+      return;
+    }
+
+    CudnnConvArgsV8 args(*ctx, input, output_diff, weight_diff);
+
+    // trigger conv compute
+    auto handle = ctx->stream()->As<ep::CudaStream>()->cudnn_handle();
+    CudnnFrontendRunConv(handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_FILTER_DESCRIPTOR,
+                         input, output_diff, weight_diff, buffer, args);
+  }
+
+  bool IsCudaGraphSupported(user_op::KernelInitContext* ctx,
+                            user_op::OpKernelState* state) const override {
+    return Singleton<ResourceDesc, ForSession>::Get()
+        ->resource()
+        .cudnn_conf()
+        .cudnn_conv_heuristic_search_algo();
+  }
+};
+
+REGISTER_USER_KERNEL("conv_filter_grad")
+    .SetCreateFn<ConvFilterGradGpuKernelV8>()
+    .SetIsMatchedHob(user_op::HobDeviceType() == DeviceType::kCUDA
+                     && user_op::HobEnvBool("ONEFLOW_KERNEL_ENABLE_CUDNN_V8", false))
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {
+      auto& input = ctx->InputTensorDesc("x", 0);
+      auto& output_diff = ctx->InputTensorDesc("dy", 0);
+      auto& weight_diff = ctx->InputTensorDesc("filter_diff", 0);
+      CudnnConvArgsV8 args(*ctx, input, output_diff, weight_diff);
+      auto handle = Singleton<CudnnHandlePool>::Get()->Get();
+      std::string tag;
+      auto configs = CudnnFrontendGetConfigs(
+          handle, CUDNN_BACKEND_OPERATION_CONVOLUTION_BACKWARD_FILTER_DESCRIPTOR, args.xdesc,
+          args.ydesc, args.wdesc, args.cdesc, args.beta, tag);
+      size_t workspace_size = GetCudnnConvWorkspaceSizeV8(handle, configs, tag);
+      Singleton<CudnnHandlePool>::Get()->Put(handle);
+      return workspace_size;
+    })
+    .SetPriority(user_op::kKernelPriorityOptimized);
 
 struct ConvBiasGradState final : public user_op::OpKernelState {
   std::unique_ptr<CudnnTensorDesc> bias_diff_desc;

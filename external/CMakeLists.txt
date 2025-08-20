@@ -17,6 +17,11 @@ set(KINETO_URL
 use_mirror(VARIABLE KINETO_URL URL ${KINETO_URL})
 set(KINETO_MD5 f9b550591b3899fb267270c19484933f)
 
+set(CUDNN_FRONTEND_URL
+    https://github.com/NVIDIA/cudnn-frontend/archive/refs/tags/v0.9.1.zip)
+use_mirror(VARIABLE CUDNN_FRONTEND_URL URL ${CUDNN_FRONTEND_URL})
+set(CUDNN_FRONTEND_MD5 0d28ff6aaa984dac4f7d16acfc48de72)
+
 set(EXTERNAL_TARGETS)
 
 if(WITH_TBB) # set(WITH_${threading_runtime_item} ON) in threading.cmake
@@ -32,6 +37,11 @@ list(APPEND EXTERNAL_TARGETS fmt)
 
 add_subdirectory(kineto)
 list(APPEND EXTERNAL_TARGETS kineto)
+
+if(BUILD_CUDA)
+  add_subdirectory(cudnn_frontend)
+  list(APPEND EXTERNAL_TARGETS cudnn_frontend)
+endif()
 
 mark_targets_as_system(${EXTERNAL_TARGETS})
 
