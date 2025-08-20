@@ -20,7 +20,9 @@ namespace oneflow {
 const AMPList& AutoMixedPrecisionLists::WhiteList() {
   static AMPList white_list = {"matmul",
                                "batch_matmul",
+                               "conv1d",
                                "conv2d",
+                               "conv3d",
                                "conv_data_grad",
                                "conv_filter_grad",
                                "conv_bias_grad",
@@ -138,7 +140,8 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "group_norm_grad",
                               "silu",
                               "silu_grad",
-                              "fused_weighted_sum"};
+                              "fused_weighted_sum",
+                              "cast"};
   return gray_list;
 }
 
