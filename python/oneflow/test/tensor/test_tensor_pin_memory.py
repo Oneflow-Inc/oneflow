@@ -29,7 +29,7 @@ from oneflow.test_utils.automated_test_util import *
 class TestTensor(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n1d()
-    @autotest(n=5, auto_backward=True, check_graph=False)
+    @autotest(n=5, auto_backward=True, check_graph=True)
     def test_tensor_pin_memory(test_case):
         device = random_device()
         x = random_tensor(ndim=3).to(device)
@@ -43,7 +43,7 @@ class TestTensor(flow.unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n1d()
-    @autotest(n=5, auto_backward=False, check_graph=False)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_0_dim_tensor_pin_memory(test_case):
         device = random_device()
         x = random_tensor(ndim=1).to(device)
@@ -58,7 +58,7 @@ class TestTensor(flow.unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n1d()
-    @autotest(n=5, auto_backward=False, check_graph=False)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_tensor_construct_with_pin_memory_param(test_case):
         device = random_device()
         n = random(1, 4).to(int)
@@ -72,7 +72,7 @@ class TestTensor(flow.unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n1d()
-    @autotest(n=5, auto_backward=True, check_graph=False)
+    @autotest(n=5, auto_backward=True, check_graph=True)
     def test_tensor_is_pinned(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)

@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_search_sorted(test_case, placement, sbp, ndim):
     dims = [random(1, 3) * 8 for _ in range(ndim)]
     sorted_sequence = random_tensor(ndim, *dims).to_global(placement, sbp)
@@ -42,7 +42,7 @@ class TestSearchSorted_Global(flow.unittest.TestCase):
                 _test_search_sorted(test_case, placement, sbp, ndim)
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_search_sorted_scalar(test_case, placement, sbp):
     dim0 = [random(1, 3) * 8]
     sorted_sequence = random_tensor(1, *dim0).to_global(placement, sbp)
