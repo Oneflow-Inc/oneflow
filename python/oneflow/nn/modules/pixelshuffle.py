@@ -48,7 +48,7 @@ class PixelShufflev2(Module):
     if use upscale_factor:
 
     .. math::
-        C_{out} = C_{in} \\div \\text{h_upscale_factor}^2
+        C_{out} = C_{in} \\div \\text{upscale_factor}^2
 
         H_{out} = H_{in} \\times \\text{upscale_factor}
 
@@ -115,6 +115,101 @@ class PixelShufflev2(Module):
 
     def extra_repr(self) -> str:
         return f"w_upscale_factor={self.w_upscale_factor}, h_upscale_factor={self.h_upscale_factor}"
+
+
+class PixelUnShufflev2(Module):
+    """
+    Part of the documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.PixelUnshuffle.html.
+
+    Reverses the :func:`oneflow.nn.PixelShuffle` operation by rearranging elements in a tensor of shape
+     :math:`(*, C, H \\times r_h, W \\times r_w)` to a tensor of shape :math:`(*, C \\times r_h \\times r_w, H, W)`, 
+     where r_h and r_w are downscale factors.
+
+    See the paper:
+    `Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network`_
+    by Shi et. al (2016) for more details.
+
+    Args:
+        downscale_factor (int, optional): factor to decrease spatial resolution by, only use when factors of height and width spatial are the same.
+
+        h_downscale_factor (int, optional): factor to decrease height spatial resolution by, only one of h_upscale_factor and upscale_factor can be used.
+        w_downscale_factor (int, optional): factor to decrease width spatial resolution by, only one of w_upscale_factor and upscale_factor can be used.
+
+    Shape:
+        - Input: :math:`(*, C_{in}, H_{in}, W_{in})`, where * is zero or more batch dimensions
+        - Output: :math:`(*, C_{out}, H_{out}, W_{out})`, where
+
+    if use downscale_factor:
+
+    .. math::
+        C_{out} = C_{in} \\times \\text{downscale_factor}^2
+
+        H_{out} = H_{in} \\div \\text{downscale_factor}
+
+        W_{out} = W_{in} \\div \\text{downscale_factor}
+
+    if use h_downscale_factor and w_downscale_factor:
+
+    .. math::
+        C_{out} = C_{in} \\times \\text{h_downscale_factor} \\times \\text{w_downscale_factor}
+
+        H_{out} = H_{in} \\div \\text{h_downscale_factor}
+
+        W_{out} = W_{in} \\div \\text{w_downscale_factor}
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> m = flow.nn.PixelUnShuffle(downscale_factor=4)
+        >>> x = flow.Tensor(np.random.randn(3, 4, 64, 64))
+        >>> y = m(x)
+        >>> y.shape
+        oneflow.Size([3, 64, 4, 4])
+
+        >>> m = flow.nn.PixelUnShuffle(h_downscale_factor=3, w_downscale_factor=4)
+        >>> x = flow.Tensor(np.random.randn(1, 2, 12, 16))
+        >>> y = m(x)
+        >>> y.shape
+        oneflow.Size([1, 24, 4, 4])
+
+    .. _Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network:
+        https://arxiv.org/abs/1609.05158
+    """
+
+    def __init__(
+        self,
+        downscale_factor: Optional[int] = None,
+        h_downscale_factor: Optional[int] = None,
+        w_downscale_factor: Optional[int] = None,
+    ) -> None:
+        super().__init__()
+        if downscale_factor is None:
+            assert (
+                h_downscale_factor is not None and w_downscale_factor is not None
+            ), "h_downscale_factor and w_downscale_factor should be None if use downscale_factor"
+        else:
+            assert (
+                h_downscale_factor is None and w_downscale_factor is None
+            ), "downscale_factor should be None if use h_downscale_factor and w_diwnscale_factor"
+            h_downscale_factor = downscale_factor
+            w_downscale_factor = downscale_factor
+        assert (
+            h_downscale_factor > 0 and w_downscale_factor > 0
+        ), "The scale factor of height and width must larger than zero"
+        self.h_downscale_factor = h_downscale_factor
+        self.w_downscale_factor = w_downscale_factor
+
+    def forward(self, input: Tensor) -> Tensor:
+        return flow._C.pixel_unshuffle(
+            input, self.h_downscale_factor, self.w_downscale_factor
+        )
+
+    def extra_repr(self) -> str:
+        return f"w_downscale_factor={self.w_downscale_factor}, h_downscale_factor={self.h_downscale_factor}"
 
 
 if __name__ == "__main__":

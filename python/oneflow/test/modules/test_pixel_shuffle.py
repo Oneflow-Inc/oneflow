@@ -97,6 +97,18 @@ class TestPixelShuffleModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @autotest()
+    def test_pixel_unshuffle_with_random_data(test_case):
+        downscale_factor = random().to(int)
+        num_channels = downscale_factor * downscale_factor * random().to(int)
+        m = torch.nn.PixelUnShuffle(downscale_factor=downscale_factor)
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=4, dim1=num_channels).to(device)
+        y = m(x)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()
