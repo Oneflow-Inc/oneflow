@@ -152,7 +152,8 @@ Non-linear Activations (weighted sum, nonlinearity)
     nn.Hardswish 
     nn.Hardtanh 
     nn.LeakyReLU 
-    nn.LogSigmoid 
+    nn.LogSigmoid
+    nn.MultiheadAttention 
     nn.PReLU 
     nn.ReLU
     nn.ReLU6 
