@@ -40,7 +40,13 @@ class MockEntityNameFormatter:
 
         elif isinstance(obj, FunctionType):
             module = inspect.getmodule(obj)
-            obj = f"{module.__name__}.{obj.__qualname__}"
+            if (
+                module.__name__ == "torch.nn.functional"
+                and obj.__qualname__ == "boolean_dispatch.<locals>.fn"
+            ):
+                obj = f"{module.__name__}.{obj.__name__}"
+            else:
+                obj = f"{module.__name__}.{obj.__qualname__}"
 
         assert isinstance(obj, str), f"obj must be str, but got {type(obj)}"
 
