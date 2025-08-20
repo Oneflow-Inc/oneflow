@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/common/tensor_meta.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/nd_sbp_infer_hint.h"
+#include "oneflow/core/common/op_args_vector.h"
 
 namespace oneflow {
 
@@ -43,8 +44,6 @@ class InputGlobalTensorMeta final {
                         const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint)
       : tensor_meta_(tensor_meta), consumer_nd_sbp_constraint_(consumer_nd_sbp_constraint) {}
 
-  InputGlobalTensorMeta(const InputGlobalTensorMeta&) = default;
-  InputGlobalTensorMeta(InputGlobalTensorMeta&&) = default;
   ~InputGlobalTensorMeta() = default;
 
   size_t hash_value() const;
@@ -70,7 +69,7 @@ class GlobalTensorMetaInferArgs final {
   GlobalTensorMetaInferArgs(GlobalTensorMetaInferArgs&&) = default;
   ~GlobalTensorMetaInferArgs() = default;
 
-  const std::vector<InputGlobalTensorMeta>& input_global_tensor_metas() const {
+  const OpArgsVector<InputGlobalTensorMeta>& input_global_tensor_metas() const {
     return input_global_tensor_metas_;
   }
   const AttrMap& attrs() const { return attrs_; }
@@ -97,7 +96,7 @@ class GlobalTensorMetaInferArgs final {
   Maybe<void> InitInputGlobalTensorMetas(const TensorTuple& input_tensors);
 
   AttrMap attrs_;
-  std::vector<InputGlobalTensorMeta> input_global_tensor_metas_;
+  OpArgsVector<InputGlobalTensorMeta> input_global_tensor_metas_;
 };
 
 class SrcOpGlobalTensorMetaInferArgs final {

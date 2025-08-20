@@ -19,6 +19,7 @@ limitations under the License.
 #include "llvm/ADT/SmallVector.h"
 #include "oneflow/core/common/op_args_reserved_size.h"
 #include "oneflow/core/common/check.h"
+#include "oneflow/core/common/hash.h"
 
 namespace oneflow {
 
@@ -56,5 +57,18 @@ class small_vector : public llvm::SmallVector<T, N> {
 };
 
 }  // namespace oneflow
+
+namespace std {
+
+template<typename T, size_t N>
+struct hash<oneflow::small_vector<T, N>> {
+  std::size_t operator()(const oneflow::small_vector<T, N>& vec) const {
+    std::size_t hash_value = vec.size();
+    for (const auto& elem : vec) { oneflow::AddHash<T>(&hash_value, elem); }
+    return hash_value;
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_COMMON_SMALL_VECTOR_H_

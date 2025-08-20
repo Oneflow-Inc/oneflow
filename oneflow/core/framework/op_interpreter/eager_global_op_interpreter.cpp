@@ -195,12 +195,13 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     }
     std::shared_ptr<GlobalTensorMetaInferArgs> infer_args =
         JUST(GlobalTensorMetaInferArgs::New(ctx.attrs, boxing_inputs));
-    // is_identical is true indicating all inputs tensor have same parallel_desc
-    const bool is_identical = JUST(IsAllInputsParallelDescIdentical(infer_args));
-    // if is_identical is false and env 'ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL' set to
-    // true then traverse all input tensor use function GetBoxingOutput(), during this process,
-    // each tensor will to_global with target parallel_desc
-    if (IsEnvEnableGlobalInputsWithInConsistentPlacement() && !is_identical) {
+    // IsAllInputsParallelDescIdentical is true indicating all inputs tensor have same parallel_desc
+    // if IsAllInputsParallelDescIdentical is false and env
+    // 'ONEFLOW_ENABLE_PIPELINE_PARALLELISM_AUTO_TO_GLOBAL' set to true then traverse all input
+    // tensor use function GetBoxingOutput(), during this process, each tensor will to_global with
+    // target parallel_desc
+    if (IsEnvEnableGlobalInputsWithInConsistentPlacement()
+        && !JUST(IsAllInputsParallelDescIdentical(infer_args))) {
       parallel_desc = JUST(GetMaxRankTensorPlacement(infer_args));
       Optional<int64_t> parallel_id;
       JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
