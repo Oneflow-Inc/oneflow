@@ -20,7 +20,13 @@ from oneflow.nn.modules.module import Module
 
 def nms_op(boxes, scores, iou_threshold: float):
     score_inds = flow.argsort(scores, dim=0, descending=True)
-    boxes = flow._C.gather(boxes, score_inds, axis=0)
-    keep = flow._C.nms(boxes, iou_threshold)
+    if boxes.device == flow.device("npu"):
+        sorted_scores = flow.gather(scores, dim=0, index=score_inds)
+        keep = flow._C.nms(
+            boxes, sorted_scores, score_inds.to(flow.int32), iou_threshold=iou_threshold
+        )
+    else:
+        boxes = flow._C.gather(boxes, score_inds, axis=0)
+        keep = flow._C.nms(boxes, iou_threshold=iou_threshold)
     index = flow.squeeze(flow.argwhere(keep), dim=[1])
     return flow._C.gather(score_inds, index, axis=0)
