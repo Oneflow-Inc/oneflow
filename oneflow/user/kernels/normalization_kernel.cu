@@ -38,7 +38,7 @@ namespace {
 
 cudnnBatchNormMode_t getCudnnBatchNormMode(const int64_t dim) {
   if (dim == 2) {
-    return CUDNN_BATCHNORM_PER_ACTIVATION;
+    return CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
   } else if (ParseBooleanFromEnv("ONEFLOW_ENABLE_NHWC", false)) {
     return CUDNN_BATCHNORM_SPATIAL_PERSISTENT;
   } else {
