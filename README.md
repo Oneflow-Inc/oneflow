@@ -100,7 +100,7 @@ docker pull oneflowinc/oneflow:nightly-cuda11.8
   ```
   apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake autoconf libtool
   ```
-  These dependencies are preinstalled in offical conda environment and docker image, you can use the offical conda environment [here](https://github.com/Oneflow-Inc/conda-env) or use the docker image by:
+  These dependencies are preinstalled in official conda environment and docker image, you can use the official conda environment [here](https://github.com/Oneflow-Inc/conda-env) or use the docker image by:
   ```bash
   docker pull oneflowinc/manylinux2014_x86_64_cuda11.2
   ```
