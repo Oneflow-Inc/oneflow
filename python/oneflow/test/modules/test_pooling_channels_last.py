@@ -77,6 +77,22 @@ def _max_pool2d(dilation, return_indices):
     return pool
 
 
+def _avg_pool(fn, k, s, p, count_include_pad):
+    def pool(x, data_format):
+        return fn(
+            x,
+            kernel_size=k,
+            stride=s,
+            padding=p,
+            ceil_mode=True,
+            count_include_pad=count_include_pad,
+            divisor_override=0,
+            data_format=data_format,
+        )
+
+    return pool
+
+
 def _devices():
     if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
         return ["cpu"]
@@ -94,6 +110,27 @@ class TestPoolingChannelsLast(flow.unittest.TestCase):
                             test_case,
                             _max_pool2d(dilation, return_indices),
                             (2, 3, 9, 8),
+                            device,
+                            dtype,
+                        )
+
+    def test_avg_pool_channels_last(test_case):
+        cases = [
+            (flow._C.avg_pool1d, (2, 3, 11), [3], [2], [1]),
+            (flow._C.avg_pool2d, (2, 3, 9, 8), [3, 2], [2, 1], [1, 1]),
+            (flow._C.avg_pool3d, (2, 3, 5, 6, 7), [3, 2, 2], [2, 1, 2], [1, 0, 1]),
+        ]
+        for device in _devices():
+            for fn, shape, k, s, p in cases:
+                if device == "cuda" and len(shape) == 4:
+                    # 4-D GPU tensors take the cuDNN path, which was correct.
+                    continue
+                for count_include_pad in (True, False):
+                    for dtype in (np.float32, np.float64):
+                        _check_against_channels_first(
+                            test_case,
+                            _avg_pool(fn, k, s, p, count_include_pad),
+                            shape,
                             device,
                             dtype,
                         )

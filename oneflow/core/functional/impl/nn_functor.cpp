@@ -1403,6 +1403,21 @@ class AvgPoolNDFunctor {
                         ceil_mode);
       return JUST(OpInterpUtil::Dispatch<Tensor>(*tf_avgpool_op_, {x}, attrs));
     }
+    if (data_format == "channels_last") {
+      // The avg_pool kernels pool channels_first data only.
+      const int32_t ndim = x->ndim();
+      std::vector<int32_t> to_first{0, ndim - 1};
+      std::vector<int32_t> to_last{0};
+      for (int32_t i = 1; i < ndim - 1; ++i) {
+        to_first.push_back(i);
+        to_last.push_back(i + 1);
+      }
+      to_last.push_back(1);
+      const auto& pooled =
+          JUST((*this)(JUST(functional::Permute(x, to_first)), kernel_size, stride, padding,
+                       ceil_mode, count_include_pad, divisor_override, "channels_first"));
+      return functional::ToContiguous(JUST(functional::Permute(pooled, to_last)));
+    }
 
     auto& attrs =
         THREAD_CACHED_MUTABLE_ATTR_MAP("kernel_size", "padding", "stride", "data_format",
