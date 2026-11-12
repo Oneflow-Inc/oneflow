@@ -56,3 +56,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(kineto)
 
 target_include_directories(kineto PUBLIC $<BUILD_INTERFACE:${kineto_SOURCE_DIR}/libkineto/include>)
+
+# This kineto release predates gcc-13's stricter transitive-include rules: SampleListener.h
+# uses uint64_t without including <cstdint> (it came in for free via libstdc++ before
+# gcc-13). Force-include <cstdint> so the headers parse; CPU-only, not HIP-specific.
+foreach(_kineto_tgt kineto kineto_base kineto_api)
+  if(TARGET ${_kineto_tgt})
+    target_compile_options(${_kineto_tgt} PRIVATE -include cstdint)
+  endif()
+endforeach()
