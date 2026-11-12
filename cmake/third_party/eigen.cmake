@@ -13,11 +13,21 @@ endif()
 
 if(THIRD_PARTY)
 
+  # This pinned Eigen dev snapshot has a latent bug in Transpositions.h: the friend
+  # operator* of Transpose<TranspositionsBase<...>> calls trt.derived(), but that class
+  # has no derived() member (it is a standalone expression, not a CRTP base). g++ never
+  # instantiates the offending friend so it slips through; clang's stricter two-phase
+  # lookup rejects it. The monolith is compiled with the ROCm clang, so patch the call to
+  # pass the Transpose object directly (matches the sibling operator* on the next lines,
+  # which already pass *this). Not HIP-specific; needed for any clang build.
+  set(EIGEN_TRANSPOSITIONS_H Eigen/src/Core/Transpositions.h)
   ExternalProject_Add(
     eigen
     PREFIX eigen
     URL ${EIGEN_URL}
     URL_MD5 ${EIGEN_MD5}
+    PATCH_COMMAND sed -i "s/matrix.derived(), trt.derived()/matrix.derived(), trt/"
+                  <SOURCE_DIR>/${EIGEN_TRANSPOSITIONS_H}
     UPDATE_COMMAND ""
     INSTALL_DIR "${EIGEN_INSTALL_DIR}"
     CMAKE_CACHE_ARGS

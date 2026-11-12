@@ -30,6 +30,9 @@ Maybe<Symbol<Device>> ToOneFlowDevice(const DLDevice& ctx) {
     case DLDeviceType::kDLCPU: return JUST(Device::New("cpu"));
 #ifdef WITH_CUDA
     case DLDeviceType::kDLCUDA: return JUST(Device::New("cuda", ctx.device_id));
+#if defined(USE_HIP)
+    case DLDeviceType::kDLROCM: return JUST(Device::New("cuda", ctx.device_id));
+#endif
 #endif
     default: UNIMPLEMENTED_THEN_RETURN() << "Unsupported device type: " << ctx.device_type;
   }
@@ -135,7 +138,11 @@ Maybe<DLDevice> ToDLDevice(Symbol<Device> ofdevice) {
   switch (ofdevice->enum_type()) {
     case DeviceType::kCPU: ctx.device_type = DLDeviceType::kDLCPU; break;
 #ifdef WITH_CUDA
+#if defined(USE_HIP)
+    case DeviceType::kCUDA: ctx.device_type = DLDeviceType::kDLROCM; break;
+#else
     case DeviceType::kCUDA: ctx.device_type = DLDeviceType::kDLCUDA; break;
+#endif
 #endif
     default: UNIMPLEMENTED_THEN_RETURN() << "Unsupported device type: " << ofdevice->type();
   }

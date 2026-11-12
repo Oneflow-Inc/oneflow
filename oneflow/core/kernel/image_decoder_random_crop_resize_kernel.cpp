@@ -28,7 +28,15 @@ limitations under the License.
 
 #include <cuda.h>
 
-#if CUDA_VERSION >= 10020
+#if defined(USE_HIP)
+
+// ROCm decodes with rocJPEG (the VCN hardware JPEG decoder) and resizes with RPP.
+#define WITH_ROCJPEG
+
+#include <rocjpeg/rocjpeg.h>
+#include "oneflow/core/kernel/image_resize_rpp.h"
+
+#elif CUDA_VERSION >= 10020
 
 #define WITH_NVJPEG
 
@@ -480,6 +488,183 @@ DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kCUDA>(int target_widt
 
 #endif  // defined(WITH_NVJPEG)
 
+#if defined(WITH_ROCJPEG)
+
+#define OF_ROCJPEG_CHECK(condition)                                                                \
+  for (RocJpegStatus _of_rocjpeg_check_status = (condition);                                       \
+       _of_rocjpeg_check_status != ROCJPEG_STATUS_SUCCESS;)                                        \
+  LOG(FATAL) << "Check failed: " #condition " : " << rocJpegGetErrorName(_of_rocjpeg_check_status) \
+             << " (" << static_cast<int>(_of_rocjpeg_check_status) << ") "
+
+// The hardware decoder writes the whole image as interleaved RGB; the random crop is applied by the
+// resize, the same order the nvJPEG path uses with its hardware decoder. Streams the decoder does
+// not support (progressive JPEG, for example) go to the CPU decoder, and so does every image when
+// no hardware decoder can be created (a GPU without a JPEG engine, or no access to its driver) or
+// when ONEFLOW_DECODER_ENABLE_NVJPEG_HARDWARE_ACCELERATION is false.
+class GpuDecodeHandle final : public DecodeHandle {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GpuDecodeHandle);
+  explicit GpuDecodeHandle(int dev, int target_width, int target_height);
+  ~GpuDecodeHandle() override;
+
+  void DecodeRandomCropResize(const unsigned char* data, size_t length,
+                              RandomCropGenerator* crop_generator, unsigned char* workspace,
+                              size_t workspace_size, unsigned char* dst, int target_width,
+                              int target_height) override;
+  void WarmupOnce(int warmup_size, unsigned char* workspace, size_t workspace_size) override;
+  void Synchronize() override;
+
+ private:
+  bool Decode(const unsigned char* data, size_t length, unsigned char* dst, size_t dst_max_length,
+              int* dst_width, int* dst_height);
+  void CropResize(const unsigned char* src, int src_width, int src_height,
+                  ROIGenerator* roi_generator, unsigned char* dst, int dst_width, int dst_height);
+  void CpuFallback(const unsigned char* data, size_t length, RandomCropGenerator* crop_generator,
+                   unsigned char* dst, int target_width, int target_height);
+
+  cudaStream_t cuda_stream_ = nullptr;
+  RocJpegHandle jpeg_handle_ = nullptr;
+  RocJpegStreamHandle jpeg_stream_ = nullptr;
+  std::unique_ptr<RppImageResizer> resizer_;
+  CpuDecodeHandle fallback_handle_;
+  unsigned char* fallback_buffer_{};
+  size_t fallback_buffer_size_;
+  bool warmup_done_;
+};
+
+GpuDecodeHandle::GpuDecodeHandle(int dev, int target_width, int target_height)
+    : warmup_done_(false) {
+  OF_CUDA_CHECK(cudaStreamCreateWithFlags(&cuda_stream_, cudaStreamNonBlocking));
+  if (!ParseBooleanFromEnv("ONEFLOW_DECODER_ENABLE_NVJPEG_HARDWARE_ACCELERATION", true)) {
+    LOG(WARNING) << "ONEFLOW_DECODER_ENABLE_NVJPEG_HARDWARE_ACCELERATION is false, JPEG images are "
+                    "decoded on the CPU";
+  } else {
+    const RocJpegStatus status = rocJpegCreate(ROCJPEG_BACKEND_HARDWARE, dev, &jpeg_handle_);
+    if (status != ROCJPEG_STATUS_SUCCESS) {
+      jpeg_handle_ = nullptr;
+      LOG(WARNING) << "rocJPEG cannot create a hardware JPEG decoder on device " << dev << " ("
+                   << rocJpegGetErrorName(status) << "), JPEG images are decoded on the CPU";
+    } else {
+      OF_ROCJPEG_CHECK(rocJpegStreamCreate(&jpeg_stream_));
+      resizer_ = RppImageResizer::Create(cuda_stream_);
+      if (!resizer_) {
+        LOG(WARNING) << "RPP cannot be set up on device " << dev
+                     << ", JPEG images are decoded on the CPU";
+        OF_ROCJPEG_CHECK(rocJpegStreamDestroy(jpeg_stream_));
+        OF_ROCJPEG_CHECK(rocJpegDestroy(jpeg_handle_));
+        jpeg_stream_ = nullptr;
+        jpeg_handle_ = nullptr;
+      }
+    }
+  }
+  fallback_buffer_size_ = target_width * target_height * kNumChannels;
+  OF_CUDA_CHECK(cudaMallocHost(&fallback_buffer_, fallback_buffer_size_));
+}
+
+GpuDecodeHandle::~GpuDecodeHandle() {
+  OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
+  resizer_.reset();
+  if (jpeg_handle_ != nullptr) {
+    OF_ROCJPEG_CHECK(rocJpegStreamDestroy(jpeg_stream_));
+    OF_ROCJPEG_CHECK(rocJpegDestroy(jpeg_handle_));
+  }
+  OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_));
+  OF_CUDA_CHECK(cudaFreeHost(fallback_buffer_));
+}
+
+bool GpuDecodeHandle::Decode(const unsigned char* data, size_t length, unsigned char* dst,
+                             size_t dst_max_length, int* dst_width, int* dst_height) {
+  if (jpeg_handle_ == nullptr) { return false; }
+  if (rocJpegStreamParse(data, length, jpeg_stream_) != ROCJPEG_STATUS_SUCCESS) { return false; }
+  uint8_t num_components = 0;
+  RocJpegChromaSubsampling subsampling{};
+  uint32_t widths[ROCJPEG_MAX_COMPONENT] = {};
+  uint32_t heights[ROCJPEG_MAX_COMPONENT] = {};
+  if (rocJpegGetImageInfo(jpeg_handle_, jpeg_stream_, &num_components, &subsampling, widths,
+                          heights)
+      != ROCJPEG_STATUS_SUCCESS) {
+    return false;
+  }
+  const int width = static_cast<int>(widths[0]);
+  const int height = static_cast<int>(heights[0]);
+  CHECK_LE(width * height * kNumChannels, dst_max_length);
+  RocJpegDecodeParams params{};
+  params.output_format = ROCJPEG_OUTPUT_RGB;
+  RocJpegImage image{};
+  image.channel[0] = dst;
+  image.pitch[0] = width * kNumChannels;
+  if (rocJpegDecode(jpeg_handle_, jpeg_stream_, &params, &image) != ROCJPEG_STATUS_SUCCESS) {
+    return false;
+  }
+  *dst_width = width;
+  *dst_height = height;
+  return true;
+}
+
+void GpuDecodeHandle::CropResize(const unsigned char* src, int src_width, int src_height,
+                                 ROIGenerator* roi_generator, unsigned char* dst, int dst_width,
+                                 int dst_height) {
+  ROI roi{};
+  roi_generator->Generate(src_width, src_height, &roi);
+  CHECK(resizer_->ResizeRgb(src, src_width, src_height, roi.x, roi.y, roi.w, roi.h, dst, dst_width,
+                            dst_height));
+}
+
+void GpuDecodeHandle::CpuFallback(const unsigned char* data, size_t length,
+                                  RandomCropGenerator* crop_generator, unsigned char* dst,
+                                  int target_width, int target_height) {
+  CHECK_LE(target_width * target_height * kNumChannels, fallback_buffer_size_);
+  fallback_handle_.DecodeRandomCropResize(data, length, crop_generator, nullptr, 0,
+                                          fallback_buffer_, target_width, target_height);
+  OF_CUDA_CHECK(cudaMemcpyAsync(dst, fallback_buffer_, target_width * target_height * kNumChannels,
+                                cudaMemcpyDefault, cuda_stream_));
+}
+
+void GpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t length,
+                                             RandomCropGenerator* crop_generator,
+                                             unsigned char* workspace, size_t workspace_size,
+                                             unsigned char* dst, int target_width,
+                                             int target_height) {
+  int w = 0;
+  int h = 0;
+  if (!Decode(data, length, workspace, workspace_size, &w, &h)) {
+    CpuFallback(data, length, crop_generator, dst, target_width, target_height);
+    return;
+  }
+  RandomCropROIGenerator random_crop_roi_generator(crop_generator);
+  CropResize(workspace, w, h, &random_crop_roi_generator, dst, target_width, target_height);
+}
+
+void GpuDecodeHandle::WarmupOnce(int warmup_size, unsigned char* workspace, size_t workspace_size) {
+  if (warmup_done_ || jpeg_handle_ == nullptr) { return; }
+  warmup_size = std::min(static_cast<int>(std::sqrt(workspace_size / kNumChannels)), warmup_size);
+  cv::Mat image = cv::Mat::zeros(cv::Size(warmup_size, warmup_size), CV_8UC3);
+  cv::randu(image, cv::Scalar(0, 0, 0), cv::Scalar(255, 255, 255));
+  std::vector<unsigned char> data;
+  cv::imencode(".jpg", image, data, {});
+  int decoded_width = 0;
+  int decoded_height = 0;
+  CHECK(
+      Decode(data.data(), data.size(), workspace, workspace_size, &decoded_width, &decoded_height));
+  Synchronize();
+  warmup_done_ = true;
+}
+
+void GpuDecodeHandle::Synchronize() { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_)); }
+
+template<>
+DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kCUDA>(int target_width,
+                                                                 int target_height) {
+  int dev = 0;
+  OF_CUDA_CHECK(cudaGetDevice(&dev));
+  return [dev, target_width, target_height]() -> std::shared_ptr<DecodeHandle> {
+    OF_CUDA_CHECK(cudaSetDevice(dev));
+    return std::make_shared<GpuDecodeHandle>(dev, target_width, target_height);
+  };
+}
+
+#endif  // defined(WITH_ROCJPEG)
+
 class Worker final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Worker);
@@ -626,7 +811,7 @@ NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
       return conf.op_attribute().op_conf().device_tag() == "cpu";
     });
 
-#if defined(WITH_NVJPEG)
+#if defined(WITH_NVJPEG) || defined(WITH_ROCJPEG)
 
 NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
                     ImageDecoderRandomCropResizeKernel<DeviceType::kCUDA>)
@@ -634,6 +819,6 @@ NEW_REGISTER_KERNEL(OperatorConf::kImageDecoderRandomCropResizeConf,
       return conf.op_attribute().op_conf().device_tag() == "cuda";
     });
 
-#endif  // defined(WITH_NVJPEG)
+#endif  // defined(WITH_NVJPEG) || defined(WITH_ROCJPEG)
 
 }  // namespace oneflow

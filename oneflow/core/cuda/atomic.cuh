@@ -195,14 +195,15 @@ __device__ __forceinline__ nv_bfloat162 AddImpl(nv_bfloat162* address, nv_bfloat
 
 #endif  // __CUDA_ARCH__ >= 800
 
-#if __CUDA_ARCH__ < 530
+// HIP device code sees __CUDA_ARCH__ as 1, which would select this trap; HIP takes the CAS loop.
+#if __CUDA_ARCH__ < 530 && !defined(USE_HIP)
 
 __device__ __forceinline__ half2 AddImpl(half2* address, half2 val) {
   __trap();
   return val;
 }
 
-#endif  // __CUDA_ARCH__ < 530
+#endif  // __CUDA_ARCH__ < 530 && !defined(USE_HIP)
 
 }  // namespace internal
 

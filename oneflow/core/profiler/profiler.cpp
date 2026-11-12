@@ -21,10 +21,14 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_util.h"
-#include <nvtx3/nvToolsExt.h>
 #include <sys/syscall.h>
 #include <iostream>
+// NVTX range annotations and the CUDA profiler control API are NVIDIA-only (no header on
+// ROCm); the profiler annotations are compiled out under USE_HIP.
+#if !defined(USE_HIP)
+#include <nvtx3/nvToolsExt.h>
 #include <cuda_profiler_api.h>
+#endif  // !USE_HIP
 #endif  // WITH_CUDA
 
 namespace oneflow {
@@ -39,20 +43,22 @@ void NameThisHostThread(const std::string& name) {
         new std::string(GetStringFromEnv("ONEFLOW_PROFILER_HOST_THREAD_NAME_PREFIX", "")));
   }
   const std::string name_with_prefix = *thread_name_prefix + name;
+#if !defined(USE_HIP)
   nvtxNameOsThreadA(syscall(SYS_gettid), name_with_prefix.c_str());
+#endif  // !USE_HIP
 #endif  // WITH_CUDA
 }
 
 void RangePush(const std::string& name) {
-#ifdef OF_ENABLE_PROFILER
+#if defined(OF_ENABLE_PROFILER) && !defined(USE_HIP)
   nvtxRangePushA(name.c_str());
-#endif  // OF_ENABLE_PROFILER
+#endif  // OF_ENABLE_PROFILER && !USE_HIP
 }
 
 void RangePop() {
-#ifdef OF_ENABLE_PROFILER
+#if defined(OF_ENABLE_PROFILER) && !defined(USE_HIP)
   nvtxRangePop();
-#endif  // OF_ENABLE_PROFILER
+#endif  // OF_ENABLE_PROFILER && !USE_HIP
 }
 
 RangeGuard::RangeGuard(const std::string& name) {

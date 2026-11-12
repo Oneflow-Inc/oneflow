@@ -45,7 +45,16 @@ find_library(
   NO_DEFAULT_PATH
   DOC "Path to cuPTI library.")
 
-list(APPEND CUDA_cupti_LIBRARY CUDA::cudart_static) # for undefined symbol: cudaGetDeviceCount∂
+if(NOT USE_HIP)
+  list(APPEND CUDA_cupti_LIBRARY CUDA::cudart_static) # for undefined symbol: cudaGetDeviceCount∂
+endif()
+
+if(USE_HIP)
+  # kineto auto-enables its roctracer backend whenever it detects ROCm (the
+  # ROCM_SOURCE_DIR env var) and then demands ROCTRACER_LIBRARY from a wrong HINTS path.
+  # oneflow's profiler (BUILD_PROFILER) is off here, so build kineto CPU-only.
+  set(LIBKINETO_NOROCTRACER ON CACHE BOOL "" FORCE)
+endif()
 
 FetchContent_Declare(
   kineto
@@ -56,3 +65,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(kineto)
 
 target_include_directories(kineto PUBLIC $<BUILD_INTERFACE:${kineto_SOURCE_DIR}/libkineto/include>)
+
+# This kineto release predates gcc-13's stricter transitive-include rules: SampleListener.h
+# uses uint64_t without including <cstdint> (it came in for free via libstdc++ before
+# gcc-13). Force-include <cstdint> so the headers parse; CPU-only, not HIP-specific.
+foreach(_kineto_tgt kineto kineto_base kineto_api)
+  if(TARGET ${_kineto_tgt})
+    target_compile_options(${_kineto_tgt} PRIVATE -include cstdint)
+  endif()
+endforeach()

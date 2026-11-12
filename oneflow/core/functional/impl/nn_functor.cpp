@@ -1286,6 +1286,15 @@ class PixelShuffleFunctor {
   }
 };
 
+#ifdef USE_HIP
+// On ROCm the channels_last 2D pooling path below runs on MIOpen, which pools float, float16 and
+// bfloat16 only; other types take the channels_first kernels on an NCHW view instead.
+inline bool MIOpenPoolsDataType(DataType data_type) {
+  return data_type == DataType::kFloat || data_type == DataType::kFloat16
+         || data_type == DataType::kBFloat16;
+}
+
+#endif  // USE_HIP
 class TFPoolNDFunctor {
  public:
   TFPoolNDFunctor() = default;
@@ -1321,6 +1330,17 @@ class MaxPoolNDFunctor {
     // channels_last case
     if (input->is_cuda() && num_spatial_dims_ == 2 && data_format == "channels_last") {
       if (!return_indices && dilation.at(0) == 1 && dilation.at(1) == 1) {
+#ifdef USE_HIP
+        if (!MIOpenPoolsDataType(input->dtype()->data_type())) {
+          const auto& nchw = JUST(functional::Permute(input, {0, 3, 1, 2}));
+          const auto& pooled = JUST((*this)(nchw, kernel_size, stride, padding, dilation,
+                                            return_indices, ceil_mode, "channels_first"));
+          TensorTuple output;
+          output.emplace_back(JUST(
+              functional::ToContiguous(JUST(functional::Permute(pooled->at(0), {0, 2, 3, 1})))));
+          return output;
+        }
+#endif  // USE_HIP
         // legacy tf style maxpool2d , use cudnn implementation
         // with high performance but do not support dilation/return_indices
         std::vector<int32_t> padding_before{padding.at(0), padding.at(1)};
@@ -1391,6 +1411,16 @@ class AvgPoolNDFunctor {
           << "AvgPool2d with channels_last data format don't support count_include_pad for now.";
       CHECK_EQ_OR_THROW(divisor_override, 0)
           << "AvgPool2d with channels_last data format don't support divisor_override for now.";
+#ifdef USE_HIP
+      if (!MIOpenPoolsDataType(x->dtype()->data_type())) {
+        // MIOpen averages over the window inside the input, so exclude the padding.
+        const auto& nchw = JUST(functional::Permute(x, {0, 3, 1, 2}));
+        const auto& pooled =
+            JUST((*this)(nchw, kernel_size, stride, padding, ceil_mode,
+                         /*count_include_pad=*/false, divisor_override, "channels_first"));
+        return functional::ToContiguous(JUST(functional::Permute(pooled, {0, 2, 3, 1})));
+      }
+#endif  // USE_HIP
 
       std::vector<int32_t> padding_before{JUST(VectorAt(padding, 0)), JUST(VectorAt(padding, 1))};
       std::vector<int32_t> padding_after{JUST(VectorAt(padding, 0)), JUST(VectorAt(padding, 1))};
@@ -1402,6 +1432,21 @@ class AvgPoolNDFunctor {
                         std::string("customized"), padding_before, padding_after, data_format,
                         ceil_mode);
       return JUST(OpInterpUtil::Dispatch<Tensor>(*tf_avgpool_op_, {x}, attrs));
+    }
+    if (data_format == "channels_last") {
+      // The avg_pool kernels pool channels_first data only.
+      const int32_t ndim = x->ndim();
+      std::vector<int32_t> to_first{0, ndim - 1};
+      std::vector<int32_t> to_last{0};
+      for (int32_t i = 1; i < ndim - 1; ++i) {
+        to_first.push_back(i);
+        to_last.push_back(i + 1);
+      }
+      to_last.push_back(1);
+      const auto& pooled =
+          JUST((*this)(JUST(functional::Permute(x, to_first)), kernel_size, stride, padding,
+                       ceil_mode, count_include_pad, divisor_override, "channels_first"));
+      return functional::ToContiguous(JUST(functional::Permute(pooled, to_last)));
     }
 
     auto& attrs =

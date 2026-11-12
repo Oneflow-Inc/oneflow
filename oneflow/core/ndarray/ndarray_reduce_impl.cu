@@ -86,6 +86,10 @@ struct WithAlign2 {
   };
 };
 
+// One warp-wide tile of columns per block, as many rows as fit in 1024 threads.
+constexpr int32_t kMatrixColReduceBlockSize =
+    kCudaWarpSize * kCudaWarpSize < 1024 ? kCudaWarpSize * kCudaWarpSize : 1024;
+
 template<template<typename> class R, typename T, typename K, typename RetT>
 __global__ void MatrixColReduceByWarpBlock(K num_elems, K num_cols, const T* in, RetT* out) {
   const K thread_col = threadIdx.x % kCudaWarpSize;
@@ -93,7 +97,7 @@ __global__ void MatrixColReduceByWarpBlock(K num_elems, K num_cols, const T* in,
   const K thread_dim_row = blockDim.x / kCudaWarpSize;
   const K num_valid_threads = thread_dim_row * num_cols;  // ASSERT: always <= num_elems
   const K col = blockIdx.x * kCudaWarpSize + thread_col;
-  __shared__ WithAlign2<T> partial_values[kCudaWarpSize * kCudaWarpSize];
+  __shared__ WithAlign2<T> partial_values[kMatrixColReduceBlockSize];
   if (col < num_cols) {
     K index = thread_row * num_cols + col;
     T val = in[index];
@@ -124,7 +128,7 @@ void MatrixColReduceBy1BlockLayer(ep::Stream* stream, K num_elems, K num_cols, c
                     num_cols, in, out);
   } else {
     const int num_blocks = (num_cols + kCudaWarpSize - 1) / kCudaWarpSize;
-    const int num_threads = kCudaWarpSize * kCudaWarpSize;
+    const int num_threads = kMatrixColReduceBlockSize;
     auto Reduce = &MatrixColReduceByWarpBlock<R, T, K, RetT>;
     Reduce<<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
         num_elems, num_cols, in, out);
@@ -206,6 +210,19 @@ struct NdarrayScalarReduce<DeviceType::kCUDA, T, binary_func> final {
     DoReduce(tmp_storage.ptr());
   }
 };
+
+#if defined(USE_HIP)
+template<typename T, template<typename> class binary_func>
+size_t CudaScalarReduceTmpStorageBytes(int64_t elem_cnt) {
+  using RetT = typename BinaryFuncTrait<binary_func, T>::return_type;
+  size_t tmp_storage_bytes = 0;
+  OF_CUDA_CHECK(cub::DeviceReduce::Reduce(
+      nullptr, tmp_storage_bytes, static_cast<const T*>(nullptr), static_cast<RetT*>(nullptr),
+      static_cast<size_t>(elem_cnt), typename CubFunctor4BianryFunc<T, binary_func>::type(),
+      UnitOfBinaryFunc<T, binary_func>::Val()));
+  return tmp_storage_bytes;
+}
+#endif  // defined(USE_HIP)
 
 template<typename T, template<typename> class binary_func>
 struct NdarrayMatrixRowReduce<DeviceType::kCUDA, T, binary_func> final {
@@ -373,11 +390,19 @@ struct NdarrayReduceCoreWrapper<DeviceType::kCUDA, T, NDIMS, binary_func> final 
   }
 };
 
+#if defined(USE_HIP)
+#define INSTANTIATE_CUDA_SCALAR_REDUCE_TMP_STORAGE_BYTES(dtype, binary_func) \
+  template size_t CudaScalarReduceTmpStorageBytes<OF_PP_PAIR_FIRST(dtype), binary_func>(int64_t);
+#else
+#define INSTANTIATE_CUDA_SCALAR_REDUCE_TMP_STORAGE_BYTES(dtype, binary_func)
+#endif
+
 #define INSTANTIATE_NDARRAY_REDUCE_IMPL(dtype, binary_func)                                        \
   template struct NdarrayScalarReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>;    \
   template struct NdarrayMatrixRowReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>; \
   template struct NdarrayMatrixColReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>; \
-  template struct NdarrayXYZCubeXZReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>;
+  template struct NdarrayXYZCubeXZReduce<DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype), binary_func>; \
+  INSTANTIATE_CUDA_SCALAR_REDUCE_TMP_STORAGE_BYTES(dtype, binary_func)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_NDARRAY_REDUCE_IMPL,
                                  ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ

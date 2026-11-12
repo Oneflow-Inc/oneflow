@@ -44,14 +44,15 @@ __global__
   curandStatePhilox4_32_10_t state;
   curand_init(seed, idx, offset, &state);
 
-  int rounded_size = ((numel - 1) / (blockDim.x * gridDim.x * unroll_factor) + 1) * blockDim.x
-                     * gridDim.x * unroll_factor;
-  for (int32_t linear_index = idx; linear_index < rounded_size;
-       linear_index += blockDim.x * gridDim.x * unroll_factor) {
+  const int64_t stride = static_cast<int64_t>(blockDim.x) * gridDim.x;
+  const int64_t rounded_size =
+      ((numel - 1) / (stride * unroll_factor) + 1) * stride * unroll_factor;
+  for (int64_t linear_index = idx; linear_index < rounded_size;
+       linear_index += stride * unroll_factor) {
     auto rand = dist_func(&state);
 #pragma unroll
     for (int ii = 0; ii < unroll_factor; ii++) {
-      int li = linear_index + blockDim.x * gridDim.x * ii;
+      int64_t li = linear_index + stride * ii;
       if (li < numel) {
         T r = transform_func(static_cast<ComputeType>((&rand.x)[ii]));
         if (in_ptr[li] <= static_cast<T>(0)) {

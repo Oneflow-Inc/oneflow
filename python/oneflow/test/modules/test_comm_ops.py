@@ -34,6 +34,15 @@ class TestAllReduce(flow.unittest.TestCase):
         flow.comm.all_reduce(tensor)
         test_case.assertTrue(np.allclose(tensor.numpy(), np_arr * 2))
 
+    @flow.unittest.skip_unless_1n2d()
+    def test_all_reduce_bfloat16_1n2d(test_case):
+        np_arr = np.array([[1, 2], [3, 4]])
+        tensor = flow.tensor(np_arr * (flow.env.get_rank() + 1), dtype=flow.bfloat16)
+        tensor = tensor.to("cuda")
+        flow.comm.all_reduce(tensor)
+        test_case.assertEqual(tensor.dtype, flow.bfloat16)
+        test_case.assertTrue(np.array_equal(tensor.float().numpy(), np_arr * 3))
+
     @flow.unittest.skip_unless_2n2d()
     def test_all_reduce_2n2d(test_case):
         np_arr = np.array([[1, 2], [3, 4]])
@@ -67,6 +76,17 @@ class TestAllGather(flow.unittest.TestCase):
                 tensor_out2.numpy(),
                 np.array([[[1, 2], [3, 4], [5, 6]], [[7, 8], [9, 10], [11, 12]]]),
             )
+        )
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_all_gather_into_tensor_bfloat16_1n2d(test_case):
+        np_arr = np.array([[1, 2, 3], [4, 5, 6]])
+        tensor_in = flow.tensor(np_arr + flow.env.get_rank() * 6, dtype=flow.bfloat16)
+        tensor_in = tensor_in.to("cuda")
+        tensor_out = flow.zeros(4, 3, dtype=flow.bfloat16, device="cuda")
+        flow.comm.all_gather_into_tensor(tensor_out, tensor_in)
+        test_case.assertTrue(
+            np.array_equal(tensor_out.float().numpy(), np.arange(1, 13).reshape(4, 3))
         )
 
     @flow.unittest.skip_unless_1n2d()

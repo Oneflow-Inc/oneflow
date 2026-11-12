@@ -44,5 +44,10 @@ inline static void EnableCustomEvalFrame(PyThreadState* tstate, _PyFrameEvalFunc
 }
 
 void EnableCustomEvalFrameForCurrentThread(PyFrameEvalFunc eval_func) {
-  return EnableCustomEvalFrame(PyThreadState_GET(), eval_func);
+  // CPython 3.11 changed _PyFrameEvalFunction's frame parameter from PyFrameObject* to
+  // _PyInterpreterFrame*; oneflow's PyFrameEvalFunc typedef and RecordAndEvalFrame still use
+  // the pre-3.11 PyFrameObject* (the eval hook reconciles via frame->f_frame internally).
+  // gcc accepted the pointer-type mismatch with a warning; clang errors, so cast explicitly.
+  // Behavior is unchanged and this stack getter is off unless ONEFLOW_DEBUG is set.
+  return EnableCustomEvalFrame(PyThreadState_GET(), (_PyFrameEvalFunction)eval_func);
 }

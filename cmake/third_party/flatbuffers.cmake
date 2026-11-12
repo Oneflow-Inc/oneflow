@@ -29,6 +29,14 @@ if(THIRD_PARTY)
     URL ${FLATBUFFERS_URL}
     URL_MD5 c62ffefb3d4548b127cca14ce047f16c
     UPDATE_COMMAND bash -c "rm -f BUILD || true"
+    # flatbuffers 1.12.0 appends a hardcoded -Werror in its own CMakeLists, so gcc-13's
+    # -Wstringop-overflow on libstdc++ stl_algobase.h breaks its build (not a HIP issue);
+    # a -Wno-error in CMAKE_CXX_FLAGS is overridden because flatbuffers appends -Werror
+    # last. Strip the -Werror flags from its CMakeLists before configuring.
+    PATCH_COMMAND sed -i -e "s/-Werror=shadow//g" -e "s/ -Werror / /g"
+                  -e "s/-Werror=implicit-fallthrough=2//g" -e "s/-Werror=unused-result//g"
+                  -e "s/-Werror=unused-parameter//g"
+                  ${CMAKE_CURRENT_BINARY_DIR}/flatbuffers/src/flatbuffers/CMakeLists.txt
     BUILD_IN_SOURCE 1
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/flatbuffers/src/flatbuffers
     BUILD_BYPRODUCTS ${FLATBUFFERS_STATIC_LIBRARIES}

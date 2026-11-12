@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import unittest
 from collections import OrderedDict
 
@@ -105,6 +106,13 @@ class TestArgmax(flow.unittest.TestCase):
     def profile_argmax(test_case):
         torch.argmax(torch.ones(100000))
         torch.argmax(torch.ones(1000000))
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_argmax_all_nan_row(test_case):
+        x = flow.tensor([[float("nan")] * 5, [1.0, 2.0, 3.0, 0.0, -1.0]], device="cuda")
+        index = flow.argmax(x, dim=1).numpy()
+        test_case.assertTrue(0 <= index[0] < 5)
+        test_case.assertEqual(index[1], 2)
 
 
 if __name__ == "__main__":

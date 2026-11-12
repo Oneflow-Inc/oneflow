@@ -52,7 +52,7 @@ class AddNKernel : public OpKernel, public CudaGraphSupport {
       const Tensor* in_i = ctx->Tensor4ArgNameAndIndex("in", i);
       CHECK_EQ(in_i->shape_view().elem_cnt(), count);
       CHECK_EQ(in_i->data_type(), data_type);
-      srcs[i] = in_i->template dptr();
+      srcs[i] = in_i->dptr();
     }
     primitive->Launch(ctx->stream(), srcs.data(), in_num, out->mut_dptr(), count);
   }

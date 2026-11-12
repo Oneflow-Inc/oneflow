@@ -41,6 +41,13 @@ DECLARE_NDARRAY_REDUCE_IMPL(NdarrayMatrixColReduce);
 DECLARE_NDARRAY_REDUCE_IMPL(NdarrayXYZCubeXZReduce);
 #undef DECLARE_NDARRAY_REDUCE_IMPL
 
+#if defined(USE_HIP)
+// hipCUB's device reduce asks for at least 4 bytes of scratch, which is more than
+// elem_cnt * sizeof(T) for a short input of a one-byte type.
+template<typename T, template<typename> class binary_func>
+size_t CudaScalarReduceTmpStorageBytes(int64_t elem_cnt);
+#endif  // defined(USE_HIP)
+
 template<DeviceType device_type, typename T, template<typename> class binary_func,
          typename Enable = void>
 struct NdarrayNoReduce;
@@ -150,7 +157,7 @@ struct NdarrayReduceCore final {
     size_t n = dst_reduced.shape().ElemNum();
     int64_t dst_dim_val = dst_reduced.shape().At(axis);
     XPU_1D_KERNEL_LOOP_BEGIN(i, n);
-    T* dst_reduced_ptr = dst_reduced.template Mut(i);
+    T* dst_reduced_ptr = dst_reduced.Mut(i);
     int64_t coord[NDIMS];
     dst_reduced.shape().template Offset2Coordinate<NDIMS>(i, coord);
     T reduced = UnitOfBinaryFunc<T, binary_func>::Val();

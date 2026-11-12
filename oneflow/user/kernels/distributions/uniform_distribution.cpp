@@ -58,7 +58,11 @@ void UniformDistribution<DeviceType::kCPU, float16>::operator()(
   CHECK_GE(elem_cnt, 0) << "elem_cnt must be non-negative, but got " << elem_cnt;
   auto gen = CHECK_JUST(generator->Get<ep::CPUGenerator>());
   CPUUniformDistributionImpl<float> impl(low_, high_);
-  for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = static_cast<float16>(impl(gen->engine())); }
+  for (int64_t i = 0; i < elem_cnt; ++i) {
+    const float16 value = static_cast<float16>(impl(gen->engine()));
+    // A draw below high can still round up to high in half.
+    dptr[i] = static_cast<float>(value) >= static_cast<float>(high_) ? low_ : value;
+  }
 }
 
 }  // namespace oneflow

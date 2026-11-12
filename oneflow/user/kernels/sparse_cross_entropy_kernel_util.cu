@@ -39,7 +39,7 @@ template<typename K>
 __global__ void ComputeEntropyGpuHalf(const int64_t num_instances, const int64_t num_classes,
                                       const int64_t depth, const int64_t lower_bound, const half* x,
                                       const K* labels, half* y) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) || defined(USE_HIP)
   CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
@@ -51,7 +51,7 @@ __global__ void ComputeEntropyGpuHalf(const int64_t num_instances, const int64_t
 #else
   printf("use half need nvcc arch >= 530");
   assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) || defined(USE_HIP)*/
 }
 
 template<typename T, typename K>
@@ -72,7 +72,7 @@ template<typename K>
 __global__ void ComputeDiffGpuHalf(const int64_t num_instances, const int64_t num_classes,
                                    const int64_t depth, const int64_t lower_bound, const half* x,
                                    const K* labels, const half* dy, half* dx) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) || defined(USE_HIP)
   CUDA_1D_KERNEL_LOOP_T(int64_t, i, num_instances) {
     assert(labels[i] >= 0);
     assert(labels[i] < depth);
@@ -85,7 +85,7 @@ __global__ void ComputeDiffGpuHalf(const int64_t num_instances, const int64_t nu
 #else
   printf("use half need nvcc arch >= 530");
   assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) || defined(USE_HIP)*/
 }
 
 template<typename T, typename K, typename IndexType>
@@ -111,7 +111,7 @@ __global__ void ComputeDiffWithSoftmaxGpuHalf(const int64_t elem_cnt, const int6
                                               const int64_t depth, const int64_t lower_bound,
                                               const half* prob, const K* labels, const half* dy,
                                               half* dx) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) || defined(USE_HIP)
   CUDA_1D_KERNEL_LOOP_T(IndexType, i, elem_cnt) {
     // NOTE(chengcheng): int division ('/') of i will reduce performance of int64_t.
     const IndexType row_id = i / num_classes;
@@ -128,7 +128,7 @@ __global__ void ComputeDiffWithSoftmaxGpuHalf(const int64_t elem_cnt, const int6
 #else
   printf("use half need nvcc arch >= 530");
   assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) || defined(USE_HIP)*/
 }
 
 template<typename K, typename IndexType>
@@ -136,7 +136,7 @@ __global__ void ComputeDiffWithSoftmaxGpuHalf2(const int64_t elem_cnt, const int
                                                const int64_t depth, const int64_t lower_bound,
                                                const half* prob, const K* labels, const half* dy,
                                                half* dx) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) || defined(USE_HIP)
   const int64_t h2_num_classes = num_classes / 2;
   const int64_t h2_elem_cnt = elem_cnt / 2;
   const auto* prob_h2 = reinterpret_cast<const half2*>(prob);
@@ -157,7 +157,7 @@ __global__ void ComputeDiffWithSoftmaxGpuHalf2(const int64_t elem_cnt, const int
 #else
   printf("use half need nvcc arch >= 530");
   assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) || defined(USE_HIP)*/
 }
 
 }  // namespace

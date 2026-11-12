@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import imp
+import importlib.machinery
 import importlib.util
 import os
 from typing import List
@@ -62,11 +62,14 @@ def get_liboneflow_link_flags() -> List[str]:
 def get_link_flags() -> List[str]:
     flags = []
     flags.append("-L{}".format(get_lib()))
-    (file, oneflow_internal_lib_path, _) = imp.find_module(
-        "_oneflow_internal", [get_lib()]
+    # imp.find_module was removed in Python 3.12; locate the extension by its known
+    # suffixes under get_lib() (e.g. _oneflow_internal.cpython-3xx-<plat>.so).
+    lib_dir = get_lib()
+    oneflow_internal_lib_path = next(
+        os.path.join(lib_dir, "_oneflow_internal" + suffix)
+        for suffix in importlib.machinery.EXTENSION_SUFFIXES
+        if os.path.exists(os.path.join(lib_dir, "_oneflow_internal" + suffix))
     )
-    if file:
-        file.close()
     flags.append("-l:{}".format(os.path.basename(oneflow_internal_lib_path)))
     return flags
 

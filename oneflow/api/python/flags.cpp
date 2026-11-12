@@ -29,6 +29,14 @@ ONEFLOW_API_PYBIND11_MODULE("flags", m) {
 #endif  // WITH_CUDA
   });
 
+  m.def("with_rocm", []() {
+#ifdef USE_HIP
+    return true;
+#else
+    return false;
+#endif  // USE_HIP
+  });
+
   m.def("with_npu", []() {
 #ifdef WITH_NPU
     return true;

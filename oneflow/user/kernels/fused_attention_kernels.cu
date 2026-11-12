@@ -14,18 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef WITH_CUTLASS
+// The HIP build has no CUTLASS: it compiles only the kernels below that do not use it
+// (fused_attention_concat_past_key_value and fused_apply_rotary_emb).
+#if defined(WITH_CUTLASS) || defined(USE_HIP)
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/core/ep/include/primitive/permute.h"
+#ifdef WITH_CUTLASS
 #include "cutlass/arch/mma.h"
 #include "cutlass/gemm/warp/mma.h"
 #include "kernel_forward.h"
+#endif  // WITH_CUTLASS
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#ifdef WITH_CUTLASS
 #include "trt_flash_attention/fmha.h"
 #include "trt_flash_attention/fmha_flash_attention.h"
+#endif  // WITH_CUTLASS
 
 namespace oneflow {
 
@@ -223,6 +229,8 @@ void ParseDims(const ShapeView& shape, const std::string& layout,
   ParseDims(shape, layout, Optional<int64_t>(), Optional<int64_t>(), num_heads, head_size,
             tensor_index, b, m, h, k, b_stride, m_stride, h_stride, offset, &bm_packed);
 }
+
+#ifdef WITH_CUTLASS
 
 template<typename T, int pack_size>
 struct alignas(pack_size * sizeof(T)) Pack {
@@ -716,6 +724,8 @@ size_t InferTmpBufferSize(InferContext* ctx) {
 REGISTER_FUSED_MULTI_HEAD_ATTENTION_INFERENCE_KERNEL(DataType::kFloat16)
 REGISTER_FUSED_MULTI_HEAD_ATTENTION_INFERENCE_KERNEL(DataType::kFloat)
 
+#endif  // WITH_CUTLASS
+
 template<typename Index>
 struct ConcatParam {
   const void* past_ptr;
@@ -773,9 +783,11 @@ __device__ void ConcatPastKeyValue(ConcatParam<Index> p) {
 template<size_t elem_size, typename Index>
 __global__ void BatchConcatPastKeyValue(BatchConcatParam<Index> params) {
   if (blockIdx.y == 0) {
-    ConcatPastKeyValue<std::aligned_storage<elem_size, elem_size>::type, Index>(params.params[0]);
+    ConcatPastKeyValue<typename std::aligned_storage<elem_size, elem_size>::type, Index>(
+        params.params[0]);
   } else if (blockIdx.y == 1) {
-    ConcatPastKeyValue<std::aligned_storage<elem_size, elem_size>::type, Index>(params.params[1]);
+    ConcatPastKeyValue<typename std::aligned_storage<elem_size, elem_size>::type, Index>(
+        params.params[1]);
   } else {
     // do nothing
   }
@@ -1435,4 +1447,4 @@ REGISTER_FUSED_APPLY_ROTARY_EMB_GPU_DTYPE(nv_bfloat16);
 
 }  // namespace oneflow
 
-#endif  // WITH_CUTLASS
+#endif  // defined(WITH_CUTLASS) || defined(USE_HIP)

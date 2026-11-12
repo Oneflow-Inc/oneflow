@@ -121,6 +121,18 @@ class TestRandModule(flow.unittest.TestCase):
             test_case.assertTrue(x.dtype == flow.float16)
             test_case.assertTrue(x.shape == flow.Size((2, 3)))
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_half_rand_below_high(test_case):
+        # About 1 in 4096 float draws in [0, 1) rounds up to 1.0 in half.
+        for device in ["cuda", "cpu"]:
+            x = flow.rand(2 ** 20, dtype=flow.float16, device=device).float()
+            test_case.assertLess(x.max().item(), 1.0)
+            test_case.assertGreaterEqual(x.min().item(), 0.0)
+            x = flow.empty(2 ** 20, dtype=flow.float16, device=device)
+            x = x.uniform_(-2, 3).float()
+            test_case.assertLess(x.max().item(), 3.0)
+            test_case.assertGreaterEqual(x.min().item(), -2.0)
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()

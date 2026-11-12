@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import atexit
-import imp
+import importlib.util
 import os
 import socket
 import subprocess
@@ -58,7 +58,13 @@ def register_test_cases(
     onlytest_files = [f for f in os.listdir(directory) if FilterTestPyFile(f)]
     for f in onlytest_files:
         class_name = f[0:-3]
-        module = imp.load_source(class_name, os.path.join(directory, f))
+        # imp was removed in Python 3.12; this is what imp.load_source did.
+        spec = importlib.util.spec_from_file_location(
+            class_name, os.path.join(directory, f)
+        )
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[class_name] = module
+        spec.loader.exec_module(module)
         test_func_names = [
             name for name in dir(module) if FilterMethodName(module, name)
         ]

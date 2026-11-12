@@ -28,7 +28,7 @@ limitations under the License.
 #endif  // CUDA_VERSION >= 11000
 #include <cudnn.h>
 
-#if (CUDNN_VERSION >= 7401)
+#if (CUDNN_VERSION >= 7401) && !defined(USE_HIP)
 #define BN_ENABLE_EX_API
 #endif
 
@@ -176,6 +176,18 @@ size_t InferGradTmpSize(user_op::InferContext* ctx) {
 
 constexpr int64_t kCudaWarpSize = 32;
 
+// The mask holds one 32-bit word per 32 elements. A 64-wide wavefront covers two words, so each
+// half keeps its own 32 bits of the ballot.
+#if defined(USE_HIP)
+__device__ __forceinline__ int32_t WarpMask32(uint64_t ballot) {
+  return static_cast<int32_t>(ballot >> (__lane_id() & ~(kCudaWarpSize - 1)));
+}
+#else
+__device__ __forceinline__ int32_t WarpMask32(uint32_t ballot) {
+  return static_cast<int32_t>(ballot);
+}
+#endif  // defined(USE_HIP)
+
 template<typename T>
 __global__ void ReluGpu(int64_t n, const T* x, T* y, int32_t* mask) {
   const int32_t lane_id = threadIdx.x % kCudaWarpSize;
@@ -183,7 +195,7 @@ __global__ void ReluGpu(int64_t n, const T* x, T* y, int32_t* mask) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T x_val = x[i];
     const bool is_positive = (x_val > zero);
-    int32_t warp_mask = __ballot_sync(__activemask(), static_cast<int>(is_positive));
+    int32_t warp_mask = WarpMask32(__ballot_sync(__activemask(), static_cast<int>(is_positive)));
     if (lane_id == 0) { mask[i / kCudaWarpSize] = warp_mask; }
     y[i] = is_positive ? x_val : zero;
   }
@@ -196,7 +208,7 @@ __global__ void AddReluGpu(int64_t n, const T* x, const T* addend, T* y, int32_t
   CUDA_1D_KERNEL_LOOP(i, n) {
     const T sum = x[i] + addend[i];
     const bool is_positive = (sum > zero);
-    int32_t warp_mask = __ballot_sync(__activemask(), static_cast<int>(is_positive));
+    int32_t warp_mask = WarpMask32(__ballot_sync(__activemask(), static_cast<int>(is_positive)));
     if (lane_id == 0) { mask[i / kCudaWarpSize] = warp_mask; }
     y[i] = is_positive ? sum : zero;
   }
@@ -652,7 +664,7 @@ REGISTER_USER_KERNEL("normalization_add_relu_grad")
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA))
     .SetInferTmpSizeFn(InferGradTmpSize);
 
-#if (CUDNN_VERSION >= 7401)
+#if (CUDNN_VERSION >= 7401) && !defined(USE_HIP)
 
 size_t InferFusedNormalizationAddReluTmpSize(user_op::InferContext* ctx) {
   const auto& x = ctx->InputTensorDesc("x", 0);

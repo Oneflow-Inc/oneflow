@@ -27,7 +27,14 @@ constexpr int OPTIMAL_TILE_W = 32;
 constexpr int MAX_H_BLOCK = 128;
 constexpr int32_t MAX_BLOCK_SIZE = 512;
 constexpr unsigned MAX_GRID_SIZE = 65535u;
+// Wavefront width: 64 on CDNA (gfx9xx), 32 on RDNA/CUDA. OF_GPU_WARP_SIZE is injected
+// from the target arch by cmake/cuda.cmake; the full-warp butterfly reductions below use
+// it for both the step count getMSB(WARP_SIZE) and the shfl width.
+#if defined(OF_GPU_WARP_SIZE)
+#define WARP_SIZE OF_GPU_WARP_SIZE
+#else
 #define WARP_SIZE 32
+#endif
 
 // returns 2**floor(log2(n))
 static int lastPow2(unsigned int n) {
@@ -120,8 +127,14 @@ __device__ __forceinline__ T inv_std(T var, double eps) {
 __device__ __forceinline__ int32_t getMSB(int32_t val) { return 31 - __clz(val); }
 
 template<typename T>
+#if defined(USE_HIP)
+// HIP requires a 64-bit __shfl_*_sync mask (ROCm 7.x static_assert).
+__device__ __forceinline__ T WARP_SHFL_XOR(T value, int laneMask, int width = warpSize,
+                                           unsigned long long mask = 0xffffffffffffffffULL) {
+#else
 __device__ __forceinline__ T WARP_SHFL_XOR(T value, int laneMask, int width = warpSize,
                                            unsigned int mask = 0xffffffff) {
+#endif
   return __shfl_xor_sync(mask, value, laneMask, width);
 }
 

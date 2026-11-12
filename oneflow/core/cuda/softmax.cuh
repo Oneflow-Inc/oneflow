@@ -32,7 +32,36 @@ namespace cuda {
 
 namespace softmax {
 
+// Warp/wavefront width. NVIDIA warp is always 32 lanes; AMD wavefront is 64 on CDNA
+// (gfx90a/gfx94x) and 32 on RDNA (gfx10xx/gfx11xx). The warp-tiled reductions below
+// partition the warp into thread_group_width-wide groups (static_assert
+// thread_group_width <= kWarpSize) and kWarpSize flows from host launch config into the
+// device kernel template args, so it MUST be one compile-time value identical in both
+// the host and device passes. __GFX9__ is set only in the device pass, so it cannot be
+// used here; OF_GPU_WARP_SIZE is injected from the target arch by cmake/cuda.cmake (64
+// for gfx9, 32 for RDNA) and is visible in both passes. On CUDA it is 32.
+#if defined(OF_GPU_WARP_SIZE)
+constexpr int kWarpSize = OF_GPU_WARP_SIZE;
+#else
 constexpr int kWarpSize = 32;
+#endif
+
+// Full-warp lane mask for __shfl_*_sync. HIP requires a 64-bit mask (the compat header
+// defines OF_SHFL_FULL_MASK); CUDA uses the 32-bit literal.
+#ifndef OF_SHFL_FULL_MASK
+#define OF_SHFL_FULL_MASK 0xffffffff
+#endif
+
+// The block kernels below may launch with up to 1024 threads. On HIP that bound is stated
+// explicitly so the register allocation always permits such a launch; the CUDA kernels keep
+// upstream's attributes.
+#ifndef OF_HIP_BLOCK_LAUNCH_BOUNDS
+#if defined(USE_HIP)
+#define OF_HIP_BLOCK_LAUNCH_BOUNDS __launch_bounds__(1024)
+#else
+#define OF_HIP_BLOCK_LAUNCH_BOUNDS
+#endif
+#endif
 
 template<typename T>
 struct SumOp {
@@ -47,7 +76,7 @@ struct MaxOp {
 template<template<typename> class ReductionOp, typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ T WarpAllReduce(T val) {
   for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
-    val = ReductionOp<T>()(val, __shfl_xor_sync(0xffffffff, val, mask));
+    val = ReductionOp<T>()(val, __shfl_xor_sync(OF_SHFL_FULL_MASK, val, mask, thread_group_width));
   }
   return val;
 }
@@ -479,8 +508,8 @@ inline cudaError_t DispatchSoftmaxWarpImpl(cudaStream_t stream, LOAD load, STORE
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size,
          Algorithm algorithm>
-__global__ void SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
-                                     const int64_t cols) {
+__global__ void OF_HIP_BLOCK_LAUNCH_BOUNDS
+    SoftmaxBlockSMemImpl(LOAD load, STORE store, const int64_t rows, const int64_t cols) {
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   auto* buf = reinterpret_cast<ComputeType*>(shared_buf);
   const int tid = threadIdx.x;
@@ -632,8 +661,8 @@ inline cudaError_t TryDispatchSoftmaxBlockSMemImpl(cudaStream_t stream, LOAD loa
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size,
          Algorithm algorithm>
-__global__ void SoftmaxBlockUncachedImpl(LOAD load, STORE store, const int64_t rows,
-                                         const int64_t cols) {
+__global__ void OF_HIP_BLOCK_LAUNCH_BOUNDS
+    SoftmaxBlockUncachedImpl(LOAD load, STORE store, const int64_t rows, const int64_t cols) {
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
   const int num_packs = cols / pack_size;

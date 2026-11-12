@@ -26,7 +26,9 @@ struct UniformTransformFunctor {
   UniformTransformFunctor(ComputeType low, ComputeType high) : low(low), high(high) {}
   __device__ T operator()(ComputeType rand_num) const {
     if (rand_num == static_cast<ComputeType>(1.0)) { rand_num = static_cast<ComputeType>(0.0); }
-    return static_cast<T>(rand_num * (high - low) + low);
+    const T value = static_cast<T>(rand_num * (high - low) + low);
+    // A draw below 1 can still round up to high in a narrower T, such as half.
+    return static_cast<ComputeType>(value) >= high ? static_cast<T>(low) : value;
   }
   ComputeType low;
   ComputeType high;

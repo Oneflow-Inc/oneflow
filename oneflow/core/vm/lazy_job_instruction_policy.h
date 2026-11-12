@@ -106,6 +106,14 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
               << " WaitUntilQueueEmptyIfFrontNNGraphNotEquals.";
     }
     {
+      // Enqueue before the job instance is published: once it is in the buffers the graph can
+      // finish on the actor threads, and its FinishCb dequeues.
+      OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
+      lazy_job_stream_policy->EnqueueNNGraph(nn_graph_);
+      VLOG(3) << " VM Enqueue Graph: " << nn_graph_->job_name()
+              << " run_cnt: " << nn_graph_->run_cnt();
+    }
+    {
       OF_PROFILER_RANGE_GUARD("Send all buffers to BufferMgr");
       const auto& job_instance = MakeJobInstance(instruction);
       const auto& job_name = job_instance->job_name();
@@ -117,10 +125,6 @@ class LaunchLazyJobInstructionPolicy final : public InstructionPolicy {  // NOLI
       VLOG(3) << " VM Push SourceTick to Graph: " << nn_graph_->job_name()
               << " in run_cnt: " << nn_graph_->run_cnt();
     }
-    OF_PROFILER_RANGE_GUARD("EnqueueNNGraph");
-    lazy_job_stream_policy->EnqueueNNGraph(nn_graph_);
-    VLOG(3) << " VM Enqueue Graph: " << nn_graph_->job_name()
-            << " run_cnt: " << nn_graph_->run_cnt() << " END.";
     nn_graph_->NextRunCnt();
   }
 

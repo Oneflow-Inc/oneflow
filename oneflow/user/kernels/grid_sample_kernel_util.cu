@@ -21,6 +21,9 @@ limitations under the License.
 
 namespace oneflow {
 
+// MIOpen has no spatial-transformer sampler, so the HIP build always uses the kernels below.
+#if !defined(USE_HIP)
+
 class CudnnGridSampleDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnGridSampleDesc);
@@ -95,6 +98,8 @@ struct CudnnGridSampleKernelUtil {
   }
 };
 
+#endif  // !defined(USE_HIP)
+
 template<typename data_type, typename index_type>
 __launch_bounds__(256) __global__
     void CUDAGridSampler4DKernel(const index_type nthreads, const data_type* input_ptr,
@@ -152,10 +157,12 @@ struct GridSampleKernelUtil<DeviceType::kCUDA, data_type, index_type> final {
                         GridSamplerInterpolation interpolation, GridSamplerPadding padding,
                         const bool align_corners, const ShapeView& input_shape,
                         const ShapeView& grid_shape, const ShapeView& output_shape, int64_t count) {
+#if !defined(USE_HIP)
     if (CudnnGridSampleKernelUtil<data_type>::CanRunWithCudnn(ctx)
         && CanUse32BitIndex({input_shape, grid_shape, output_shape})) {
       return CudnnGridSampleKernelUtil<data_type>::ForwardCompute(ctx);
     }
+#endif  // !defined(USE_HIP)
 
     CUDAGridSampler4DKernel<data_type, index_type>
         <<<GridSampleGetBlocks(count, 256), 256, 0,
@@ -185,10 +192,12 @@ struct GridSampleKernelUtil<DeviceType::kCUDA, data_type, index_type> final {
                          const bool align_corners, const ShapeView& input_shape,
                          const ShapeView& grid_shape, const ShapeView& output_shape,
                          int64_t count) {
+#if !defined(USE_HIP)
     if (CudnnGridSampleKernelUtil<data_type>::CanRunWithCudnn(ctx)
         && CanUse32BitIndex({input_shape, grid_shape, output_shape})) {
       return CudnnGridSampleKernelUtil<data_type>::BackwardCompute(ctx);
     }
+#endif  // !defined(USE_HIP)
 
     CUDAGridSampler4DBackwardKernel<data_type, index_type>
         <<<GridSampleGetBlocks(count, 256), 256, 0,
