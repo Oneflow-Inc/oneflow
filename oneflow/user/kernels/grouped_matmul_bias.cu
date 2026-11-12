@@ -185,6 +185,7 @@ class GroupedMatmulBiasKernel final : public user_op::OpKernel, public user_op::
       for (int32_t j = 0; j < y->shape_view().NumAxes() - 1; ++j) {
         CHECK_EQ(y->shape_view().At(j), x->shape_view().At(j));
       }
+      if (m == 0 || n == 0) { continue; }
       groups[Problem(m, n, k)].push_back(Buffer<T>{
           x->dptr<T>(), w->dptr<T>(), has_biases ? b->dptr<T>() : nullptr, y->mut_dptr<T>()});
     }

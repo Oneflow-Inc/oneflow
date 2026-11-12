@@ -76,6 +76,13 @@ class TestGroupedMatmulBias(flow.unittest.TestCase):
         _test_grouped_matmul_bias(test_case, flow.float16, problems, True)
         _test_grouped_matmul_bias(test_case, flow.float16, problems, False)
 
+    def test_grouped_matmul_bias_empty_output(test_case):
+        problems = [(0, 64, 32), (2, 64, 32), (2, 0, 32)]
+        for dtype in (flow.float16, flow.float32):
+            for bias in (True, False):
+                _test_grouped_matmul_bias(test_case, dtype, problems, bias)
+                _test_grouped_matmul_bias(test_case, dtype, problems[:1], bias)
+
 
 if __name__ == "__main__":
     unittest.main()
