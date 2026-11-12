@@ -140,6 +140,19 @@ class TestRandint(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_randint_numel_near_int32_max(test_case):
+        # The GPU random kernels once indexed with int32 and wrote nothing when
+        # numel was within one grid stride of 2**31.
+        n = 2 ** 31 - 1
+        if flow.cuda.mem_get_info()[0] < 3 * n:
+            test_case.skipTest("needs 6 GiB of free GPU memory")
+        x = flow.full((n,), 7, dtype=flow.int8, device="cuda")
+        del x
+        y = flow.randint(0, 2, (n,), dtype=flow.int8, device="cuda")
+        for part in (y[:4096], y[-4096:]):
+            test_case.assertEqual(set(np.unique(part.numpy()).tolist()), {0, 1})
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
