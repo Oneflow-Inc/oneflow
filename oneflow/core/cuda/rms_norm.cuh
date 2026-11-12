@@ -47,7 +47,8 @@ __global__ void RmsNormWarpImpl(LOAD load, STORE store, const int nrow, const in
   ComputeType buf[rows_per_access][max_cols_per_thread];
   const int global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int num_global_thread_groups = gridDim.x * blockDim.y;
-  for (int row_i = global_thread_group_id; row_i < nrow; row_i += num_global_thread_groups) {
+  for (int row_i = global_thread_group_id; row_i < nrow / rows_per_access;
+       row_i += num_global_thread_groups) {
     ComputeType thread_square_sum[rows_per_access];
 #pragma unroll
     for (int row_j = 0; row_j < rows_per_access; ++row_j) {
@@ -516,7 +517,8 @@ __global__ void RmsNormGradWarpImpl(const int nrow, const int ncol, LOAD_X load_
 
   const int global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int num_global_thread_group = gridDim.x * blockDim.y;
-  for (int row_i = global_thread_group_id; row_i < nrow; row_i += num_global_thread_group) {
+  for (int row_i = global_thread_group_id; row_i < nrow / rows_per_access;
+       row_i += num_global_thread_group) {
     ComputeType sum_stats[rows_per_access];
     ComputeType inv_rms_buf[rows_per_access];
 #pragma unroll

@@ -42,6 +42,39 @@ def _torch_rmsnorm(x, weight, normalized_shape=None, eps=1e-6):
     return normed * weight if weight is not None else normed
 
 
+def _warp_dispatch_widths():
+    # Every width up to 256, then both sides of each multiple of 32 up to 2048 and a few
+    # wider ones, so that each column bucket of the warp and block kernels is reached on
+    # 32- and 64-wide warps, for both pack sizes.
+    widths = list(range(1, 257))
+    for k in range(9, 65):
+        widths += [32 * k - 1, 32 * k, 32 * k + 1]
+    widths += [3071, 4095, 4096, 4097, 8191, 8192]
+    return widths
+
+
+def _wide_widths():
+    # Widths past 8192 on both sides of the row sizes at which a cached row needs 64 KiB and
+    # 128 KiB of shared memory, forward and backward, in fp32 and fp16, so that the dispatch
+    # from the shared-memory kernels to the uncached ones is reached.
+    return [
+        8180,
+        8190,
+        12000,
+        16000,
+        16350,
+        16384,
+        16400,
+        24000,
+        32000,
+        32760,
+        32768,
+        32800,
+        40000,
+        65000,
+    ]
+
+
 def _test_rmsnorm(
     test_case,
     shape,
@@ -50,11 +83,10 @@ def _test_rmsnorm(
     eps=1e-6,
     dtype=flow.float32,
     device="cuda",
+    rng=np.random,
 ):
-    np_x = np.random.randn(*shape).astype(np.float32)
-    np_weight = (
-        np.random.randn(*normalized_shape).astype(np.float32) if affine else None
-    )
+    np_x = rng.randn(*shape).astype(np.float32)
+    np_weight = rng.randn(*normalized_shape).astype(np.float32) if affine else None
 
     torch_dtype = torch.float16 if dtype is flow.float16 else torch.float32
     torch_x = torch.tensor(np_x).to(device=device, dtype=torch_dtype)
@@ -66,7 +98,7 @@ def _test_rmsnorm(
         torch_weight.requires_grad_(True)
     torch_y = _torch_rmsnorm(torch_x, torch_weight, normalized_shape, eps)
 
-    np_rand_init_grad = np.random.randn(*tuple(torch_y.shape)).astype(np.float32)
+    np_rand_init_grad = rng.randn(*tuple(torch_y.shape)).astype(np.float32)
     torch_rand_init_grad = torch.tensor(np_rand_init_grad).to(
         device=device, dtype=torch_dtype
     )
@@ -113,9 +145,17 @@ def _test_rmsnorm(
             f"\n{a_name} vs. {b_name} max abs diff: {np.max(np.abs(a - b))}",
         )
 
+    # x_grad subtracts terms of size rstd * |dy| that cancel, so its rounding error grows
+    # with each row's rstd. Rows with rms >= 1 keep the plain tolerance.
+    norm_dims = _get_norm_dims(shape, normalized_shape)
+    mean_square = np.mean(
+        np.square(np_x.astype(np.float64)), axis=norm_dims, keepdims=True
+    )
+    scale = np.maximum(1.0, 1.0 / np.sqrt(mean_square + eps))
+
     if dtype is flow.float16:
         compare(y, torch_y, "y", "torch_y", 1e-3, 1e-2)
-        compare(x_grad, torch_x_grad, "x_grad", "torch_x_grad", 1e-2, 1e-2)
+        compare(x_grad, torch_x_grad, "x_grad", "torch_x_grad", 1e-2 * scale, 1e-2)
         if affine:
             compare(
                 weight_grad,
@@ -127,7 +167,7 @@ def _test_rmsnorm(
             )
     else:
         compare(y, torch_y, "y", "torch_y")
-        compare(x_grad, torch_x_grad, "x_grad", "torch_x_grad")
+        compare(x_grad, torch_x_grad, "x_grad", "torch_x_grad", 1e-5 * scale)
         if affine:
             compare(
                 weight_grad,
@@ -156,6 +196,26 @@ class TestRMSNorm(flow.unittest.TestCase):
         _test_rmsnorm(
             test_case, shape=[4, 16], normalized_shape=[16], affine=False,
         )
+
+    def test_widths(test_case):
+        for cols in _warp_dispatch_widths():
+            _test_rmsnorm(
+                test_case,
+                shape=[cols % 3 + 2, cols],
+                normalized_shape=[cols],
+                rng=np.random.RandomState(cols),
+            )
+
+    def test_wide_widths(test_case):
+        for dtype in [flow.float32, flow.float16]:
+            for cols in _wide_widths():
+                _test_rmsnorm(
+                    test_case,
+                    shape=[cols % 3 + 2, cols],
+                    normalized_shape=[cols],
+                    dtype=dtype,
+                    rng=np.random.RandomState(cols),
+                )
 
     def test_warp_impl(test_case):
         _test_rmsnorm(
