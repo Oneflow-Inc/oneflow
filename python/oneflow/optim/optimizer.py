@@ -316,7 +316,7 @@ class Optimizer(object):
                 return value
             elif isinstance(value, dict):
                 return {k: cast(param, v) for k, v in value.items()}
-            elif isinstance(value, collections.Iterable):
+            elif isinstance(value, collections.abc.Iterable):
                 return type(value)(cast(param, v) for v in value)
             else:
                 return value
