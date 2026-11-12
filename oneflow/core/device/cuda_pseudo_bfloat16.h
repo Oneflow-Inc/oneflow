@@ -24,7 +24,11 @@ limitations under the License.
 #include <cuda_bf16.h>
 #endif
 
-#if CUDA_VERSION >= 11000 && CUDA_VERSION <= 12010 && defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 800
+// HIP's __hip_bfloat16 (hip_bf16.h) already ships the operator/intrinsic set this file
+// emulates for pre-sm80 CUDA bf16; with __CUDA_ARCH__=1 it would redefine them and clash
+// ("__device__ function cannot overload __host__ __device__ function"). Skip under USE_HIP.
+#if CUDA_VERSION >= 11000 && CUDA_VERSION <= 12010 && defined(__CUDA_ARCH__) \
+    && __CUDA_ARCH__ < 800 && !defined(USE_HIP)
 
 #define DEFINE_CUDA_PSEUDO_BFLOAT16_ARITHMETIC_BINARY_OPERATOR(op)                \
   __device__ __forceinline__ __nv_bfloat16 operator op(const __nv_bfloat16& lh,   \

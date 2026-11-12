@@ -118,10 +118,20 @@ __global__ void BarrierKernel(int32_t parallel_id, int32_t parallel_num,
                               Param<T, IDX, pack_size, N> param) {
   int count = param.is_kernel_start[parallel_id][parallel_id];
   if (threadIdx.x < parallel_num) {
+#if defined(USE_HIP)
+    // The flags live in uncached memory and are polled by peer GPUs across the fabric.
+    // System-scope atomics order each flag with this GPU's earlier accesses.
+    __hip_atomic_store(param.is_kernel_start[parallel_id] + threadIdx.x, count + 1,
+                       __ATOMIC_RELEASE, __HIP_MEMORY_SCOPE_SYSTEM);
+    while (__hip_atomic_load(param.is_kernel_start[threadIdx.x] + parallel_id, __ATOMIC_ACQUIRE,
+                             __HIP_MEMORY_SCOPE_SYSTEM)
+           < count + 1) {}
+#else
     volatile int32_t* start_f = param.is_kernel_start[parallel_id];
     volatile int32_t* remote_start_f = param.is_kernel_start[threadIdx.x];
     start_f[threadIdx.x] = count + 1;
     while (remote_start_f[parallel_id] < count + 1) {}
+#endif  // defined(USE_HIP)
   }
 }
 
@@ -142,6 +152,7 @@ void GetPtrs(user_op::KernelComputeContext* ctx, std::vector<void*>* unique_embe
   const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
   inverse_indices_ptr->at(parallel_id) =
       const_cast<void*>(ctx->Tensor4ArgNameAndIndex("cur_rank_inverse_indices", 0)->dptr());
+#if !defined(USE_HIP)
   if (DisableFuseGatherCopy()) {
     unique_embeddings_ptr->at(parallel_id) =
         ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr();
@@ -149,6 +160,7 @@ void GetPtrs(user_op::KernelComputeContext* ctx, std::vector<void*>* unique_embe
     unique_embeddings_ptr->at(parallel_id) =
         const_cast<void*>(ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0)->dptr());
   }
+#endif  // !defined(USE_HIP)
 
   std::string name = ctx->op_name();
   {
@@ -161,9 +173,13 @@ void GetPtrs(user_op::KernelComputeContext* ctx, std::vector<void*>* unique_embe
     OF_CUDA_CHECK(cudaIpcGetMemHandle(&push_handle_offset.at(2).handle,
                                       is_kernel_start_ptr->at(parallel_id)));
 
+#if defined(USE_HIP)
+    auto* func = &hipPointerGetAttribute;
+#else
     cudaError_t (*func)(void*, CUpointer_attribute, CUdeviceptr);
     OF_CUDA_CHECK(
         cudaGetDriverEntryPoint("cuPointerGetAttribute", (void**)(&func), cudaEnableDefault));
+#endif  // defined(USE_HIP)
     void* unique_embeddings_base;
     OF_CUDA_CHECK(func(&unique_embeddings_base, CU_POINTER_ATTRIBUTE_RANGE_START_ADDR,
                        (CUdeviceptr)(unique_embeddings_ptr->at(parallel_id))));
@@ -220,13 +236,36 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
     inverse_indices_ptr_.resize(parallel_num);
     is_kernel_start_ptr_.resize(parallel_num);
     size_t is_kernel_start_size = GetCudaAlignedSize(parallel_num * sizeof(int32_t));
+#if defined(USE_HIP)
+    // Peers poll these flags across the fabric. A peer's read does not see a write held in this
+    // GPU's L2 for ordinary device memory, so the barrier would never release; uncached memory
+    // makes every flag access go to memory.
+    OF_CUDA_CHECK(hipExtMallocWithFlags(&is_kernel_start_ptr_.at(parallel_id_),
+                                        is_kernel_start_size, hipDeviceMallocUncached));
+#else
     OF_CUDA_CHECK(cudaMalloc(&is_kernel_start_ptr_.at(parallel_id_), is_kernel_start_size));
+#endif  // defined(USE_HIP)
     OF_CUDA_CHECK(cudaMemset(is_kernel_start_ptr_.at(parallel_id_), 0, is_kernel_start_size));
+#if defined(USE_HIP)
+    // A peer's reads of ordinary device memory can miss writes still held in this GPU's L2:
+    // neither the end of the kernel that wrote them nor the barrier's system-scope release writes
+    // them back on every AMD GPU. Peers therefore read the embeddings from an uncached staging
+    // buffer, written by GatherKernel before the barrier.
+    const user_op::TensorDesc* cur_rank_embeddings =
+        ctx->TensorDesc4ArgNameAndIndex("cur_rank_embeddings", 0);
+    OF_CUDA_CHECK(hipExtMallocWithFlags(&unique_embeddings_ptr_.at(parallel_id_),
+                                        cur_rank_embeddings->shape().elem_cnt()
+                                            * GetSizeOfDataType(cur_rank_embeddings->data_type()),
+                                        hipDeviceMallocUncached));
+#endif  // defined(USE_HIP)
   }
 
   ~DataShuffleKernelState() {
     CudaCurrentDeviceGuard guard(device_index_);
     OF_CUDA_CHECK(cudaFree(is_kernel_start_ptr_.at(parallel_id_)));
+#if defined(USE_HIP)
+    OF_CUDA_CHECK(cudaFree(unique_embeddings_ptr_.at(parallel_id_)));
+#endif  // defined(USE_HIP)
   }
 
   std::vector<void*>* UniqueEmbeddings() { return &unique_embeddings_ptr_; }
@@ -264,6 +303,20 @@ void LaunchKernel(user_op::KernelComputeContext* ctx, DataShuffleKernelState<IDX
   param.num_unique_matrix = reinterpret_cast<const uint32_t*>(num_unique_matrix->dptr());
   int64_t embedding_num_pack = embedding_size / pack_size;
   cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+#if defined(USE_HIP)
+  const int num_blocks =
+      2 * ctx->stream()->As<ep::CudaStream>()->device_properties().multiProcessorCount;
+  // Peers only read the staging buffer, so gather into it before the barrier releases them.
+  GatherKernel<<<num_blocks, 1024, 0, cuda_stream>>>(
+      parallel_id, parallel_num, embedding_num_pack, param.num_unique_matrix,
+      param.inverse_indices[parallel_id],
+      reinterpret_cast<const Pack<T, pack_size>*>(
+          ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0)->dptr()),
+      param.unique_embeddings[parallel_id]);
+  BarrierKernel<<<1, parallel_num, 0, cuda_stream>>>(parallel_id, parallel_num, param);
+  EmbeddingShuffleCopyKernel<<<num_blocks, 1024, 0, cuda_stream>>>(parallel_id, parallel_num,
+                                                                   embedding_num_pack, param);
+#else
   BarrierKernel<<<1, parallel_num, 0, cuda_stream>>>(parallel_id, parallel_num, param);
   const int num_blocks =
       2 * ctx->stream()->As<ep::CudaStream>()->device_properties().multiProcessorCount;
@@ -287,6 +340,7 @@ void LaunchKernel(user_op::KernelComputeContext* ctx, DataShuffleKernelState<IDX
     EmbeddingShuffleCudaKernel<<<num_blocks, 1024, 0, cuda_stream>>>(parallel_id, parallel_num,
                                                                      embedding_num_pack, param);
   }
+#endif  // defined(USE_HIP)
   if (!ctx->Attr<bool>("is_train")) {
     BarrierKernel<<<1, parallel_num, 0, cuda_stream>>>(
         parallel_id, parallel_num,

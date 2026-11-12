@@ -45,7 +45,16 @@ find_library(
   NO_DEFAULT_PATH
   DOC "Path to cuPTI library.")
 
-list(APPEND CUDA_cupti_LIBRARY CUDA::cudart_static) # for undefined symbol: cudaGetDeviceCount∂
+if(NOT USE_HIP)
+  list(APPEND CUDA_cupti_LIBRARY CUDA::cudart_static) # for undefined symbol: cudaGetDeviceCount∂
+endif()
+
+if(USE_HIP)
+  # kineto auto-enables its roctracer backend whenever it detects ROCm (the
+  # ROCM_SOURCE_DIR env var) and then demands ROCTRACER_LIBRARY from a wrong HINTS path.
+  # oneflow's profiler (BUILD_PROFILER) is off here, so build kineto CPU-only.
+  set(LIBKINETO_NOROCTRACER ON CACHE BOOL "" FORCE)
+endif()
 
 FetchContent_Declare(
   kineto

@@ -142,6 +142,13 @@ docker pull oneflowinc/oneflow:nightly-cuda11.8
     ```
     Here the DCMAKE\_CUDA\_ARCHITECTURES macro is used to specify the CUDA architecture, and the DCUDA\_TOOLKIT\_ROOT\_DIR and DCUDNN\_ROOT\_DIR macros are used to specify the root path of the CUDA Toolkit and CUDNN.
 
+  - For AMD GPUs with ROCm, use the CUDA cache (from either directory) and enable HIP, compiling with the ROCm clang:
+
+    ```
+    cmake .. -C ../cmake/caches/international/cuda.cmake -DUSE_HIP=ON -DCMAKE_HIP_ARCHITECTURES=gfx942 -DCMAKE_C_COMPILER=/opt/rocm/lib/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/rocm/lib/llvm/bin/clang++ -DWITH_CUTLASS=OFF -DWITH_MLIR=OFF -DBUILD_RDMA=OFF -DBUILD_CPP_API=OFF -DBUILD_HWLOC=OFF -DTREAT_WARNINGS_AS_ERRORS=OFF -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
+    ```
+    Here the DCMAKE\_HIP\_ARCHITECTURES macro specifies the GPU architecture; when it is omitted, the GPUs of the build machine are detected. One build covers either wavefront-64 GPUs (gfx9, e.g. MI200/MI300) or wavefront-32 GPUs (gfx10/gfx11), not both. `build_rocm.sh` in the root directory configures and builds with these options (Ninja, Release). With ROCm, the cuDNN, cuBLASLt, cuSOLVER and nvJPEG/NPP code paths run on MIOpen, hipBLASLt, hipSOLVER and rocJPEG/RPP; kernels that need CUTLASS are not built, as in a CUDA build with -DWITH\_CUTLASS=OFF.
+
 - Build the project, inside `build` directory, run:
 
   ```

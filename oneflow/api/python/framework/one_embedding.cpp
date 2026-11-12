@@ -117,14 +117,14 @@ class PersistentTableWriterImpl : public PersistentTableWriter {
     std::vector<std::vector<Key>> keys_buffers(tables_.size());
     std::vector<std::vector<char>> values_buffers(tables_.size());
     for (size_t i = 0; i < n; ++i) {
-      const Key key = *(reinterpret_cast<const Key*>(keys.template data(i)));
+      const Key key = *(reinterpret_cast<const Key*>(keys.data(i)));
       const uint32_t shard = ShardingHash()(key) % tables_.size();
       keys_buffers[shard].push_back(key);
       const size_t values_offset = values_buffers[shard].size();
       values_buffers[shard].resize(values_offset + storage_dim_ * sizeof(Value));
       for (size_t j = 0; j < values.shape(1); ++j) {
         std::memcpy(values_buffers[shard].data() + values_offset + j * values.itemsize(),
-                    values.template data(i, j), values.itemsize());
+                    values.data(i, j), values.itemsize());
       }
     }
     for (size_t shard = 0; shard < tables_.size(); ++shard) {

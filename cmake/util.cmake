@@ -239,7 +239,21 @@ function(set_compile_options_to_oneflow_target target)
 
   set_target_properties(${target} PROPERTIES INSTALL_RPATH "$ORIGIN/../lib")
 
-  if(BUILD_CUDA)
+  if(BUILD_CUDA AND USE_HIP)
+    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:HIP>:-Werror=return-type>)
+    # oneflow's own GPU host .cpp TUs (ep/cuda/*.cpp, device/cuda_util.cpp, ...) call
+    # cuda*/cublas* and include <cuda.h> etc. but compile as CXX (not hipcc), so they need
+    # the compat header force-included, the toolkit-name shim dir, the ROCm include dir, and
+    # the warp-size macro -- applied per oneflow target (not globally, to avoid leaking
+    # into third-party subdir builds like TBB). -Wno-attributes silences the benign HIP
+    # device-decl 'convergent' warnings the host g++ emits.
+    target_include_directories(${target} PRIVATE "${PROJECT_SOURCE_DIR}/oneflow/core/device/hip_compat"
+                               ${hip_INCLUDE_DIRS})
+    target_compile_definitions(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:OF_GPU_WARP_SIZE=${OF_GPU_WARP_SIZE}>)
+    target_compile_options(${target} PRIVATE
+      $<$<COMPILE_LANGUAGE:CXX>:-include${PROJECT_SOURCE_DIR}/oneflow/core/device/cuda_to_hip.h>
+      $<$<COMPILE_LANGUAGE:CXX>:-Wno-attributes>)
+  elseif(BUILD_CUDA)
     if("${CMAKE_CUDA_COMPILER_ID}" STREQUAL "NVIDIA")
       target_compile_options(
         ${target}

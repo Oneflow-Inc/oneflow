@@ -84,6 +84,19 @@ auto FillPrimitiveExists() {
   });
 }
 
+template<template<typename> class BinaryFunc, DeviceType device_type, typename T>
+size_t ReduceTmpSize(const Shape& in_shape) {
+  size_t tmp_size = in_shape.elem_cnt() * sizeof(T);
+#if defined(USE_HIP)
+  if constexpr (device_type == DeviceType::kCUDA) {
+    using DevT = typename DevDType<device_type, T>::type;
+    tmp_size =
+        std::max(tmp_size, CudaScalarReduceTmpStorageBytes<DevT, BinaryFunc>(in_shape.elem_cnt()));
+  }
+#endif  // defined(USE_HIP)
+  return tmp_size;
+}
+
 template<template<typename> class BinaryFunc, DeviceType device_type, typename T, typename K>
 class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
@@ -132,7 +145,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
                        && (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
         const Shape& in_shape = ctx->InputShape("input_tensor", 0);                                \
-        return in_shape.elem_cnt() * sizeof(dtype);                                                \
+        return ReduceTmpSize<binary_func, device, dtype>(in_shape);                                \
       });
 
 #define REGISTER_REDUCE_LOGICAL_XPU_KERNEL(op_name, binary_func, device, dtype)                  \
@@ -144,7 +157,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
                        && FillPrimitiveExists())                                                 \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
         const Shape& in_shape = ctx->InputShape("input_tensor", 0);                              \
-        return in_shape.elem_cnt() * sizeof(dtype);                                              \
+        return ReduceTmpSize<binary_func, device, dtype>(in_shape);                              \
       });
 
 #define REGISTER_REDUCE_ARITHMETIC_KERNELS(device, dtype)                  \

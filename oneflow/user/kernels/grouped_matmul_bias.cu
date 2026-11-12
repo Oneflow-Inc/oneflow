@@ -142,6 +142,19 @@ void ApplyGroup(const Problem& problem, std::vector<Buffer<T>> ptrs, bool has_bi
   }
   auto sp_alpha = GetCublasScalarParameter(alpha, compute_type);
   auto sp_beta = GetCublasScalarParameter(beta, compute_type);
+#if defined(USE_HIP)
+  if (compute_type == CUDA_R_32F && OfUseLongKGemm(data_type, problem.k, problem.k, problem.k)) {
+    auto* cuda_stream = stream->As<ep::CudaStream>();
+    for (int i = 0; i < params.n; ++i) {
+      OF_CUBLAS_CHECK(OfLongKGemm(
+          cuda_stream->cublas_handle(), cuda_stream->cublas_lt_handle(), cuda_stream->cuda_stream(),
+          cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(), CUBLAS_OP_T,
+          CUBLAS_OP_N, problem.n, problem.m, problem.k, alpha, params.buffer[i].w, problem.k, 0,
+          params.buffer[i].x, problem.k, 0, beta, params.buffer[i].y, data_type, problem.n, 0, 1));
+    }
+    return;
+  }
+#endif  // defined(USE_HIP)
   OF_CUBLAS_CHECK(cublasGemmBatchedEx(
       stream->As<ep::CudaStream>()->cublas_handle(), CUBLAS_OP_T, CUBLAS_OP_N, problem.n, problem.m,
       problem.k, &sp_alpha, ptr_arr + kMaxProblemBatch, data_type, problem.k, ptr_arr, data_type,

@@ -131,16 +131,30 @@ struct AddStore {
   int64_t row_size;
 };
 
-template<typename T>
-__inline__ __device__ T WarpReduce(T val) {
-  for (int mask = 16; mask > 0; mask /= 2) { val += __shfl_down_sync(0xffffffff, val, mask); }
-  return val;
-}
-
+// This is the row/column block tile, fixed at 32 -- it equals block_dim_x and
+// block_dim_y * num_per_block (the launch is dim3(32, 32/num_per_block)) and the shared
+// transpose buffers are [32][33]. It is a tiling constant, NOT the hardware warp width, so
+// it must stay 32 on wave64 as well; tying it to OF_GPU_WARP_SIZE desynchronizes it from
+// the (still 32-wide) launch and shared buffers and corrupts the reduction.
 constexpr int tile_size = 32;
+#ifndef OF_SHFL_FULL_MASK
+#define OF_SHFL_FULL_MASK 0xffffffff
+#endif
 constexpr int num_per_block = 4;
 constexpr int block_dim_x = 32;
 constexpr int block_dim_y = 32 / num_per_block;
+
+template<typename T>
+__inline__ __device__ T WarpReduce(T val) {
+  // Reduce the block_dim_x (=32) column partials. Confine the butterfly to a width of
+  // block_dim_x via the 4-arg shuffle so that on a 64-lane wave64 wavefront (where two
+  // threadIdx.y rows share one wavefront) lanes from the neighbouring row are not folded
+  // in. Correct on both wave32 and wave64.
+  for (int mask = block_dim_x / 2; mask > 0; mask /= 2) {
+    val += __shfl_down_sync(OF_SHFL_FULL_MASK, val, mask, block_dim_x);
+  }
+  return val;
+}
 
 template<typename T, typename ComputeType>
 __global__ void LayerNormParamGrad(int rows, int cols, const T* __restrict__ dy,

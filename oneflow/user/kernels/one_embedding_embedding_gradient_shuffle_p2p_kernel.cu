@@ -97,10 +97,20 @@ __global__ void BarrierKernel(int32_t parallel_id, int32_t parallel_num,
                               Param<T, IDX, pack_size, N> param) {
   int count = param.is_kernel_start[parallel_id][parallel_id];
   if (threadIdx.x < parallel_num) {
+#if defined(USE_HIP)
+    // The flags live in uncached memory and are polled by peer GPUs across the fabric.
+    // System-scope atomics order each flag with this GPU's earlier accesses.
+    __hip_atomic_store(param.is_kernel_start[parallel_id] + threadIdx.x, count + 1,
+                       __ATOMIC_RELEASE, __HIP_MEMORY_SCOPE_SYSTEM);
+    while (__hip_atomic_load(param.is_kernel_start[threadIdx.x] + parallel_id, __ATOMIC_ACQUIRE,
+                             __HIP_MEMORY_SCOPE_SYSTEM)
+           < count + 1) {}
+#else
     volatile int32_t* start_f = param.is_kernel_start[parallel_id];
     volatile int32_t* remote_start_f = param.is_kernel_start[threadIdx.x];
     start_f[threadIdx.x] = count + 1;
     while (remote_start_f[parallel_id] < count + 1) {}
+#endif  // defined(USE_HIP)
   }
 }
 
@@ -114,8 +124,10 @@ void GetPtrs(user_op::KernelComputeContext* ctx,
              std::vector<void*>* is_kernel_start_ptr) {
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+#if !defined(USE_HIP)
   unique_partitioned_embedding_grad_ptr->at(parallel_id) =
       const_cast<void*>(ctx->Tensor4ArgNameAndIndex("embedding_grad", 0)->dptr());
+#endif  // !defined(USE_HIP)
   std::string name = ctx->op_name();
   {
     std::vector<IpcMemHandleOffset> push_handle_offset;
@@ -124,9 +136,13 @@ void GetPtrs(user_op::KernelComputeContext* ctx,
                                       unique_partitioned_embedding_grad_ptr->at(parallel_id)));
     OF_CUDA_CHECK(cudaIpcGetMemHandle(&push_handle_offset.at(1).handle,
                                       is_kernel_start_ptr->at(parallel_id)));
+#if defined(USE_HIP)
+    auto* func = &hipPointerGetAttribute;
+#else
     cudaError_t (*func)(void*, CUpointer_attribute, CUdeviceptr);
     OF_CUDA_CHECK(
         cudaGetDriverEntryPoint("cuPointerGetAttribute", (void**)(&func), cudaEnableDefault));
+#endif  // defined(USE_HIP)
     void* embedding_grad_base;
     OF_CUDA_CHECK(func(&embedding_grad_base, CU_POINTER_ATTRIBUTE_RANGE_START_ADDR,
                        (CUdeviceptr)(unique_partitioned_embedding_grad_ptr->at(parallel_id))));
@@ -173,13 +189,36 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
     unique_partitioned_embedding_grad_ptr_.resize(parallel_num);
     is_kernel_start_ptr_.resize(parallel_num);
     size_t is_kernel_start_size = GetCudaAlignedSize(parallel_num * sizeof(int32_t));
+#if defined(USE_HIP)
+    // Peers poll these flags across the fabric. A peer's read does not see a write held in this
+    // GPU's L2 for ordinary device memory, so the barrier would never release; uncached memory
+    // makes every flag access go to memory.
+    OF_CUDA_CHECK(hipExtMallocWithFlags(&is_kernel_start_ptr_.at(parallel_id_),
+                                        is_kernel_start_size, hipDeviceMallocUncached));
+#else
     OF_CUDA_CHECK(cudaMalloc(&is_kernel_start_ptr_.at(parallel_id_), is_kernel_start_size));
+#endif  // defined(USE_HIP)
     OF_CUDA_CHECK(cudaMemset(is_kernel_start_ptr_.at(parallel_id_), 0, is_kernel_start_size));
+#if defined(USE_HIP)
+    // A peer's reads of ordinary device memory can miss writes still held in this GPU's L2:
+    // neither the end of the kernel that wrote them nor the barrier's system-scope release writes
+    // them back on every AMD GPU. Peers therefore read the gradient from an uncached staging
+    // buffer, filled before the barrier.
+    const user_op::TensorDesc* embedding_grad =
+        ctx->TensorDesc4ArgNameAndIndex("embedding_grad", 0);
+    OF_CUDA_CHECK(hipExtMallocWithFlags(
+        &unique_partitioned_embedding_grad_ptr_.at(parallel_id_),
+        embedding_grad->shape().elem_cnt() * GetSizeOfDataType(embedding_grad->data_type()),
+        hipDeviceMallocUncached));
+#endif  // defined(USE_HIP)
   }
 
   ~DataShuffleKernelState() {
     CudaCurrentDeviceGuard guard(device_index_);
     OF_CUDA_CHECK(cudaFree(is_kernel_start_ptr_.at(parallel_id_)));
+#if defined(USE_HIP)
+    OF_CUDA_CHECK(cudaFree(unique_partitioned_embedding_grad_ptr_.at(parallel_id_)));
+#endif  // defined(USE_HIP)
   }
 
   std::vector<void*>* UniquePartitionedEmbeddingGrads() {
@@ -308,8 +347,14 @@ class EmbeddingGraidientShuffleP2PKernel final : public user_op::OpKernel,
     if (current_iter_ == 0) {
       GetPtrs(ctx, kernel_state->UniquePartitionedEmbeddingGrads(), kernel_state->IsKernelStart());
     }
+#if defined(USE_HIP)
+    OF_CUDA_CHECK(cudaMemcpyAsync(
+        kernel_state->UniquePartitionedEmbeddingGrads()->at(parallel_id), embedding_grad->dptr(),
+        embedding_grad->shape_view().elem_cnt() * sizeof(T), cudaMemcpyDefault, cuda_stream));
+#else
     CHECK_EQ(kernel_state->UniquePartitionedEmbeddingGrads()->at(parallel_id),
              embedding_grad->dptr());
+#endif  // defined(USE_HIP)
     Param<T, IDX, pack_size, 8> param;
     CHECK_EQ(embedding_size % pack_size, 0);
     CHECK_LE(parallel_num, 8);

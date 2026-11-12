@@ -204,6 +204,18 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
     const long long int cublas_stride_b = a_batch_count == 1 ? 0 : cublas_k * cublas_n;
     const long long int cublas_stride_c = cublas_m * cublas_n;
     const auto sp_beta = GetCublasScalarParameter(beta, compute_type);
+#if defined(USE_HIP)
+    if (compute_type == CUBLAS_COMPUTE_32F
+        && OfUseLongKGemm(cuda_data_type, cublas_k, cublas_lda, cublas_ldb)) {
+      OF_CUBLAS_CHECK(OfLongKGemm(
+          cuda_stream->cublas_handle(), cuda_stream->cublas_lt_handle(), cuda_stream->cuda_stream(),
+          cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(), cublas_trans_a,
+          cublas_trans_b, cublas_m, cublas_n, cublas_k, sp_alpha.s, cublas_a, cublas_lda,
+          cublas_stride_a, cublas_b, cublas_ldb, cublas_stride_b, sp_beta.s, cublas_c,
+          cuda_data_type, cublas_ldc, cublas_stride_c, batch_count));
+      return;
+    }
+#endif  // defined(USE_HIP)
     OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
         cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n, cublas_k,
         &sp_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_stride_a, cublas_b, cuda_data_type,
@@ -215,6 +227,18 @@ void LaunchBroadcastMatmul(Stream* stream, DataType data_type, BlasTransposeType
       const void* cublas_a = batch_b;
       const void* cublas_b = batch_a;
       void* cublas_c = batch_c;
+#if defined(USE_HIP)
+      if (compute_type == CUBLAS_COMPUTE_32F
+          && OfUseLongKGemm(cuda_data_type, cublas_k, cublas_lda, cublas_ldb)) {
+        OF_CUBLAS_CHECK(OfLongKGemm(cuda_stream->cublas_handle(), cuda_stream->cublas_lt_handle(),
+                                    cuda_stream->cuda_stream(), cuda_stream->cublas_workspace(),
+                                    cuda_stream->cublas_workspace_size(), cublas_trans_a,
+                                    cublas_trans_b, cublas_m, cublas_n, cublas_k, sp_alpha.s,
+                                    cublas_a, cublas_lda, 0, cublas_b, cublas_ldb, 0, sp_beta.s,
+                                    cublas_c, cuda_data_type, cublas_ldc, 0, 1));
+        return;
+      }
+#endif  // defined(USE_HIP)
       OF_CUBLAS_CHECK(cublasGemmEx(
           cuda_stream->cublas_handle(), cublas_trans_a, cublas_trans_b, cublas_m, cublas_n,
           cublas_k, &sp_alpha, cublas_a, cuda_data_type, cublas_lda, cublas_b, cuda_data_type,

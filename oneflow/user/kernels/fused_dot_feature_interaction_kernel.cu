@@ -19,7 +19,9 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/batch_matmul.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/cuda/atomic.cuh"
+#if !defined(USE_HIP)
 #include <mma.h>
+#endif  // !defined(USE_HIP)
 
 namespace oneflow {
 
@@ -794,6 +796,124 @@ void LaunchMemset(cudaStream_t stream, size_t sm_count, int64_t vector_size, int
   }
 }
 
+#if defined(USE_HIP)
+template<typename T>
+__global__ void GatherSparseFeaturesGpu(int64_t elem_cnt, int32_t sparse_dim, int32_t vector_size,
+                                        int32_t concated_padded_dim, int32_t sparse_dim_start,
+                                        const uint32_t* sparse_indices, const T* sparse_feature,
+                                        T* concated_features) {
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, elem_cnt) {
+    const int64_t row = i / vector_size;
+    const int64_t col = i - row * vector_size;
+    const int64_t batch_idx = row / sparse_dim;
+    const int64_t sparse_row = row - batch_idx * sparse_dim;
+    const int64_t dst_row = batch_idx * concated_padded_dim + sparse_dim_start + sparse_row;
+    concated_features[dst_row * vector_size + col] =
+        sparse_feature[static_cast<int64_t>(sparse_indices[row]) * vector_size + col];
+  }
+}
+
+__device__ __forceinline__ void AtomicAddPack(Pack<float, 1>* address, const Pack<float, 1>& val) {
+  cuda::atomic::Add(&address->elem[0], val.elem[0]);
+}
+
+__device__ __forceinline__ void AtomicAddPack(Pack<half, 1>* address, const Pack<half, 1>& val) {
+  cuda::atomic::Add(&address->elem[0], val.elem[0]);
+}
+
+__device__ __forceinline__ void AtomicAddPack(Pack<half, 2>* address, const Pack<half, 2>& val) {
+  half2 h2_val;
+  h2_val.x = val.elem[0];
+  h2_val.y = val.elem[1];
+  cuda::atomic::Add(reinterpret_cast<half2*>(address), h2_val);
+}
+
+template<typename T, int32_t pack_size>
+__global__ void ScatterAddSparseFeaturesGradGpu(
+    int64_t elem_cnt, int32_t sparse_dim, int32_t vector_num_pack, int32_t concated_padded_dim,
+    int32_t sparse_dim_start, const uint32_t* sparse_indices, const T* concated_features_grad,
+    T* sparse_feature_grad) {
+  const auto* src = reinterpret_cast<const Pack<T, pack_size>*>(concated_features_grad);
+  auto* dst = reinterpret_cast<Pack<T, pack_size>*>(sparse_feature_grad);
+  CUDA_1D_KERNEL_LOOP_T(int64_t, i, elem_cnt) {
+    const int64_t row = i / vector_num_pack;
+    const int64_t col = i - row * vector_num_pack;
+    const int64_t batch_idx = row / sparse_dim;
+    const int64_t sparse_row = row - batch_idx * sparse_dim;
+    const int64_t src_row = batch_idx * concated_padded_dim + sparse_dim_start + sparse_row;
+    AtomicAddPack(dst + static_cast<int64_t>(sparse_indices[row]) * vector_num_pack + col,
+                  src[src_row * vector_num_pack + col]);
+  }
+}
+
+// Only the tensor-core kernels read sparse_feature. On HIP the batched-GEMM path gathers the
+// sparse rows into the concatenated features and scatters their gradient back with atomics.
+int64_t GetSparseDim(user_op::KernelComputeContext* ctx) {
+  if (!ctx->has_input("sparse_feature", 0)) { return 0; }
+  CHECK(ctx->has_input("sparse_indices", 0));
+  CHECK_EQ(ctx->TensorDesc4ArgNameAndIndex("sparse_indices", 0)->data_type(), DataType::kUInt32);
+  return ctx->TensorDesc4ArgNameAndIndex("sparse_indices", 0)->shape().At(1);
+}
+
+int64_t GetSparseDim(user_op::InferContext* ctx) {
+  if (!ctx->has_input("sparse_indices", 0)) { return 0; }
+  return ctx->InputShape("sparse_indices", 0).At(1);
+}
+
+template<typename T>
+void GatherSparseFeatures(user_op::KernelComputeContext* ctx, int64_t batch_size,
+                          int64_t sparse_dim, int64_t concated_padded_dim, int64_t sparse_dim_start,
+                          int64_t vector_size, T* concated_features) {
+  const int64_t elem_cnt = batch_size * sparse_dim * vector_size;
+  if (elem_cnt == 0) { return; }
+  GatherSparseFeaturesGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                               ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+      elem_cnt, sparse_dim, vector_size, concated_padded_dim, sparse_dim_start,
+      reinterpret_cast<const uint32_t*>(ctx->Tensor4ArgNameAndIndex("sparse_indices", 0)->dptr()),
+      ctx->Tensor4ArgNameAndIndex("sparse_feature", 0)->dptr<T>(), concated_features);
+}
+
+template<typename T>
+void ScatterAddSparseFeaturesGrad(user_op::KernelComputeContext* ctx, int64_t batch_size,
+                                  int64_t sparse_dim, int64_t concated_padded_dim,
+                                  int64_t sparse_dim_start, int64_t vector_size,
+                                  const T* concated_features_grad) {
+  CHECK(ctx->has_input("num_valid_sparse_feature", 0));
+  CHECK(ctx->has_output("sparse_feature_grad", 0));
+  const user_op::Tensor* num_valid_sparse_feature =
+      ctx->Tensor4ArgNameAndIndex("num_valid_sparse_feature", 0);
+  CHECK_EQ(num_valid_sparse_feature->data_type(), DataType::kUInt32);
+  T* sparse_feature_grad = ctx->Tensor4ArgNameAndIndex("sparse_feature_grad", 0)->mut_dptr<T>();
+  auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
+  const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+  LaunchMemset<T>(cuda_stream->cuda_stream(), cuda_stream->device_properties().multiProcessorCount,
+                  vector_size, parallel_num,
+                  reinterpret_cast<const uint32_t*>(num_valid_sparse_feature->dptr())
+                      + parallel_id * parallel_num,
+                  sparse_feature_grad);
+  const uint32_t* sparse_indices =
+      reinterpret_cast<const uint32_t*>(ctx->Tensor4ArgNameAndIndex("sparse_indices", 0)->dptr());
+  const int64_t rows = batch_size * sparse_dim;
+  if (rows == 0) { return; }
+  constexpr int32_t half_pack_size = std::is_same<T, half>::value ? 2 : 1;
+  if (half_pack_size == 2 && vector_size % 2 == 0) {
+    const int64_t elem_cnt = rows * vector_size / 2;
+    ScatterAddSparseFeaturesGradGpu<T, half_pack_size>
+        <<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+           cuda_stream->cuda_stream()>>>(elem_cnt, sparse_dim, vector_size / 2, concated_padded_dim,
+                                         sparse_dim_start, sparse_indices, concated_features_grad,
+                                         sparse_feature_grad);
+  } else {
+    const int64_t elem_cnt = rows * vector_size;
+    ScatterAddSparseFeaturesGradGpu<T, 1><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock,
+                                            0, cuda_stream->cuda_stream()>>>(
+        elem_cnt, sparse_dim, vector_size, concated_padded_dim, sparse_dim_start, sparse_indices,
+        concated_features_grad, sparse_feature_grad);
+  }
+}
+#endif  // defined(USE_HIP)
+
 template<typename T, int max_in>
 bool DispatchFeatureInteractionDotPackSize(user_op::KernelComputeContext* ctx,
                                            const int32_t input_size) {
@@ -1189,19 +1309,30 @@ class FusedDotFeatureInteractionKernel final : public user_op::OpKernel,
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const DataType data_type = out->data_type();
     CHECK_LT(out->shape_view().elem_cnt(), GetMaxVal<int32_t>());
+    // The tensor-core kernels use CUDA wmma; the HIP build takes the batched-GEMM path below.
+#if !defined(USE_HIP)
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     if ((cuda_stream->device_properties().major >= 7 && data_type == DataType::kFloat16)
         || (cuda_stream->device_properties().major >= 8 && data_type == DataType::kFloat)) {
       bool success = TryLaunchTensorCoreDotKernel<T>(ctx);
       if (success == true) { return; }
     }
+#endif  // !defined(USE_HIP)
+#if defined(USE_HIP)
+    const int64_t sparse_dim = GetSparseDim(ctx);
+#else
     CHECK(!ctx->has_input("sparse_feature", 0)) << "sparse_feature is not supported. ";
+#endif  // defined(USE_HIP)
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t batch_size = out->shape_view().At(0);
     int64_t features_concated_dim = 0;
     for (int64_t i = 0; i < ctx->input_size("features"); ++i) {
       features_concated_dim += ctx->TensorDesc4ArgNameAndIndex("features", i)->shape().At(1);
     }
+#if defined(USE_HIP)
+    const int64_t sparse_dim_start = features_concated_dim;
+    features_concated_dim += sparse_dim;
+#endif  // defined(USE_HIP)
     const int64_t concated_padded_dim = GetPaddedDim(features_concated_dim);
     const int64_t vector_size = ctx->TensorDesc4ArgNameAndIndex("features", 0)->shape().At(2);
     const int64_t out_dim = out->shape_view().At(1);
@@ -1226,6 +1357,10 @@ class FusedDotFeatureInteractionKernel final : public user_op::OpKernel,
              matmul_out_size + gather_indices_size + padded_concated_features_size);
     ConcatFeatures<T>(ctx, batch_size, concated_padded_dim * vector_size,
                       padded_concated_features_ptr);
+#if defined(USE_HIP)
+    GatherSparseFeatures<T>(ctx, batch_size, sparse_dim, concated_padded_dim, sparse_dim_start,
+                            vector_size, padded_concated_features_ptr);
+#endif  // defined(USE_HIP)
     auto batch_matmul = ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
         ctx->device_type(), data_type, ep::primitive::BlasTransposeType::N,
         ep::primitive::BlasTransposeType::T);
@@ -1259,6 +1394,9 @@ user_op::InferTmpSizeFn GenFusedDotFeatureInteractionInferTmpSizeFn() {
     for (int32_t i = 0; i < ctx->input_size("features"); ++i) {
       features_concated_dim += ctx->InputShape("features", i).At(1);
     }
+#if defined(USE_HIP)
+    features_concated_dim += GetSparseDim(ctx);
+#endif  // defined(USE_HIP)
     const int64_t concated_padded_dim = GetPaddedDim(features_concated_dim);
     size_t matmul_out_size =
         GetCudaAlignedSize(batch_size * concated_padded_dim * concated_padded_dim * sizeof(T));
@@ -1297,18 +1435,29 @@ class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel,
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const DataType data_type = dy->data_type();
+    // The tensor-core kernels use CUDA wmma; the HIP build takes the batched-GEMM path below.
+#if !defined(USE_HIP)
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     if ((cuda_stream->device_properties().major >= 7 && data_type == DataType::kFloat16)
         || (cuda_stream->device_properties().major >= 8 && data_type == DataType::kFloat)) {
       bool success = TryLaunchTensorCoreDotBackwardKernel<T>(ctx);
       if (success == true) { return; }
     }
+#endif  // !defined(USE_HIP)
+#if defined(USE_HIP)
+    const int64_t sparse_dim = GetSparseDim(ctx);
+#else
     CHECK(!ctx->has_input("sparse_feature", 0)) << "sparse_feature is not supported. ";
+#endif  // defined(USE_HIP)
     const int64_t batch_size = dy->shape_view().At(0);
     int64_t features_concated_dim = 0;
     for (int32_t i = 0; i < ctx->output_size("features_grad"); ++i) {
       features_concated_dim += ctx->TensorDesc4ArgNameAndIndex("features_grad", i)->shape().At(1);
     }
+#if defined(USE_HIP)
+    const int64_t sparse_dim_start = features_concated_dim;
+    features_concated_dim += sparse_dim;
+#endif  // defined(USE_HIP)
     const int64_t concated_padded_dim = GetPaddedDim(features_concated_dim);
     const int64_t vector_size = ctx->TensorDesc4ArgNameAndIndex("features_grad", 0)->shape().At(2);
     const int64_t out_dim = dy->shape_view().At(1);
@@ -1328,6 +1477,10 @@ class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel,
         tmp_buffer->shape_view().elem_cnt());
     ConcatFeatures<T>(ctx, batch_size, concated_padded_dim * vector_size,
                       padded_concated_features_ptr);
+#if defined(USE_HIP)
+    GatherSparseFeatures<T>(ctx, batch_size, sparse_dim, concated_padded_dim, sparse_dim_start,
+                            vector_size, padded_concated_features_ptr);
+#endif  // defined(USE_HIP)
 
     T* output_concat_grad_ptr = nullptr;
     int64_t output_concat_end_dim = 0;
@@ -1349,6 +1502,13 @@ class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel,
 
     ConcatFeaturesGrad(ctx, batch_size, concated_padded_dim, vector_size,
                        padded_concated_features_grad_ptr);
+#if defined(USE_HIP)
+    if (sparse_dim > 0) {
+      ScatterAddSparseFeaturesGrad<T>(ctx, batch_size, sparse_dim, concated_padded_dim,
+                                      sparse_dim_start, vector_size,
+                                      padded_concated_features_grad_ptr);
+    }
+#endif  // defined(USE_HIP)
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -1360,6 +1520,9 @@ user_op::InferTmpSizeFn GenFusedDotFeatureInteractionGradInferTmpSizeFn() {
     for (int32_t i = 0; i < ctx->output_size("features_grad"); ++i) {
       features_concated_dim += ctx->InputShape("features_grad", i).At(1);
     }
+#if defined(USE_HIP)
+    features_concated_dim += GetSparseDim(ctx);
+#endif  // defined(USE_HIP)
     const int64_t concated_padded_dim = GetPaddedDim(features_concated_dim);
     const int64_t batch_size = ctx->InputShape("features_grad", 0).At(0);
     const int64_t vector_size = ctx->InputShape("features_grad", 0).At(2);

@@ -1,12 +1,38 @@
 include(python)
 
+# Retag a target's .cu/.cuh sources to LANGUAGE HIP and set its HIP_ARCHITECTURES.
+# Used under USE_HIP so the existing .cu compile through hipcc with no
+# file renames; the CUDA build is a pure passthrough.
+function(of_retag_cuda_sources_as_hip target)
+  get_target_property(_of_srcs ${target} SOURCES)
+  if(NOT _of_srcs)
+    return()
+  endif()
+  set(_of_hip_srcs)
+  foreach(_of_src ${_of_srcs})
+    if("${_of_src}" MATCHES "\\.(cu|cuh)$")
+      list(APPEND _of_hip_srcs ${_of_src})
+    endif()
+  endforeach()
+  if(_of_hip_srcs)
+    set_source_files_properties(${_of_hip_srcs} TARGET_DIRECTORY ${target} PROPERTIES LANGUAGE HIP)
+    set_target_properties(${target} PROPERTIES HIP_ARCHITECTURES "${CMAKE_HIP_ARCHITECTURES}")
+  endif()
+endfunction()
+
 function(oneflow_add_executable)
   add_executable(${ARGV})
+  if(USE_HIP)
+    of_retag_cuda_sources_as_hip(${ARGV0})
+  endif()
   set_compile_options_to_oneflow_target(${ARGV0})
 endfunction()
 
 function(oneflow_add_library)
   add_library(${ARGV})
+  if(USE_HIP)
+    of_retag_cuda_sources_as_hip(${ARGV0})
+  endif()
   set_compile_options_to_oneflow_target(${ARGV0})
 endfunction()
 
@@ -220,6 +246,18 @@ endif(BUILD_PYTHON)
 include_directories(${PROJECT_SOURCE_DIR}) # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 
+if(USE_HIP)
+  # oneflow's source glob compiles every .cuh as a standalone TU. Three .cuh are not
+  # self-contained -- they live inside namespace oneflow::cuda and use symbols their .cu
+  # includer pulled in first (cuda::softmax::Pack for fused_softmax; ep::primitive::CopyNd
+  # for one_embedding_data_shuffle; the cublasLt descriptor types for cublas_fused_mlp_util)
+  # without including the defining headers themselves. nvcc tolerates the standalone pass;
+  # clang does not. Their code is still built inside the .cu that include them, so drop only
+  # the redundant standalone compile. The other 16 .cuh are self-contained and compile as HIP.
+  list(FILTER of_all_obj_cc EXCLUDE REGEX
+       "oneflow/user/kernels/(fused_softmax|one_embedding_data_shuffle|cublas_fused_mlp_util)\\.cuh$")
+endif()
+
 # cc obj lib
 oneflow_add_library(oneflow SHARED ${of_all_obj_cc})
 
@@ -298,6 +336,15 @@ endif()
 check_variable_defined(LLVM_INCLUDE_DIRS)
 set_property(TARGET LLVMSupportWithHeader PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                                                    ${LLVM_INCLUDE_DIRS})
+# When the monolith is compiled with the ROCm clang, that toolchain's bundled
+# llvm/Config/abi-breaking.h (LLVM_ENABLE_ABI_BREAKING_CHECKS=0) is found on clang's
+# builtin header path ahead of oneflow's vendored LLVM headers (=1), so every TU emits an
+# extern reference to llvm::DisableABIBreakingChecks while the linked libLLVMSupport (built
+# =1) only defines EnableABIBreakingChecks -> liboneflow.so fails to load with an undefined
+# symbol. LLVM provides this macro precisely to drop the link-time enforcement symbol when
+# only ADT/Support headers are used; defining it sidesteps the spurious mismatch.
+set_property(TARGET LLVMSupportWithHeader PROPERTY INTERFACE_COMPILE_DEFINITIONS
+                                                   LLVM_DISABLE_ABI_BREAKING_CHECKS_ENFORCING=1)
 
 list(APPEND oneflow_third_party_libs LLVMSupportWithHeader)
 
@@ -334,7 +381,9 @@ elseif(UNIX)
     -Wl,--as-needed
     -ldl
     -lrt)
-  if(BUILD_CUDA)
+  if(BUILD_CUDA AND USE_HIP)
+    target_link_libraries(oneflow hip::host)
+  elseif(BUILD_CUDA)
     target_link_libraries(oneflow CUDA::cudart_static)
   endif()
   if(WITH_OMP)
@@ -468,7 +517,9 @@ file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_B
 function(oneflow_add_test target_name)
   cmake_parse_arguments(arg "" "TEST_NAME;WORKING_DIRECTORY" "SRCS" ${ARGN})
   oneflow_add_executable(${target_name} ${arg_SRCS})
-  if(BUILD_CUDA)
+  if(BUILD_CUDA AND USE_HIP)
+    target_link_libraries(${target_name} hip::host)
+  elseif(BUILD_CUDA)
     target_link_libraries(${target_name} CUDA::cudart_static)
   endif()
   set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY

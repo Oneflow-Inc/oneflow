@@ -27,7 +27,39 @@ namespace cuda {
 
 namespace layer_norm {
 
+// Wavefront width: 64 on CDNA (gfx9xx), 32 on RDNA/CUDA. Must be one compile-time value
+// in both the host and device passes of the .cu because it flows from the host launch
+// config into the device kernel template args; OF_GPU_WARP_SIZE is injected from the
+// target arch by cmake/cuda.cmake. See core/cuda/softmax.cuh for the rationale.
+#if defined(OF_GPU_WARP_SIZE)
+constexpr int kWarpSize = OF_GPU_WARP_SIZE;
+#else
 constexpr int kWarpSize = 32;
+#endif
+
+// The (max_cols, min_cols) dispatch rungs below read min_cols * kWarpSize columns
+// unconditionally, so every width up to one full warp must be taken by a thread-group rung
+// first. On a 64-wide wavefront that needs a 64-wide rung, which a 32-lane warp cannot have.
+#if defined(OF_GPU_WARP_SIZE) && OF_GPU_WARP_SIZE == 64
+#define OF_NORM_WARP_64 1
+#else
+#define OF_NORM_WARP_64 0
+#endif
+
+#ifndef OF_SHFL_FULL_MASK
+#define OF_SHFL_FULL_MASK 0xffffffff
+#endif
+
+// The block kernels below may launch with up to 1024 threads. On HIP that bound is stated
+// explicitly so the register allocation always permits such a launch; the CUDA kernels keep
+// upstream's attributes.
+#ifndef OF_HIP_BLOCK_LAUNCH_BOUNDS
+#if defined(USE_HIP)
+#define OF_HIP_BLOCK_LAUNCH_BOUNDS __launch_bounds__(1024)
+#else
+#define OF_HIP_BLOCK_LAUNCH_BOUNDS
+#endif
+#endif
 
 template<typename T>
 struct SumOp {
@@ -42,7 +74,7 @@ struct MaxOp {
 template<template<typename> class ReductionOp, typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ T WarpAllReduce(T val) {
   for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
-    val = ReductionOp<T>()(val, __shfl_xor_sync(0xffffffff, val, mask, thread_group_width));
+    val = ReductionOp<T>()(val, __shfl_xor_sync(OF_SHFL_FULL_MASK, val, mask, thread_group_width));
   }
   return val;
 }
@@ -239,9 +271,9 @@ __inline__ __device__ void WelfordWarpReduce(T thread_mean, T thread_m2, T threa
   *m2 = thread_m2;
   *count = thread_count;
   for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
-    T b_mean = __shfl_down_sync(0xffffffff, *mean, mask, thread_group_width);
-    T b_m2 = __shfl_down_sync(0xffffffff, *m2, mask, thread_group_width);
-    T b_count = __shfl_down_sync(0xffffffff, *count, mask, thread_group_width);
+    T b_mean = __shfl_down_sync(OF_SHFL_FULL_MASK, *mean, mask, thread_group_width);
+    T b_m2 = __shfl_down_sync(OF_SHFL_FULL_MASK, *m2, mask, thread_group_width);
+    T b_count = __shfl_down_sync(OF_SHFL_FULL_MASK, *count, mask, thread_group_width);
     WelfordCombine(b_mean, b_m2, b_count, mean, m2, count);
   }
 }
@@ -250,9 +282,9 @@ template<typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ void WelfordWarpAllReduce(T thread_mean, T thread_m2, T thread_count, T* mean,
                                                 T* m2, T* count) {
   WelfordWarpReduce<T, thread_group_width>(thread_mean, thread_m2, thread_count, mean, m2, count);
-  *mean = __shfl_sync(0xffffffff, *mean, 0, thread_group_width);
-  *m2 = __shfl_sync(0xffffffff, *m2, 0, thread_group_width);
-  *count = __shfl_sync(0xffffffff, *count, 0, thread_group_width);
+  *mean = __shfl_sync(OF_SHFL_FULL_MASK, *mean, 0, thread_group_width);
+  *m2 = __shfl_sync(OF_SHFL_FULL_MASK, *m2, 0, thread_group_width);
+  *count = __shfl_sync(OF_SHFL_FULL_MASK, *count, 0, thread_group_width);
 }
 
 template<typename T>
@@ -471,6 +503,9 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchLayerNormWarp
   DEFINE_ONE_ELIF(8)
   DEFINE_ONE_ELIF(16)
   DEFINE_ONE_ELIF(32)
+#if OF_NORM_WARP_64
+  DEFINE_ONE_ELIF(64)
+#endif
 #undef DEFINE_ONE_ELIF
 #define DEFINE_ONE_ELIF(max_col, min_col)                                                          \
   else if (cols <= (max_col)*kWarpSize) {                                                          \
@@ -514,6 +549,9 @@ typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchLayerNormWarp
   DEFINE_ONE_ELIF(8)
   DEFINE_ONE_ELIF(16)
   DEFINE_ONE_ELIF(32)
+#if OF_NORM_WARP_64
+  DEFINE_ONE_ELIF(64)
+#endif
 #undef DEFINE_ONE_ELIF
 #define DEFINE_ONE_ELIF(max_col, min_col)                                                          \
   else if ((cols <= (max_col)*kWarpSize) && (cols > (min_col)*kWarpSize)) {                        \
@@ -560,9 +598,9 @@ inline cudaError_t DispatchLayerNormWarpImpl(cudaStream_t stream, LOAD load, STO
 }
 
 template<typename LOAD, typename STORE, typename ComputeType, int pack_size, int block_size>
-__global__ void LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t rows,
-                                       const int64_t cols, const double epsilon, ComputeType* mean,
-                                       ComputeType* inv_variance) {
+__global__ void OF_HIP_BLOCK_LAUNCH_BOUNDS
+    LayerNormBlockSMemImpl(LOAD load, STORE store, const int64_t rows, const int64_t cols,
+                           const double epsilon, ComputeType* mean, ComputeType* inv_variance) {
   using LoadType = typename LOAD::LoadType;
   extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   auto* buf = reinterpret_cast<LoadType*>(shared_buf);
@@ -626,10 +664,17 @@ inline cudaError_t LaunchLayerNormBlockSMemImpl(cudaStream_t stream, LOAD load, 
 template<typename Func>
 cudaError_t MaximizeDynamicSharedMemorySize(Func func, const int max_smem_size) {
   cudaFuncAttributes attr{};
-  cudaError_t err = cudaFuncGetAttributes(&attr, func);
+#if defined(USE_HIP)
+  // hipFuncGetAttributes/hipFuncSetAttribute take the kernel as const void* only (CUDA
+  // also accepts a typed pointer); cast for portability.
+  const void* func_ptr = reinterpret_cast<const void*>(func);
+#else
+  Func func_ptr = func;
+#endif
+  cudaError_t err = cudaFuncGetAttributes(&attr, func_ptr);
   if (err != cudaSuccess) { return err; }
   constexpr int reserved_smem = 1024;  // 1K
-  return cudaFuncSetAttribute(func, cudaFuncAttributeMaxDynamicSharedMemorySize,
+  return cudaFuncSetAttribute(func_ptr, cudaFuncAttributeMaxDynamicSharedMemorySize,
                               max_smem_size - attr.sharedSizeBytes - reserved_smem);
 }
 
@@ -1103,6 +1148,9 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchLayerNormGrad
   DEFINE_ONE_ELIF(8)
   DEFINE_ONE_ELIF(16)
   DEFINE_ONE_ELIF(32)
+#if OF_NORM_WARP_64
+  DEFINE_ONE_ELIF(64)
+#endif
 #undef DEFINE_ONE_ELIF
 #define DEFINE_ONE_ELIF(max_col, min_col)                                                   \
   else if (cols <= (max_col)*kWarpSize) {                                                   \
@@ -1147,10 +1195,10 @@ inline cudaError_t DispatchLayerNormGradWarpImpl(cudaStream_t stream, LOAD_X loa
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
          int pack_size, int block_size>
-__global__ void LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
-                                           STORE store, const ComputeType* mean,
-                                           const ComputeType* inv_variance, const int64_t rows,
-                                           const int64_t cols) {
+__global__ void OF_HIP_BLOCK_LAUNCH_BOUNDS
+    LayerNormGradBlockSMemImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy, STORE store,
+                               const ComputeType* mean, const ComputeType* inv_variance,
+                               const int64_t rows, const int64_t cols) {
   using LoadTypeX = typename LOAD_X::LoadType;
   using LoadTypeDy = typename LOAD_SCALED_DY::LoadType;
   extern __shared__ __align__(sizeof(double)) unsigned char grad_shared_buf[];
@@ -1379,10 +1427,10 @@ inline cudaError_t TryDispatchLayerNormGradBlockSMemImpl(cudaStream_t stream, LO
 
 template<typename LOAD_X, typename LOAD_SCALED_DY, typename STORE, typename ComputeType,
          int pack_size, int block_size>
-__global__ void LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy,
-                                               STORE store, const ComputeType* mean,
-                                               const ComputeType* inv_variance, const int64_t rows,
-                                               const int64_t cols) {
+__global__ void OF_HIP_BLOCK_LAUNCH_BOUNDS
+    LayerNormGradBlockUncachedImpl(LOAD_X load_x, LOAD_SCALED_DY load_scaled_dy, STORE store,
+                                   const ComputeType* mean, const ComputeType* inv_variance,
+                                   const int64_t rows, const int64_t cols) {
   using LoadTypeX = typename LOAD_X::LoadType;
   using LoadTypeDy = typename LOAD_SCALED_DY::LoadType;
   const int tid = threadIdx.x;

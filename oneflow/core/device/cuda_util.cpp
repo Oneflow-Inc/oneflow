@@ -48,7 +48,9 @@ const char* CublasGetErrorString(cublasStatus_t error) {
 #if CUDA_VERSION >= 6000
     case CUBLAS_STATUS_NOT_SUPPORTED: return "CUBLAS_STATUS_NOT_SUPPORTED";
 #endif
-#if CUDA_VERSION >= 6050
+#if CUDA_VERSION >= 6050 && !defined(USE_HIP)
+    // hipblas has no LICENSE_ERROR status; the compat header aliases it to INTERNAL_ERROR,
+    // which would duplicate the case above. Drop it on HIP.
     case CUBLAS_STATUS_LICENSE_ERROR: return "CUBLAS_STATUS_LICENSE_ERROR";
 #endif
     default: return "Unknown cublas status";
@@ -113,7 +115,7 @@ const char* CusovlerGetErrorString(cusolverStatus_t error) {
 }
 #endif
 
-#if CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10020 && !defined(USE_HIP)
 
 const char* NvjpegGetErrorString(nvjpegStatus_t error) {
   switch (error) {
@@ -191,12 +193,21 @@ CublasMathModeGuard::CublasMathModeGuard(cublasHandle_t handle) : handle_(handle
 }
 
 CublasMathModeGuard::~CublasMathModeGuard() {
+#if !defined(USE_HIP)
   if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, saved_mode_)); }
+#endif  // !USE_HIP
 }
 
 void CublasMathModeGuard::SetMathMode(cublasMath_t new_mode) {
   new_mode_ = new_mode;
+#if !defined(USE_HIP)
   if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, new_mode_)); }
+#else
+  // hipblas only accepts HIPBLAS_DEFAULT_MATH; TENSOR_OP_MATH and the
+  // DISALLOW_REDUCED_PRECISION_REDUCTION flag return HIPBLAS_STATUS_NOT_SUPPORTED on CDNA.
+  // The NVIDIA tensor-core math-mode hint has no hipblas equivalent (rocBLAS selects the
+  // compute precision from the data/compute types), so the guard is a no-op on HIP.
+#endif  // !USE_HIP
 }
 
 void CudaSynchronize(int device_id) {
@@ -273,7 +284,16 @@ void InitCudaContextOnce(int device_id) {
 }
 
 cudaError_t CudaDriverGetPrimaryCtxActive(int dev, int* active) {
-#if CUDA_VERSION >= 11030
+#if defined(USE_HIP)
+  // HIP exposes the driver primary-context API directly (no cudaGetDriverEntryPoint dance).
+  hipDevice_t hip_device{};
+  if (hipDeviceGet(&hip_device, dev) != hipSuccess) { return hipErrorInvalidDevice; }
+  unsigned int flags{};
+  if (hipDevicePrimaryCtxGetState(hip_device, &flags, active) != hipSuccess) {
+    return hipErrorUnknown;
+  }
+  return hipSuccess;
+#elif CUDA_VERSION >= 11030
   CUdevice cu_device{};
   {
     CUresult (*fnCuDeviceGet)(CUdevice*, int) = nullptr;

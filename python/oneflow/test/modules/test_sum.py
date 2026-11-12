@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import unittest
 from collections import OrderedDict
 
@@ -159,6 +160,25 @@ class TestSumModule(flow.unittest.TestCase):
         x = random_tensor(ndim=0).to(device)
         y = torch.sum(x)
         return y
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_sum_along_rows(test_case):
+        for shape in [
+            (31, 5),
+            (64, 72),
+            (1024, 72),
+            (4096, 8),
+            (5000, 3),
+            (16, 64, 72),
+        ]:
+            np_x = np.random.randn(*shape).astype(np.float32)
+            x = flow.tensor(np_x, device="cuda")
+            dim = tuple(range(len(shape) - 1))
+            test_case.assertTrue(
+                np.allclose(
+                    flow.sum(x, dim=dim).numpy(), np.sum(np_x, axis=dim), atol=1e-3
+                )
+            )
 
 
 if __name__ == "__main__":

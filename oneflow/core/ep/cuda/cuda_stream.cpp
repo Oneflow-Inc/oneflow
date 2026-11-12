@@ -66,7 +66,9 @@ void CheckCudaRuntimeVersion() {
 }
 
 void CheckCublasVersion(cublasHandle_t handle) {
-#if CUDA_VERSION >= 10020
+// hipblas exposes neither hipblasGetVersion nor CUBLAS_VER_MAJOR/MINOR; the cuBLAS
+// compile-vs-runtime version banner is informational, so skip it on HIP.
+#if CUDA_VERSION >= 10020 && !defined(USE_HIP)
 #if (!defined(CUBLAS_VER_MAJOR)) || (!defined(CUBLAS_VER_MINOR))
 #error
 #endif  // (!defined(CUBLAS_VER_MAJOR)) || (!defined(CUBLAS_VER_MINOR))
@@ -158,10 +160,27 @@ CudaStream::CudaStream(CudaDevice* device)
     const unsigned int stream_flags = ParseIntegerFromEnv(stream_flags_env_name, 0);
     OF_CUDA_CHECK(cudaStreamCreateWithFlags(&cuda_stream_, stream_flags));
   } else {
+#if defined(USE_HIP)
+    // HIP multiplexes ordinary streams onto a small pool of hardware queues, so a kernel can wait
+    // in a queue behind another stream's kernel. The P2P one_embedding kernels spin until the peer
+    // GPUs reach the matching kernel; if the peer's queue holds a collective that waits on this GPU
+    // behind it, both GPUs spin forever. A stream with a CU mask gets a hardware queue of its own,
+    // so streams make progress independently of each other, as on CUDA.
+    const int cu_count = device->properties().multiProcessorCount;
+    std::vector<uint32_t> cu_mask((cu_count + 31) / 32, 0);
+    for (int i = 0; i < cu_count; ++i) { cu_mask.at(i / 32) |= 1U << (i % 32); }
+    OF_CUDA_CHECK(hipExtStreamCreateWithCUMask(&cuda_stream_, cu_mask.size(), cu_mask.data()));
+#else
     OF_CUDA_CHECK(cudaStreamCreate(&cuda_stream_));
+#endif  // defined(USE_HIP)
   }
   // cublas_handle
-  OF_CUBLAS_CHECK(cublasCreate(&cublas_handle_));
+  {
+#if defined(USE_HIP)
+    oneflow_hip_cublaslt::HandleCreationGuard guard;
+#endif  // defined(USE_HIP)
+    OF_CUBLAS_CHECK(cublasCreate(&cublas_handle_));
+  }
   OF_CUBLAS_CHECK(cublasSetStream(cublas_handle_, cuda_stream_));
   if (need_check_version) { CheckCublasVersion(cublas_handle_); }
 #if CUDA_VERSION >= 10010
@@ -175,7 +194,12 @@ CudaStream::CudaStream(CudaDevice* device)
 #endif  // CUBLAS_VERSION >= 11000
   // cusolver_dn_handle
 #if CUDA_VERSION >= 11000
-  OF_CUSOLVER_CHECK(cusolverDnCreate(&cusolver_dn_handle_));
+  {
+#if defined(USE_HIP)
+    oneflow_hip_cublaslt::HandleCreationGuard guard;
+#endif  // defined(USE_HIP)
+    OF_CUSOLVER_CHECK(cusolverDnCreate(&cusolver_dn_handle_));
+  }
   OF_CUSOLVER_CHECK(cusolverDnSetStream(cusolver_dn_handle_, cuda_stream_));
 #endif
   workspace_size_ =
@@ -303,12 +327,18 @@ int CudaStream::cuda_arch() const {
 void CudaStream::BeginGraphCapture() {
   CHECK(!is_graph_capturing_);
   is_graph_capturing_ = true;
+#if defined(USE_HIP)
+  oneflow_hip_cublaslt::BeginCapture();
+#endif  // defined(USE_HIP)
   OF_CUDA_CHECK(cudaStreamBeginCapture(cuda_stream_, cudaStreamCaptureModeThreadLocal));
 }
 
 void CudaStream::EndGraphCapture(CudaGraphExecutable* executable) {
   cudaGraph_t graph = nullptr;
   OF_CUDA_CHECK(cudaStreamEndCapture(cuda_stream_, &graph));
+#if defined(USE_HIP)
+  oneflow_hip_cublaslt::EndCapture();
+#endif  // defined(USE_HIP)
   executable->Update(graph);
   OF_CUDA_CHECK(cudaGraphDestroy(graph));
   is_graph_capturing_ = false;

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 from collections import OrderedDict
 
@@ -174,6 +175,19 @@ class TestLogicalReduce(flow.unittest.TestCase):
         device = random_device()
         x = torch.empty(0, 2).to(device)
         return torch.all(x)
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_reduce_short_one_byte_input(test_case):
+        for n in range(1, 10):
+            for np_dtype in [np.bool_, np.int8, np.uint8]:
+                np_x = np.random.randint(0, 2, size=n).astype(np_dtype)
+                x = flow.tensor(np_x, device="cuda")
+                test_case.assertEqual(flow.all(x).item(), np.all(np_x))
+                test_case.assertEqual(flow.any(x).item(), np.any(np_x))
+                if np_dtype is not np.bool_:
+                    test_case.assertEqual(flow.sum(x).item(), np.sum(np_x))
+                    test_case.assertEqual(flow.max(x).item(), np.max(np_x))
+                    test_case.assertEqual(flow.min(x).item(), np.min(np_x))
 
 
 if __name__ == "__main__":

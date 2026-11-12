@@ -107,8 +107,15 @@ __global__ void BarrierAndMemset(int32_t parallel_id, int32_t parallel_num,
   if (blockIdx.x == 0) {
     count = param.is_kernel_start[parallel_id][parallel_id];
     if (threadIdx.x < parallel_num) {
+#if defined(USE_HIP)
+      // The flags live in uncached memory and are polled by peer GPUs across the fabric.
+      // System-scope atomics order each flag with this GPU's earlier accesses.
+      __hip_atomic_store(param.is_kernel_start[parallel_id] + threadIdx.x, count + 1,
+                         __ATOMIC_RELEASE, __HIP_MEMORY_SCOPE_SYSTEM);
+#else
       volatile int32_t* start_f = param.is_kernel_start[parallel_id];
       start_f[threadIdx.x] = count + 1;
+#endif  // defined(USE_HIP)
     }
   }
   Pack<char, pack_size> pack_value;
@@ -118,8 +125,14 @@ __global__ void BarrierAndMemset(int32_t parallel_id, int32_t parallel_num,
   if (global_thread_id < num_counter) { counter[global_thread_id] = 0; }
   if (blockIdx.x == 0) {
     if (threadIdx.x < parallel_num) {
+#if defined(USE_HIP)
+      while (__hip_atomic_load(param.is_kernel_start[threadIdx.x] + parallel_id, __ATOMIC_ACQUIRE,
+                               __HIP_MEMORY_SCOPE_SYSTEM)
+             < count + 1) {}
+#else
       volatile int32_t* remote_start_f = param.is_kernel_start[threadIdx.x];
       while (remote_start_f[parallel_id] < count + 1) {}
+#endif  // defined(USE_HIP)
     }
   }
 }
@@ -285,7 +298,16 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
     size_t buffer_size = num_partitioned_unique_size_ + partitioned_unique_ids_size_
                          + partitioned_unique_table_ids_size_ + is_kernel_start_size_;
     buffer_ptrs_.resize(parallel_num);
+#if defined(USE_HIP)
+    // Peers read the partitioned unique ids and counts and poll the flags in this buffer across
+    // the fabric. A peer's read of ordinary device memory misses writes still held in this GPU's
+    // L2, so the barrier would never release and the ids would be stale; uncached memory makes
+    // every access go to memory.
+    OF_CUDA_CHECK(
+        hipExtMallocWithFlags(&buffer_ptrs_.at(parallel_id), buffer_size, hipDeviceMallocUncached));
+#else
     cudaMalloc(&buffer_ptrs_.at(parallel_id), buffer_size);
+#endif  // defined(USE_HIP)
     cudaMemset(buffer_ptrs_.at(parallel_id), 0, buffer_size);
   }
   ~DataShuffleKernelState() {
@@ -369,8 +391,15 @@ __global__ void BarrierAndComputeOut(int32_t parallel_id, int32_t parallel_num, 
   if (blockIdx.x == 0) {
     count = param.is_kernel_start[parallel_id][parallel_id];
     if (threadIdx.x < parallel_num) {
+#if defined(USE_HIP)
+      // The flags live in uncached memory and are polled by peer GPUs across the fabric.
+      // System-scope atomics order each flag with this GPU's earlier accesses.
+      __hip_atomic_store(param.is_kernel_start[parallel_id] + threadIdx.x, count + 1,
+                         __ATOMIC_RELEASE, __HIP_MEMORY_SCOPE_SYSTEM);
+#else
       volatile int32_t* start_f = param.is_kernel_start[parallel_id];
       start_f[threadIdx.x] = count + 1;
+#endif  // defined(USE_HIP)
     }
   }
   if (parallel_num > 1) {
@@ -392,8 +421,14 @@ __global__ void BarrierAndComputeOut(int32_t parallel_id, int32_t parallel_num, 
   }
   if (blockIdx.x == 0) {
     if (threadIdx.x < parallel_num) {
+#if defined(USE_HIP)
+      while (__hip_atomic_load(param.is_kernel_start[threadIdx.x] + parallel_id, __ATOMIC_ACQUIRE,
+                               __HIP_MEMORY_SCOPE_SYSTEM)
+             < count + 1) {}
+#else
       volatile int32_t* remote_start_f = param.is_kernel_start[threadIdx.x];
       while (remote_start_f[parallel_id] < count + 1) {}
+#endif  // defined(USE_HIP)
     }
   }
 }

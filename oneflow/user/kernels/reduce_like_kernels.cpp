@@ -67,10 +67,18 @@ auto ReduceMatmulNoTransAPrimitiveExists() {
                           });
 }
 
+template<DeviceType device_type, typename T>
 size_t ReduceSumLikeInferTmpSize(user_op::InferContext* ctx) {
   if (ctx->Attr<std::vector<int32_t>>("axis").empty()) { return 0; }
   const user_op::TensorDesc& tensor_desc_x = ctx->InputTensorDesc("x", 0);
-  return tensor_desc_x.shape().elem_cnt() * GetSizeOfDataType(tensor_desc_x.data_type());
+  size_t tmp_size = tensor_desc_x.shape().elem_cnt() * GetSizeOfDataType(tensor_desc_x.data_type());
+#if defined(USE_HIP)
+  if constexpr (device_type == DeviceType::kCUDA) {
+    tmp_size = std::max(tmp_size, CudaScalarReduceTmpStorageBytes<T, BinaryFuncSum>(
+                                      tensor_desc_x.shape().elem_cnt()));
+  }
+#endif  // defined(USE_HIP)
+  return tmp_size;
 }
 
 }  // namespace
@@ -102,13 +110,21 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel, public user_op::Cu
     } else {
       user_op::Tensor* tensor_tmp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
       T* temp_storage = static_cast<T*>(tensor_tmp->mut_dptr());
+#if defined(USE_HIP)
+      // The scratch can be larger than x (see ReduceSumLikeInferTmpSize).
+      XpuVarNdarray<T> tmp(
+          Shape({tensor_tmp->shape_view().elem_cnt() / static_cast<int64_t>(sizeof(T))}),
+          temp_storage);
+#else
+      XpuVarNdarray<T> tmp(tensor_x->shape_view(), temp_storage, tensor_x->shape_view().NumAxes());
+#endif  // defined(USE_HIP)
       NdarrayUtil<device_type, T>::ReduceSum(
           ctx->stream(),
           XpuVarNdarray<T>(CreateReducedShape(tensor_x->shape_view(), {axis.begin(), axis.end()}),
                            tensor_y->mut_dptr<T>()),
           XpuVarNdarray<const T>(tensor_x->shape_view(), tensor_x->dptr<T>(),
                                  tensor_x->shape_view().NumAxes()),
-          XpuVarNdarray<T>(tensor_x->shape_view(), temp_storage, tensor_x->shape_view().NumAxes()));
+          tmp);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -119,7 +135,7 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel, public user_op::Cu
       .SetCreateFn<ReduceSumLikeOpKernel<device, OF_PP_PAIR_FIRST(data_type_pair)>>()          \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                    \
                        && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair))) \
-      .SetInferTmpSizeFn(ReduceSumLikeInferTmpSize);
+      .SetInferTmpSizeFn(ReduceSumLikeInferTmpSize<device, OF_PP_PAIR_FIRST(data_type_pair)>);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_SUM_LIKE_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ)

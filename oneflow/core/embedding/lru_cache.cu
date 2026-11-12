@@ -23,7 +23,7 @@ limitations under the License.
 #include <cuda.h>
 
 #if CUDA_VERSION >= 11000 && ((!defined(__CUDA_ARCH__)) || (__CUDA_ARCH__ >= 700)) \
-    && !(defined(__clang__) && defined(__CUDA__))
+    && !(defined(__clang__) && defined(__CUDA__)) && !defined(USE_HIP)
 #include <cuda/std/semaphore>
 #endif
 
@@ -33,10 +33,25 @@ namespace embedding {
 
 namespace {
 
-constexpr int kWarpSize = 32;
+// One set has one way per lane of a warp, so the number of ways follows the hardware warp
+// width (64 on wavefront-64 GPUs). HIP ballots are 64-bit, so the mask and the bit helpers are
+// 64-bit there.
+constexpr int kWarpSize = kCudaWarpSize;
 constexpr int kNumWarpPerBlock = 4;
 constexpr int kBlockSize = kNumWarpPerBlock * kWarpSize;
+#if defined(USE_HIP)
+constexpr uint64_t kFullMask = 0xFFFFFFFFFFFFFFFFULL;
+__device__ __forceinline__ int OfWarpFfs(uint64_t mask) {
+  return __ffsll(static_cast<unsigned long long>(mask));
+}
+__device__ __forceinline__ int OfWarpPopc(uint64_t mask) {
+  return __popcll(static_cast<unsigned long long>(mask));
+}
+#else
 constexpr uint32_t kFullMask = 0xFFFFFFFFU;
+__device__ __forceinline__ int OfWarpFfs(unsigned mask) { return __ffs(mask); }
+__device__ __forceinline__ int OfWarpPopc(unsigned mask) { return __popc(mask); }
+#endif
 
 ep::CudaLaunchConfig GetLaunchConfig(uint32_t n_keys) {
   return ep::CudaLaunchConfig((n_keys + kNumWarpPerBlock - 1) / kNumWarpPerBlock,
@@ -84,7 +99,7 @@ class WarpMutexAtomicImpl {
 };
 
 #if CUDA_VERSION >= 11000 && ((!defined(__CUDA_ARCH__)) || (__CUDA_ARCH__ >= 700)) \
-    && !(defined(__clang__) && defined(__CUDA__))
+    && !(defined(__clang__) && defined(__CUDA__)) && !defined(USE_HIP)
 
 class WarpMutexSemaphoreImpl {
  public:
@@ -148,7 +163,7 @@ void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>
   int major = 0;
   OF_CUDA_CHECK(cudaDeviceGetAttribute(&major, cudaDevAttrComputeCapabilityMajor, device));
   size_t mutex_size_per_set = 0;
-#if CUDA_VERSION >= 11000 && !(defined(__clang__) && defined(__CUDA__))
+#if CUDA_VERSION >= 11000 && !(defined(__clang__) && defined(__CUDA__)) && !defined(USE_HIP)
   if (major >= 7) {
 #if !defined(__CUDA_ARCH__)
     mutex_size_per_set = sizeof(WarpMutexSemaphoreImpl);
@@ -221,9 +236,9 @@ struct SetContext {
     const Key lane_key = keys[thread_ctx.lane_id];
     const int lane_age = ages[thread_ctx.lane_id];
     const bool lane_hit = (lane_key == key && lane_age != 0);
-    const unsigned hit_mask = __ballot_sync(kFullMask, lane_hit);
+    const auto hit_mask = __ballot_sync(kFullMask, lane_hit);
     if (hit_mask != 0) {
-      return __ffs(static_cast<int>(hit_mask)) - 1;
+      return OfWarpFfs(hit_mask) - 1;
     } else {
       return -1;
     }
@@ -242,9 +257,9 @@ struct SetContext {
     int insert_way = -1;
     const Key lane_key = keys[thread_ctx.lane_id];
     int lane_age = ages[thread_ctx.lane_id];
-    const unsigned hit_mask = __ballot_sync(kFullMask, lane_key == key && lane_age != 0);
+    const auto hit_mask = __ballot_sync(kFullMask, lane_key == key && lane_age != 0);
     if (hit_mask != 0) {
-      insert_way = __ffs(static_cast<int>(hit_mask)) - 1;
+      insert_way = OfWarpFfs(hit_mask) - 1;
       const int insert_way_age = __shfl_sync(kFullMask, lane_age, insert_way);
       if (lane_age > insert_way_age) {
         lane_age -= 1;
@@ -254,9 +269,9 @@ struct SetContext {
       __syncwarp();
     }
     if (insert_way == -1) {
-      const unsigned valid_mask = __ballot_sync(kFullMask, lane_age != 0);
-      if (valid_mask != kFullMask) {
-        insert_way = __popc(static_cast<int>(valid_mask));
+      const auto valid_mask = __ballot_sync(kFullMask, lane_age != 0);
+      if (OfWarpPopc(valid_mask) != kWarpSize) {
+        insert_way = OfWarpPopc(valid_mask);
         if (lane_age > 0) {
           lane_age -= 1;
         } else if (thread_ctx.lane_id == insert_way) {
@@ -274,7 +289,7 @@ struct SetContext {
                         const ThreadContext& thread_ctx, Key key, int* way, Key* evicted_key) {
     const Key lane_key = keys[thread_ctx.lane_id];
     int lane_age = ages[thread_ctx.lane_id];
-    const int insert_way = __ffs(__ballot_sync(kFullMask, lane_age == 1)) - 1;
+    const int insert_way = OfWarpFfs(__ballot_sync(kFullMask, lane_age == 1)) - 1;
     *evicted_key = __shfl_sync(kFullMask, lane_key, insert_way);
     if (thread_ctx.lane_id == insert_way) {
       keys[insert_way] = key;
@@ -470,7 +485,7 @@ __global__ void DumpKernel(LruCacheContext<Key, Elem> cache_ctx, size_t start_ke
     __syncwarp();
     warp_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = lane_key;
     warp_ages[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = lane_age;
-    const int key_count = __popc(__ballot_sync(kFullMask, lane_age != 0));
+    const int key_count = OfWarpPopc(__ballot_sync(kFullMask, lane_age != 0));
     if (key_count == 0) { continue; }
     uint32_t offset = 0;
     if (thread_ctx.lane_id == 0) { offset = atomicAdd(n_dumped, key_count); }

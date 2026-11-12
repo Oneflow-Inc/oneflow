@@ -314,13 +314,20 @@ __device__ float RoundHalfAwayFromZero(const float x) {
 }
 
 // warp reduce version.
+#if defined(OF_GPU_WARP_SIZE)
+constexpr int32_t kWarpSize = OF_GPU_WARP_SIZE;
+#else
 constexpr int32_t kWarpSize = 32;
+#endif
+#ifndef OF_SHFL_FULL_MASK
+#define OF_SHFL_FULL_MASK 0xffffffff
+#endif
 constexpr int32_t kMaxColSize = 1024;
 
 template<typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ T WarpMaxAllReduce(T val) {
   for (int32_t lane_mask = thread_group_width / 2; lane_mask > 0; lane_mask /= 2) {
-    val = max(val, __shfl_xor_sync(0xffffffff, val, lane_mask, thread_group_width));
+    val = max(val, __shfl_xor_sync(OF_SHFL_FULL_MASK, val, lane_mask, thread_group_width));
   }
   return val;
 }

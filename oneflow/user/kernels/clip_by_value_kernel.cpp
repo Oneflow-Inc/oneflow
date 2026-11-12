@@ -55,9 +55,10 @@ int64_t GetDtypeMatchedValue(double floating, int64_t integral) {
 #ifdef WITH_CUDA
 template<>
 half GetDtypeMatchedValue(double floating, int64_t integral) {
-#if CUDA_VERSION >= 11000
+#if CUDA_VERSION >= 11000 && !defined(USE_HIP)
   return __double2half(floating);
 #else
+  // HIP has no host-callable __double2half; __float2half is __host__ __device__.
   return __float2half(static_cast<float>(floating));
 #endif
 }

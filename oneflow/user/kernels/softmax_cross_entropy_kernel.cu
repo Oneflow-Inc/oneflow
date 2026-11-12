@@ -80,7 +80,7 @@ __global__ void ComputeDiffWithSoftmaxGpu(const int64_t elem_cnt, const int64_t 
 __global__ void ComputeDiffWithSoftmaxGpuHalf(const int64_t elem_cnt, const int64_t num_classes,
                                               const half* prob, const half* labels, const half* dy,
                                               half* dx) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) || defined(USE_HIP)
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const int32_t row_id = i / num_classes;
     dx[i] = __hmul(dy[row_id], __hsub(prob[i], labels[i]));
@@ -88,7 +88,7 @@ __global__ void ComputeDiffWithSoftmaxGpuHalf(const int64_t elem_cnt, const int6
 #else
   printf("use half need nvcc arch >= 530");
   assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) || defined(USE_HIP)*/
 }
 
 }  // namespace

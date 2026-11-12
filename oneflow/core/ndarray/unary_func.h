@@ -100,7 +100,7 @@ struct UnaryFuncExp<float16> final {
 template<>
 struct UnaryFuncNegative<half> final {
   static __device__ __forceinline__ const half Invoke(const half x) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
+#if (defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530) || defined(USE_HIP)
     return __hneg(x);
 #else
     NO_HALF_UTIL_FOUND;

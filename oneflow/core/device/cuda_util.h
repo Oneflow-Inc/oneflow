@@ -25,7 +25,7 @@ limitations under the License.
 #include <cusolverDn.h>
 #endif
 #include <cuda.h>
-#if CUDA_VERSION >= 10010
+#if CUDA_VERSION >= 10010 || defined(USE_HIP)
 #include <cublasLt.h>
 #endif
 #include <cuda_runtime.h>
@@ -34,13 +34,13 @@ limitations under the License.
 #include <cufft.h>
 #include <nccl.h>
 #include <cuda_fp16.h>
-#if CUDA_VERSION >= 11000
+#if CUDA_VERSION >= 11000 || defined(USE_HIP)
 #include <cuda_bf16.h>
 #endif  // CUDA_VERSION >= 11000
 #include "oneflow/core/device/cuda_pseudo_half.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
-#if CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10020 && !defined(USE_HIP)
 
 #include <nvjpeg.h>
 
@@ -58,7 +58,7 @@ const char* CuFFTGetErrorString(cufftResult_t error);
 const char* CusovlerGetErrorString(cusolverStatus_t error);
 #endif
 
-#if CUDA_VERSION >= 10020
+#if CUDA_VERSION >= 10020 && !defined(USE_HIP)
 
 const char* NvjpegGetErrorString(nvjpegStatus_t error);
 
@@ -138,7 +138,15 @@ const char* NvjpegGetErrorString(nvjpegStatus_t error);
 
 const int32_t kCudaThreadsNumPerBlock = 512;
 const int32_t kCudaMaxBlocksNum = 8192;
+// Wavefront width: 64 on CDNA (gfx9xx), 32 on RDNA/CUDA. OF_GPU_WARP_SIZE is injected
+// from the target arch by cmake/cuda.cmake (visible in both passes of every .cu). Every
+// consumer of kCudaWarpSize is a .cu/.cuh device TU, so the macro is always in scope; the
+// 32 fallback keeps the CUDA build unchanged.
+#if defined(OF_GPU_WARP_SIZE)
+const int32_t kCudaWarpSize = OF_GPU_WARP_SIZE;
+#else
 const int32_t kCudaWarpSize = 32;
+#endif
 
 // 48KB, max byte size of shared memroy per thread block
 // TODO: limit of shared memory should be different for different arch

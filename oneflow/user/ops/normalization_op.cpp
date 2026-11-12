@@ -301,7 +301,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
   })(ctx);
 }
 
-#if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
+#if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401) && !defined(USE_HIP)
 
 namespace {
 
@@ -549,7 +549,7 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   return BwDataTypeInferFn(ctx);
 }
 
-#if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
+#if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401) && !defined(USE_HIP)
 
 /* static */ Maybe<void> CudnnFusedNormalizationAddReluGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {

@@ -25,7 +25,7 @@ namespace oneflow {
 namespace {
 
 bool IsFusedBnAddReluSupported() {
-#if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
+#if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401) && !defined(USE_HIP)
   return true;
 #else
   return false;

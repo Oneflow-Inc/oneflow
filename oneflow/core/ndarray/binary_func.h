@@ -206,7 +206,7 @@ struct BinaryFuncPow<float> final {
 template<>
 struct BinaryFuncPow<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
+#if (defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530) || defined(USE_HIP)
     return __float2half(powf(__half2float(x), __half2float(y)));
 #else
     NO_HALF_UTIL_FOUND;
@@ -335,7 +335,7 @@ struct BinaryFuncNanSum<half> final {
 template<>
 struct BinaryFuncSub<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
+#if (defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530) || defined(USE_HIP)
     return __hsub(x, y);
 #else
     NO_HALF_UTIL_FOUND;
@@ -346,7 +346,7 @@ struct BinaryFuncSub<half> final {
 template<>
 struct BinaryFuncMul<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
+#if (defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530) || defined(USE_HIP)
     return __hmul(x, y);
 #else
     NO_HALF_UTIL_FOUND;
@@ -357,7 +357,7 @@ struct BinaryFuncMul<half> final {
 template<>
 struct BinaryFuncDiv<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if __CUDA_ARCH__ >= 530
+#if __CUDA_ARCH__ >= 530 || defined(USE_HIP)
     return __hdiv(x, y);
 #else
     NO_HALF_UTIL_FOUND;
@@ -368,7 +368,7 @@ struct BinaryFuncDiv<half> final {
 template<>
 struct BinaryFuncMax<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
+#if (defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530) || defined(USE_HIP)
     return __hgt(x, y) ? x : y;
 #else
     NO_HALF_UTIL_FOUND;
@@ -379,7 +379,7 @@ struct BinaryFuncMax<half> final {
 template<>
 struct BinaryFuncMin<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530
+#if (defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 530) || defined(USE_HIP)
     return __hlt(x, y) ? x : y;
 #else
     NO_HALF_UTIL_FOUND;
@@ -455,7 +455,7 @@ struct BinaryFuncFloorMod<double> final {
 template<>
 struct BinaryFuncFloorMod<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if __CUDA_ARCH__ >= 530
+#if __CUDA_ARCH__ >= 530 || defined(USE_HIP)
     const half trunc_mod = __float2half(fmodf(__half2float(x), __half2float(y)));
     return __hne(trunc_mod, GetZeroVal<half>())
                    && __hlt(y, GetZeroVal<half>()) != __hlt(trunc_mod, half(0))
@@ -518,7 +518,7 @@ struct BinaryFuncFMod<double> final {
 template<>
 struct BinaryFuncFMod<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if __CUDA_ARCH__ >= 530
+#if __CUDA_ARCH__ >= 530 || defined(USE_HIP)
     const half trunc_mod = __float2half(fmodf(__half2float(x), __half2float(y)));
     return trunc_mod;
 #else
@@ -578,7 +578,7 @@ struct BinaryFuncFloorDiv<int64_t> final {
 template<>
 struct BinaryFuncFloorDiv<half> final {
   static __device__ __forceinline__ half Invoke(const half x, const half y) {
-#if __CUDA_ARCH__ >= 530
+#if __CUDA_ARCH__ >= 530 || defined(USE_HIP)
     return __float2half(floor(fdividef(__half2float(x), __half2float(y))));
 #else
     NO_HALF_UTIL_FOUND;

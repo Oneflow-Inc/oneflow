@@ -28,7 +28,7 @@ __device__ bool IsNotFinite(T x) {
 
 template<>
 __device__ bool IsNotFinite<half>(half x) {
-#if __CUDA_ARCH__ >= 530
+#if __CUDA_ARCH__ >= 530 || defined(USE_HIP)
   return (__hisinf(x) || __hisnan(x));
 #else
   __trap();

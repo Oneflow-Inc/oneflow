@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import os
 import unittest
 from collections import OrderedDict
 
@@ -156,6 +157,17 @@ class TestReduceSumLike(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_reduce_sum_like_short_one_byte_input(test_case):
+        for n in range(1, 10):
+            np_x = np.random.randint(-3, 4, size=(n, 2)).astype(np.int8)
+            x = flow.tensor(np_x, device="cuda")
+            like = flow.zeros(1, 1, dtype=flow.int8, device="cuda")
+            of_out = flow._C.reduce_sum_like(x, like, axis=(0, 1))
+            test_case.assertEqual(of_out.numpy().item(), np.sum(np_x))
+            of_out = flow._C.reduce_sum_like(x[:, :1], like, axis=(0, 1))
+            test_case.assertEqual(of_out.numpy().item(), np.sum(np_x[:, :1]))
 
 
 if __name__ == "__main__":

@@ -196,7 +196,14 @@ __global__ void FusedWarpReluDropoutKernel(uint64_t seed, uint64_t offset, const
           T out_val = x_val * t_combined_mask * t_scale;
           x[cur_linear_index] = out_val;
         }
+#if defined(USE_HIP)
+        // A 64-wide wavefront carries two of these 32-lane rows; keep this row's half of the
+        // ballot.
+        int32_t warp_mask = static_cast<int32_t>(__ballot_sync(__activemask(), thread_bitmask)
+                                                 >> (__lane_id() & ~(kWarpSize - 1)));
+#else
         int32_t warp_mask = __ballot_sync(__activemask(), thread_bitmask);
+#endif
         if (lane_id == 0) { mask[(row * aux_ld + cur_col) / kWarpSize] = warp_mask; }
       }
     }

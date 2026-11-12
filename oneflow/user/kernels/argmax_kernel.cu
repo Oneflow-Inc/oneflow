@@ -109,10 +109,19 @@ void ArgMax(const T* in_ptr, int32_t num_row, int32_t num_col, void* temp_storag
 }
 
 template<typename T>
-__global__ void WriteKeysToOutput(const int32_t instance_num,
+__global__ void WriteKeysToOutput(const int32_t instance_num, const int32_t instance_size,
                                   const cub::KeyValuePair<int32_t, T>* key_value_out_ptr,
                                   int64_t* out_ptr) {
-  CUDA_1D_KERNEL_LOOP(i, instance_num) { out_ptr[i] = key_value_out_ptr[i].key; }
+  CUDA_1D_KERNEL_LOOP(i, instance_num) {
+#if defined(USE_HIP)
+    // hipCUB seeds each segment with an out-of-range key and keeps it when no element compares
+    // greater, as in an all-NaN row. CUB returns an index inside the row there.
+    const int32_t key = key_value_out_ptr[i].key;
+    out_ptr[i] = (key >= 0 && key < instance_size) ? key : 0;
+#else
+    out_ptr[i] = key_value_out_ptr[i].key;
+#endif
+  }
 }
 
 }  // namespace
@@ -144,7 +153,7 @@ class GpuArgMaxKernel final : public user_op::OpKernel {
            ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     WriteKeysToOutput<T><<<BlocksNum4ThreadsNum(instance_num), kCudaThreadsNumPerBlock, 0,
                            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        instance_num, buffer_manager.KeyValueOutPtr(), out->mut_dptr<int64_t>());
+        instance_num, instance_size, buffer_manager.KeyValueOutPtr(), out->mut_dptr<int64_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
